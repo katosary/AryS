@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ProfileView: View {
-    @State var viewModel = ViewModel()
+    @State var viewModel = ViewModel() 
     
     var body: some View {
         NavigationStack{
@@ -25,8 +25,8 @@ struct ProfileView: View {
                         
                         VStack{
                             HStack{
-                                Text(viewModel.user)
-//                                Text("ユーザー名")
+                                Text(viewModel.userName)
+                                //                                Text("ユーザー名")
                                     .font(.headline)
                                 // プロフィール編集ボタン
                                 Button{
@@ -40,7 +40,6 @@ struct ProfileView: View {
                                 }
                                 .padding(.horizontal)//horizontalは上下にスペースは作らず、左右だけに作りだす。
                                 
-                                Divider()
                             }
                             HStack(spacing: 2){
                                 viewModel.profileStat(count: "12", label: "投稿")
@@ -50,7 +49,7 @@ struct ProfileView: View {
                     }
                     VStack{
                         HStack{
-                            Text("お気に入りのコーヒー")
+                            Text("お気に入りのコーヒー：")
                             Text(viewModel.favoriteCoffee)
                         }
                         .padding(30)

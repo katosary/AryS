@@ -10,7 +10,7 @@ import Foundation
 
 struct Post: Identifiable {
     let id: UUID = UUID()
-    var user: String
+    var user: User
     var coffeeName: String
     var content: String
     var rating: Int

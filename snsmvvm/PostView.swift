@@ -116,7 +116,7 @@ extension ContentView {
                 .tag(3)
             
             // 5. プロフィール
-            ProfileView()
+            ProfileView(viewModel: viewModel)
                 .tabItem {
                     Image(systemName: "person.circle")
                     Text("プロフィール")
@@ -142,7 +142,7 @@ extension ContentView {
             VStack{
                 // ユーザー名・作成日・メニュー
                 HStack{
-                    Text(post.user) // 投稿者
+                    Text(post.user.userName) // 投稿者
                         .frame(maxWidth: 150, alignment: .leading)
                     Text(post.createdAt,style:.date) // 作成日
                         .frame(maxWidth: 150, alignment: .trailing)

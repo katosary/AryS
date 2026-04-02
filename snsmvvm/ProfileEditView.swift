@@ -9,7 +9,7 @@ import SwiftUI
 
 struct ProfileEditView: View {
     @Environment(\.dismiss) private var dismiss
-    @Binding var viewModel: ViewModel
+    @Binding var viewModel: ViewModel 
     
     var body: some View {
         NavigationStack{
@@ -32,21 +32,21 @@ struct ProfileEditView: View {
             //            .onAppear{
             //                viewModel.editingUser = viewModel.user
             //                viewModel.editingFavoCoffee = viewModel.favoriteCoffee
-        }
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("保存") {
-                    // ViewModelの更新関数を呼ぶ
-                    viewModel.updateUser()
-                    //viewModel.updatePost(targetPost: post)
-                    dismiss()
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("保存") {
+                        // ViewModelの更新関数を呼ぶ
+                        viewModel.updateUser()
+                        //viewModel.updatePost(targetPost: post)
+                        dismiss()
+                    }
                 }
             }
-        }
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button("キャンセル") {
-                    dismiss()
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("キャンセル") {
+                        dismiss()
+                    }
                 }
             }
         }

@@ -6,15 +6,12 @@
 //
 
 //ViewModel
-import Foundation
 import Observation
-import Combine
 import SwiftUI
 
 @Observable
 class ViewModel {
     var posts: [Post] = []//SendMessageViewで入力された内容を保存している配列。　postsはその配列の名前
-    var user: String = ""
     var coffeeName: String = ""
     var content: String = ""
     var inputcoffee: String = ""
@@ -36,14 +33,14 @@ class ViewModel {
     var selectedPost: Post?
     var selectedTab: Int = 0
     
-    var users: [User] = []
+    var user: User = User(userNo: 0, userName: "Anonymous", favoriteCoffee: "")
     var userName: String = ""
     var favoriteCoffee: String = ""
     var userNo: Int = 0
     
     //投稿追加
     func addPost() {
-        let newPost = Post(user:"Anonymous",coffeeName:coffeeName,content: content,rating:rating, createdAt: Date())
+        let newPost = Post(user: user,coffeeName:coffeeName,content: content,rating:rating, createdAt: Date())
         posts.append(newPost)
         coffeeName = ""
         content = ""
@@ -83,13 +80,10 @@ class ViewModel {
     
     //ユーザー情報編集
     func updateUser(){
-        let newUser = User(
+        user = User(
             userNo: userNo,
             userName: userName,
             favoriteCoffee: favoriteCoffee)
-        users.append(newUser)
-        userName = ""
-        favoriteCoffee = ""
     }
     
     //プロフィール数字情報

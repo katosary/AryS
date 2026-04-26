@@ -10,7 +10,7 @@ import SwiftUI
 struct PostEditView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var viewModel: ViewModel
-    let post: Post
+    let post: Log
     
     var body : some View {
         NavigationStack {
@@ -33,15 +33,14 @@ struct PostEditView: View {
             .navigationTitle("投稿を編集")
             .onAppear {
                 // 画面が開いたときに、元のデータをセットする
-                viewModel.editingCoffee = post.coffeeName
-                viewModel.editingContent = post.content
-                viewModel.editingRating = post.rating
+                viewModel.editingCoffee = post.countryName
+                viewModel.editingRating = post.aromarating
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("保存") {
                         // ViewModelの更新関数を呼ぶ
-                        viewModel.updatePost(targetPost: post)
+                        viewModel.updateLog(targetPost: post)
                         dismiss()
                     }
                 }

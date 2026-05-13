@@ -34,8 +34,6 @@ struct MatchingView: View {
                     .ignoresSafeArea(edges: .bottom)
                 }
             }
-            .navigationTitle("トレンド")
-            .navigationBarTitleDisplayMode(.inline)
             .task {
                 if matchingViewModel.discoveredProfiles.isEmpty {
                     await matchingViewModel.fetchRecommendedProfiles()
@@ -46,113 +44,110 @@ struct MatchingView: View {
 }
 
 // --- 2. 1人分のプロフィール表示 (カードの中身) ---
+// --- 2. 1人分のプロフィール表示 (カードデザイン版) ---
 struct MatchProfileView: View {
-    let profile: UserProfile // MatchingViewから渡されるテストデータ
+    let profile: UserProfile
     
     // デザイン定数
-    let coverHeight: CGFloat = 320
-    let profileSize: CGFloat = 120
+    let profileSize: CGFloat = 110
     
     var body: some View {
         GeometryReader { geometry in
-            // 画面の横幅を取得して、各パーツのサイズに適用
-            let screenWidth = geometry.size.width
+            let screenHeight = geometry.size.height
             
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 0) {
-                    
-                    // --- A. 上部：ビジュアルエリア ---
-                    ZStack(alignment: .bottom) {
-                        // カバー部分（コーヒーらしいブラウンのグラデーション）
-                        Rectangle()
-                            .fill(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [Color.brown.opacity(0.5), Color.black.opacity(0.8)]),
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
+            // カード本体
+            VStack(spacing: 0) {
+                
+                // --- A. 上部：ビジュアルエリア ---
+                ZStack(alignment: .bottom) {
+                    // カバー画像部分（グラデーション）
+                    Rectangle()
+                        .fill(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.brown.opacity(0.6), Color.black.opacity(0.7)]),
+                                startPoint: .top,
+                                endPoint: .bottom
                             )
-                            .frame(width: screenWidth, height: coverHeight)
-                        
-                        // プロフィール写真（中央下部に配置）
-                        Image(systemName: "person.crop.circle.fill")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: profileSize, height: profileSize)
-                            .foregroundColor(.white)
-                            .background(Color(.systemGray4))
-                            .clipShape(Circle())
-                            .overlay(Circle().stroke(Color.white, lineWidth: 4))
-                            // アイコンの半分（profileSize / 2）を下に突き出させる
-                            .offset(y: profileSize / 2)
-                    }
-                    // ZStack自体の高さをカバー画像に合わせることで、下のVStackの起点を作る
-                    .frame(width: screenWidth, height: coverHeight)
+                        )
+                        // カードの半分弱を画像にする
+                        .frame(height: screenHeight * 0.4)
                     
-                    // --- B. 下部：プロフィール詳細エリア ---
-                    VStack(spacing: 16) {
-                        // アイコンがはみ出している分のスペースを確保
-                        Spacer().frame(height: profileSize / 2 + 12)
-                        
-                        // 名前
-                        Text(profile.name)
-                            .font(.system(size: 30, weight: .bold, design: .rounded))
-                        
-                        // コーヒーのスタイル（タグ風）
-                        Text(profile.coffeeStyle)
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 6)
-                            .background(Color.brown.opacity(0.1))
-                            .foregroundColor(.brown)
-                            .cornerRadius(20)
-                        
-                        Divider()
-                            .padding(.horizontal, 40)
-                            .padding(.vertical, 8)
-                        
-                        // 自己紹介文
-                        Text(profile.bio)
-                            .font(.body)
-                            .lineSpacing(6)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 30)
-                            .foregroundColor(.primary.opacity(0.8))
-                        
-                        // --- C. アクションボタン ---
-                        HStack(spacing: 50) {
-                            // スキップボタン
-                            ActionButton(icon: "xmark", color: .red)
-                                .onTapGesture {
-                                    print("\(profile.name)さんをスキップしました")
-                                }
-                            
-                            // いいねボタン
-                            ActionButton(icon: "heart.fill", color: .green)
-                                .onTapGesture {
-                                    print("\(profile.name)さんにいいねしました！")
-                                }
-                        }
-                        .padding(.top, 30)
-                        .padding(.bottom, 50) // 下スクロールの余白
-                    }
-                    .frame(width: screenWidth) // 横幅を画面に合わせる
+                    // プロフィール写真（中央に配置）
+                    Image(systemName: "person.crop.circle.fill")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: profileSize, height: profileSize)
+                        .foregroundColor(.white)
+                        .background(Color(.systemGray4))
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(Color.white, lineWidth: 3))
+                        .offset(y: profileSize / 3) // 少しだけ下にはみ出させる
                 }
+                
+                // --- B. 下部：プロフィール詳細エリア ---
+                VStack(spacing: 12) {
+                    Spacer().frame(height: profileSize / 3 + 10)
+                    
+                    // 名前
+                    Text(profile.name)
+                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                    
+                    // コーヒーのスタイル
+                    Text(profile.coffeeStyle)
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 4)
+                        .background(Color.brown.opacity(0.1))
+                        .foregroundColor(.brown)
+                        .cornerRadius(4) // ここも角を少し硬めに
+                    
+                    Divider()
+                        .padding(.horizontal, 40)
+                    
+                    // 自己紹介（スクロールなしで収まるよう最大3行などに制限可能）
+                    Text(profile.bio)
+                        .font(.subheadline)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(4)
+                        .padding(.horizontal, 20)
+                        .foregroundColor(.secondary)
+                    
+                    Spacer()
+                    
+                    // --- C. アクションボタン ---
+                    HStack(spacing: 60) {
+                        ActionButton(icon: "xmark", color: .red)
+                            .onTapGesture { print("Skip") }
+                        
+                        ActionButton(icon: "heart.fill", color: .green)
+                            .onTapGesture { print("Like") }
+                    }
+                    .padding(.bottom, 30)
+                }
+                .frame(maxWidth: .infinity)
             }
+            .background(Color.white) // カードの背景色
+            // --- 角を尖らせて影をつける設定 ---
+            .cornerRadius(30) // 角を尖らせる
+            .shadow(color: Color.black.opacity(0.15), radius: 10, x: 0, y: 5) // 後ろに影
+            .padding(.horizontal, 20) // 左右に余白を作って「カード」に見せる
+            .padding(.vertical, 30)   // 上下にも余白
         }
-        .background(Color(.systemBackground)) // ダークモード対応
     }
 }
 
-// プレビュー用のコード（Xcodeのプレビュー画面で確認できます）
 #Preview {
-    MatchProfileView(profile: UserProfile(
-        name: "テストユーザー",
-        coffeeStyle: "浅煎り派 ☕️",
-        bio: "ここに自己紹介が入ります。スワイプして次の人を確認できます。"
-    ))
+    ContentView()
 }
+//// プレビュー用のコード（Xcodeのプレビュー画面で確認できます）
+//#Preview {
+//    MatchProfileView(profile: UserProfile(
+//        name: "テストユーザー",
+//        coffeeStyle: "浅煎り派 ☕️",
+//        bio: "ここに自己紹介が入ります。スワイプして次の人を確認できます。"
+//    ))
+//}
 
 // ボタン用のサブView
 struct ActionButton: View {

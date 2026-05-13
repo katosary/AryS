@@ -11,7 +11,8 @@ import PhotosUI
 
 @Observable
 class ProfileViewModel {
-    var user: User = User(userNo: 0, userName: "", selfIntroduction: "", favoriteCoffee: "",probitter: 0, proacidity: 0, probody: 0, proaroma: 0)
+    var user: User = User(userNo: 0, userName: "", selfIntroduction: "", favoriteCoffee: "",probitter: 0, proacidity: 0, probody: 0, proaroma: 0, proflavor: "")
+    var logs: [Log] = []
     var userName: String = ""
     var selfIntroduction: String = ""
     var favoriteCoffee: String = ""
@@ -23,6 +24,7 @@ class ProfileViewModel {
     var proacidity: Int = 0
     var probody: Int = 0
     var proaroma: Int = 0
+    var proflavor: String = ""
     
     var maxRating = 5
     var offImage: Image?
@@ -38,6 +40,7 @@ class ProfileViewModel {
         didSet{ Task { await loadProfileImage() } }
     }
     
+    
     //ユーザー情報編集
     func updateUser(){
         user = User(
@@ -48,21 +51,22 @@ class ProfileViewModel {
             probitter: probitter,
             proacidity: proacidity,
             probody: probody,
-            proaroma: proaroma
+            proaroma: proaroma,
+            proflavor: proflavor
         )
     }
     
-    //プロフィール数字情報
-    func profileStat(count: String, label: String) -> some View {
-        VStack {
-            Text(count)
-                .font(.headline)
-            Text(label)
-                .font(.caption)
-                .foregroundColor(.gray)
-        }
-        .frame(maxWidth: .infinity) // 均等に並ぶように幅を広げる
-    }
+//    //プロフィール数字情報
+//    func profileStat(count: String, label: String) -> some View {
+//        VStack {
+//            Text(count)
+//                .font(.headline)
+//            Text(label)
+//                .font(.caption)
+//                .foregroundColor(.gray)
+//        }
+//        .frame(maxWidth: .infinity) // 均等に並ぶように幅を広げる
+//    }
     
     func image(for number: Int, rating: Int) -> Image {
         if number > rating {
@@ -73,6 +77,8 @@ class ProfileViewModel {
     }
     
     
+    
+
     
     @MainActor
     private func loadCoffeeImage() async {

@@ -26,6 +26,9 @@ struct Log: Identifiable {
     var bodyrating2: Int
     var createdAt: Date
     var logImage: UIImage?
+    var textOffset: CGSize = .zero
+    var tagX: CGFloat = 0
+    var tagY: CGFloat = 0
 }
 
 struct User: Identifiable{
@@ -40,4 +43,5 @@ struct User: Identifiable{
     var proacidity: Int
     var probody: Int
     var proaroma: Int
+    var proflavor: String
 }

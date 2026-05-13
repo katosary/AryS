@@ -9,7 +9,7 @@ import SwiftUI
 
 struct ProfileView: View {
     @State private var profileSelection = 0
-    var viewModel = ViewModel()
+    var viewModel: ViewModel
     @State var profileViewModel = ProfileViewModel()
     
     // 画面の横幅を取得
@@ -26,7 +26,25 @@ struct ProfileView: View {
             let screenWidth = geometry.size.width // ここで横幅を取得
             NavigationStack{
                 ScrollView{
-                    VStack { //これから並べるVStackの中のものを先頭寄せにして並べるものの間に15のスペースを作る
+                    // プロフィール編集ボタン
+                    HStack{
+                        Spacer()
+                        Button{
+                            profileViewModel.isProfileEditSheet = true
+                        } label: {
+                            Text("プロフィールを編集")
+                                .font(Font.headline.bold())
+                                .padding(.vertical, 5)    // 上下の厚み（大きくしたい分だけ数値を増やす）
+                                .padding(.horizontal, 10)  // 左右の幅
+                                .background(Color(.systemGray6))
+                                .foregroundColor(.primary)
+                                .cornerRadius(8)
+                        }
+                        .padding(.top, 5)
+                        .padding(.trailing, 5)
+                        
+                    }
+                    VStack {
                         
                         VStack(spacing: 0) {
                             
@@ -82,69 +100,68 @@ struct ProfileView: View {
                             
                             VStack{
                                 HStack{
-                                    Color.clear
-                                        .frame(width: 30, height: 30)
-                                    
                                     Spacer()
                                     
-                                    Text(profileViewModel.userName)
-                                        .font(.headline)
+                                    Text(profileViewModel.user.userName)
+                                        .font(.title)
                                     
                                     Spacer()
-                                    
-                                    // プロフィール編集ボタン
-                                    Button{
-                                        profileViewModel.isProfileEditSheet = true
-                                    } label: {
-                                        Image(systemName: "pencil")
-                                            .frame(width: 30, height: 30)
-                                            .background(Color(.systemGray6))
-                                            .foregroundColor(.primary)
-                                            .cornerRadius(8)
-                                    }
-                                    .frame(alignment: .trailing)
                                 }
-                                HStack(spacing: 2){
-                                    profileViewModel.profileStat(count: "12", label: "投稿")
-                                    profileViewModel.profileStat(count: "150", label: "フォロワー")
-                                }
+                                // --- 自己紹介文エリア ---
+                                Text(profileViewModel.user.selfIntroduction)
+                                    .font(.body)
+                                    .padding(.top, 1)
+                                    .padding(.bottom, 15)
+                                    .multilineTextAlignment(.leading)
+                                    .lineSpacing(4) // 行間を少し空けると読みやすい
+                                    .fixedSize(horizontal: false, vertical: true) // テキストが長くても省略されないようにする
+                                //                                HStack(spacing: 2){
+                                //                                    profileViewModel.profileStat(count: "12", label: "投稿")
+                                //                                    profileViewModel.profileStat(count: "150", label: "フォロワー")
                             }
                         }
-                        
-                        
-                        VStack{
-                            TabView(selection: $profileSelection) {
-                                MyProfileView(title: "自己紹介",profileViewModel: profileViewModel)
-                                    .tag(0)
-                                FavoriteCoffeeView(title: "好みのコーヒー",profileViewModel: profileViewModel)
-                                    .tag(1)
-                                PostView(title: "投稿",viewModel: viewModel,profileViewModel: profileViewModel)
-                                    .tag(2)
-                                FavoriteToolView(title: "お気に入りの道具")
-                                    .tag(3)
-                            }
-                            .tabViewStyle(.page)
-                            .frame(height: 600)
-                            .ignoresSafeArea()
-                        }
-                        //                    VStack{
-                        //                        HStack{
-                        //                            Text("お気に入りのコーヒー：")
-                        //                            Text(viewModel.favoriteCoffee)
-                        //                        }
-                        //                        .padding(30)
-                        //                    }
                     }
-                    .navigationTitle("プロフィール")
-                    .navigationBarTitleDisplayMode(.inline)
+                    
+                    
+                    VStack{
+                        // 1. 見出し部分（Picker）
+                        Picker("", selection: $profileSelection) {
+                            Text("Post").tag(0)
+                            Text("Favorite Coffee").tag(1)
+                            Text("Favorite Tool").tag(2)
+                        }
+                        .padding(.top, 10)
+                        .padding(.bottom, 40)
+                        .pickerStyle(.segmented) // セグメント表示
+                        
+                        TabView(selection: $profileSelection) {
+                            PostView(title: "Favorite Coffee",viewModel: viewModel,profileViewModel: profileViewModel)
+                                .tag(0)
+                            MyProfileView(title: "Post",profileViewModel: profileViewModel)
+                                .tag(1)
+                            FavoriteToolView(title: "Favorite Tool")
+                                .tag(2)
+                        }
+                        .tabViewStyle(.page)
+                        .frame(height: 600)
+                        .ignoresSafeArea()
+                    }
                 }
-                .sheet(isPresented: $profileViewModel.isProfileEditSheet){
-                    ProfileEditView(profileViewModel: $profileViewModel)
-                }
+                .navigationTitle("プロフィール")
+                .navigationBarTitleDisplayMode(.inline)
+            }
+            .sheet(isPresented: $profileViewModel.isProfileEditSheet){
+                ProfileEditView(profileViewModel: $profileViewModel)
+                    .onAppear {
+                        // 👈 ここが重要！
+                        // メインの viewModel が持っている logs を、profileViewModel の logs にコピーする
+                        profileViewModel.logs = viewModel.logs
+                    }
             }
         }
     }
 }
+
 
 
 struct MyProfileView: View {
@@ -154,56 +171,33 @@ struct MyProfileView: View {
     var body: some View {
         ScrollView{
             LazyVStack(spacing: 20){
-                // --- 自己紹介文エリア ---
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("自己紹介")
-                        .font(.headline)
-                    
-                    Text(profileViewModel.selfIntroduction)
-                        .font(.body)
-                        .lineSpacing(4) // 行間を少し空けると読みやすい
-                        .fixedSize(horizontal: false, vertical: true) // テキストが長くても省略されないようにする
-                }
-            }
-        }
-    }
-}
-
-struct FavoriteCoffeeView: View {
-    let title: String
-    var profileViewModel: ProfileViewModel
-    
-    var body: some View {
-        @Bindable var profileViewModel = profileViewModel
-        ScrollView{
-            LazyVStack(spacing: 20){
                 VStack(alignment: .leading, spacing: 10){
                     HStack{
                         Text("お気に入りのコーヒー：")
-                        Text(profileViewModel.favoriteCoffee)
+                        Text(profileViewModel.user.favoriteCoffee)
                     }
                     
                     RatingView(
                         label: "苦味",
-                        rating: profileViewModel.probitter,
+                        rating: profileViewModel.user.probitter,
                         maxRating: profileViewModel.maxRating
                     )
                     
                     RatingView(
                         label: "酸味",
-                        rating: profileViewModel.proacidity,
+                        rating: profileViewModel.user.proacidity,
                         maxRating: profileViewModel.maxRating
                     )
                     
                     RatingView(
                         label: "コク",
-                        rating: profileViewModel.probody,
+                        rating: profileViewModel.user.probody,
                         maxRating: profileViewModel.maxRating
                     )
                     
                     RatingView(
                         label: "香り",
-                        rating: profileViewModel.proaroma,
+                        rating: profileViewModel.user.proaroma,
                         maxRating: profileViewModel.maxRating
                     )
                     
@@ -212,6 +206,7 @@ struct FavoriteCoffeeView: View {
                         Text("アッシー")
                     }
                 }
+                
             }
         }
     }
@@ -219,13 +214,18 @@ struct FavoriteCoffeeView: View {
 
 struct PostView: View {
     let title: String
-    var viewModel:ViewModel
+    var viewModel: ViewModel
     var profileViewModel: ProfileViewModel
     
     var body: some View {
-        LazyVStack(spacing: 20){
-            ForEach(viewModel.logs) { log in
-                ProfileLogView(log: log, viewModel: viewModel, profileViewModel: profileViewModel)
+        // 縦方向のスワイプをシミュレート
+        ScrollView(.vertical, showsIndicators: false) {
+            LazyVStack(spacing: 0) {
+                ForEach(viewModel.logs) { log in
+                    VStack {
+                        PostCardView(log: log, viewModel: viewModel,profileViewModel: profileViewModel,isEditable: false)
+                    }
+                }
             }
         }
     }
@@ -243,93 +243,255 @@ struct FavoriteToolView: View {
     }
 }
 
-/// 単一の投稿を表示するカードビュー
-struct ProfileLogView: View {
+/// 単一のポストカード
+struct PostCardView: View {
     let log: Log
     var viewModel: ViewModel
     var profileViewModel: ProfileViewModel
+    var isEditable: Bool
+    
+    @State private var dragOffset: CGSize = .zero
+    let profileSize: CGFloat = 40
+    
+    // ✅ 算出プロパティにしてコードをスッキリさせる
+    // 投稿者が自分かどうかを判定
+    private var isMyPost: Bool {
+        log.user.userNo == profileViewModel.user.userNo
+    }
     
     var body: some View {
-        // 投稿カードの内容
-        VStack{
-            // --- 画像の表示処理 ---
-            if let uiImage = log.logImage {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFill() // 枠いっぱいに広げる
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 200) // 高さを固定
-                    .clipped() // 枠からはみ出た分をカット
-                    .cornerRadius(12)
-            }
-            // ユーザー名・作成日・メニュー
-            HStack{
-                Text(log.user.userName) // 投稿者
-                    .frame(maxWidth: 150, alignment: .leading)
-                Text(log.createdAt,style:.date) // 作成日
-                    .frame(maxWidth: 150, alignment: .trailing)
-                Menu {
-                    // 編集メニュー
-                    Button {
-                        viewModel.selectedPost = log
-                        // 編集シートを表示
-                        viewModel.isEditSheet = true
+        VStack(spacing: 12) {
+            // --- ヘッダーエリア ---
+            HStack(spacing: 10) {
+                // プロフィール画像：自分なら最新の image、他人なら log 保持の image
+                if let uiImage = isMyPost ? profileViewModel.profileImage : nil { // 他人の画像保持ロジックがあればここに入れる
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: profileSize, height: profileSize)
+                        .clipShape(Circle())
+                } else {
+                    Image(systemName: "person.crop.circle.fill")
+                        .resizable()
+                        .frame(width: profileSize, height: profileSize)
+                        .foregroundColor(.gray.opacity(0.6))
+                        .background(Color.white)
+                        .clipShape(Circle())
+                }
+                
+                // 名前：自分なら最新の userName、他人なら log の userName
+                Text(isMyPost ? profileViewModel.user.userName : log.user.userName)
+                    .font(.subheadline)
+                    .bold()
+                
+                Spacer()
+                
+                Text(log.createdAt, style: .date)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                // 自分自身の投稿の時だけメニュー（編集・削除）を出す
+                if isMyPost {
+                    Menu {
+                        Button {
+                            viewModel.selectedPost = log
+                            viewModel.isEditSheet = true
+                        } label: {
+                            Label("編集", systemImage: "pencil")
+                        }
+                        Button(role: .destructive) {
+                            viewModel.deleteLog(targetPost: log)
+                        } label: {
+                            Label("削除", systemImage: "trash")
+                        }
                     } label: {
-                        Label("編集", systemImage: "pencil")
+                        Image(systemName: "ellipsis")
+                            .padding(5)
+                            .foregroundColor(.primary)
                     }
-                    // 対象の投稿を削除
-                    Button {
-                        viewModel.deleteLog(targetPost: log)
-                    } label: {
-                        Label("削除", systemImage: "trash")
-                            .padding(8)
-                            .foregroundColor(.secondary)
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
                 }
             }
-            // コーヒー(国名)
-            HStack {
-                Text("国名：") // ラベル
-                Text(log.countryName)
-            }
-            .frame(maxWidth: 300, alignment: .leading)
+            .padding(.horizontal, 5)
             
-            //　星評価
-            HStack {
-                let avgRating =  Double(log.bitternessrating1 + log.bitternessrating2) / 2.0
-                ZStack(alignment: .leading) {
-                    // 1. 背景の星（グレー・5つ）
-                    HStack(spacing: 4) {
-                        ForEach(0..<5) { _ in
-                            Image(systemName: "star.fill")
-                                .foregroundColor(.gray.opacity(0.3))
-                        }
+            // --- 画像・テキストオーバーレイエリア ---
+            ZStack {
+                if let uiImage = log.logImage {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFill()
+                        .aspectRatio(4/3, contentMode: .fill) // .fitから.fillに変更して枠を埋める
+                        .frame(maxWidth: .infinity)
+                        .cornerRadius(12)
+                        .clipped()
+                } else {
+                    // 画像がない時のプレースホルダー
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(.systemGray5))
+                        .aspectRatio(4/3, contentMode: .fit)
+                }
+                
+                // ドラッグ可能な情報タグ
+                VStack(alignment: .leading, spacing: 4) {
+                    Group {
+                        Text("Shop: \(log.shopName)")
+                        Text("Origin: \(log.countryName)") // County -> Origin
+                        Text("Farm: \(log.farmName)")
+                        Text("Roast: \(log.roastLevel)")
                     }
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                }
+                .padding(10)
+                .background(.ultraThinMaterial) // iOSらしい半透明背景
+                .cornerRadius(8)
+                .foregroundColor(.primary)
+                .offset(
+                    x: isEditable ?viewModel.currentOffsetX + dragOffset.width : log.tagX,
+                    y: isEditable ?viewModel.currentOffsetY + dragOffset.height : log.tagY
+                )
+                .gesture(
+                    isEditable ?
+                    DragGesture()
+                        .onChanged { value in
+                            dragOffset = value.translation
+                        }
+                        .onEnded { value in
+                            // ViewModel の値を直接更新して、動かした位置を「確定」させる
+                            viewModel.currentOffsetX += value.translation.width
+                            viewModel.currentOffsetY += value.translation.height
+                            dragOffset = .zero// アニメーションや微調整用のドラッグ距離はリセット
+                        }
+                    : nil
                     
-                    // 2. 前面の星（オレンジ・5つ）
-                    HStack(spacing: 4) {
-                        ForEach(0..<5) { _ in
-                            Image(systemName: "star.fill")
-                                .foregroundColor(.yellow)
+                    // アニメーションや微調整用のドラッグ距離はリセット
+                    
+                    
+                )
+            }
+            VStack{
+                //　星評価
+                HStack {
+                    Text("BitternessRating:")
+                        .padding(8)
+                    let avgRating =  Double(log.bitternessrating1 + log.bitternessrating2) / 2.0
+                    ZStack(alignment: .leading) {
+                        // 1. 背景の星（グレー・5つ）
+                        HStack(spacing: 4) {
+                            ForEach(0..<5) { _ in
+                                Image(systemName: "star")
+                            }
                         }
+                        
+                        // 2. 前面の星（オレンジ・5つ）
+                        HStack(spacing: 4) {
+                            ForEach(0..<5) { _ in
+                                Image(systemName: "star.fill")
+                            }
+                        }
+                        // 3. ここがポイント：前面の星を「平均値の割合」で切り抜く
+                        .mask(
+                            GeometryReader { geometry in
+                                Rectangle()
+                                // 星5つ分（100%）に対して、(rating / 5) の幅だけ表示する
+                                    .frame(width: geometry.size.width * CGFloat(avgRating / 5.0))
+                            }
+                        )
                     }
-                    // 3. ここがポイント：前面の星を「平均値の割合」で切り抜く
-                    .mask(
-                        GeometryReader { geometry in
-                            Rectangle()
-                            // 星5つ分（100%）に対して、(rating / 5) の幅だけ表示する
-                                .frame(width: geometry.size.width * CGFloat(avgRating / 5.0))
+                }
+                
+                HStack {
+                    Text("AcidityRating:")
+                        .padding(8)
+                    let avgRating =  Double(log.acidityrating1 + log.acidityrating2) / 2.0
+                    ZStack(alignment: .leading) {
+                        // 1. 背景の星（グレー・5つ）
+                        HStack(spacing: 4) {
+                            ForEach(0..<5) { _ in
+                                Image(systemName: "star")
+                            }
                         }
-                    )
+                        
+                        // 2. 前面の星（オレンジ・5つ）
+                        HStack(spacing: 4) {
+                            ForEach(0..<5) { _ in
+                                Image(systemName: "star.fill")
+                            }
+                        }
+                        // 3. ここがポイント：前面の星を「平均値の割合」で切り抜く
+                        .mask(
+                            GeometryReader { geometry in
+                                Rectangle()
+                                // 星5つ分（100%）に対して、(rating / 5) の幅だけ表示する
+                                    .frame(width: geometry.size.width * CGFloat(avgRating / 5.0))
+                            }
+                        )
+                    }
+                }
+                
+                HStack {
+                    Text("BodyRating:")
+                        .padding(8)
+                    let avgRating =  Double(log.bodyrating1 + log.bodyrating2) / 2.0
+                    ZStack(alignment: .leading) {
+                        // 1. 背景の星（グレー・5つ）
+                        HStack(spacing: 4) {
+                            ForEach(0..<5) { _ in
+                                Image(systemName: "star")
+                            }
+                        }
+                        
+                        // 2. 前面の星（オレンジ・5つ）
+                        HStack(spacing: 4) {
+                            ForEach(0..<5) { _ in
+                                Image(systemName: "star.fill")
+                            }
+                        }
+                        // 3. ここがポイント：前面の星を「平均値の割合」で切り抜く
+                        .mask(
+                            GeometryReader { geometry in
+                                Rectangle()
+                                // 星5つ分（100%）に対して、(rating / 5) の幅だけ表示する
+                                    .frame(width: geometry.size.width * CGFloat(avgRating / 5.0))
+                            }
+                        )
+                    }
+                }
+                
+                HStack {
+                    Text("AromaRating:")
+                        .padding(8)
+                    ZStack(alignment: .leading) {
+                        // 1. 背景の星（グレー・5つ）
+                        HStack(spacing: 4) {
+                            ForEach(0..<5) { _ in
+                                Image(systemName: "star")
+                            }
+                        }
+                        
+                        // 2. 前面の星（オレンジ・5つ）
+                        HStack(spacing: 4) {
+                            ForEach(0..<5) { _ in
+                                Image(systemName: "star.fill")
+                            }
+                        }
+                        // 3. ここがポイント：前面の星を「平均値の割合」で切り抜く
+                        .mask(
+                            GeometryReader { geometry in
+                                Rectangle()
+                                // 星5つ分（100%）に対して、(rating / 5) の幅だけ表示する
+                                    .frame(width: geometry.size.width * CGFloat(Double(log.aromarating) / 5.0))//Doubleどうしてこれが必要なのか
+                            }
+                        )
+                    }
+                }
+                HStack {
+                    Text("香りの種類:") // ラベル
+                    Text(log.aromaComment)
                 }
             }
-            .frame(maxWidth: 300, alignment: .leading)
+            .padding(15)
+            .foregroundColor(.black)
         }
-        .padding(20)
-        .background(Color.black)
-        .cornerRadius(10)
+        .padding(40)
     }
 }
 
@@ -358,3 +520,78 @@ struct RatingView: View {
         }
     }
 }
+
+
+
+#Preview {
+    // 1. メインの ViewModel を作成し、サンプル投稿を追加
+    let sharedViewModel = ViewModel()
+    
+    // サンプルユーザーの作成
+    let sampleUser = User(
+        userNo: 1,
+        userName: "コーヒー愛好家",
+        selfIntroduction: "毎日自宅で豆を挽いてドリップしています。\n浅煎りのエチオピアが特に好きです。",
+        favoriteCoffee: "エチオピア イルガチェフェ",
+        probitter: 2,
+        proacidity: 5,
+        probody: 3,
+        proaroma: 5,
+        proflavor: "アッシーフ、ベリー、ナッツ"
+    )
+    
+    // サンプル投稿（Log）を2件ほど追加
+    sharedViewModel.logs = [
+        Log(
+            user: sampleUser,
+            shopName: "Blue Bottle Coffee",
+            countryName: "Ethiopia",
+            farmName: "Guji Zone",
+            roastLevel: "Light",
+            aromarating: 5,
+            aromaComment: "ベリーのような酸味",
+            bitternessrating1: 1,
+            acidityrating1: 5,
+            bodyrating1: 2,
+            bitternessrating2: 2,
+            acidityrating2: 4,
+            bodyrating2: 3,
+            createdAt: Date(),
+            logImage: UIImage(systemName: "cup.and.saucer.fill"),
+            tagX: 10,
+            tagY: 20
+        ),
+        Log(
+            user: sampleUser,
+            shopName: "自家焙煎所",
+            countryName: "Colombia",
+            farmName: "Unknown",
+            roastLevel: "Medium",
+            aromarating: 4,
+            aromaComment: "ナッツのような香ばしさ",
+            bitternessrating1: 3,
+            acidityrating1: 3,
+            bodyrating1: 4,
+            bitternessrating2: 3,
+            acidityrating2: 3,
+            bodyrating2: 4,
+            createdAt: Date().addingTimeInterval(-86400), // 1日前
+            logImage: UIImage(systemName: "bean.fill"),
+            tagX: -30,
+            tagY: -10
+        )
+    ]
+    
+    // 2. プロフィール用の ViewModel を作成
+    let sharedProfileViewModel = ProfileViewModel()
+    sharedProfileViewModel.user = sampleUser
+    // 初期表示のために同期
+    sharedProfileViewModel.logs = sharedViewModel.logs
+    
+    // 3. ProfileView 本体をプレビュー
+    return ProfileView(
+        viewModel: sharedViewModel,
+        profileViewModel: sharedProfileViewModel
+    )
+}
+

@@ -15,7 +15,7 @@ struct HomeView: View {
     var body: some View {
         ZStack(alignment: .top) {
             TabView(selection: $selectedSelection){
-                FollowersView(title: "フォロー中", viewModel: viewModel,profileViewModel: profileViewModel)
+                FollowersView()
                     .tag(0)
                 RecommendView()
                     .tag(1)
@@ -31,6 +31,7 @@ struct HomeView: View {
                     VStack(spacing: 4) {
                         Text("フォロー中")
                             .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(selectedSelection == 0 ? Color.black : Color.gray)
                         
                         //                        // 選択中のアンダーライン
                         //                        Rectangle()
@@ -43,6 +44,7 @@ struct HomeView: View {
                     VStack(spacing: 4) {
                         Text("おすすめ")
                             .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(selectedSelection == 1 ? Color.black : Color.gray)
                     }
                 }
             }
@@ -53,28 +55,11 @@ struct HomeView: View {
 
 // 各リストの表示用
 struct FollowersView: View {
-    let title: String
-    var viewModel: ViewModel
-    var profileViewModel: ProfileViewModel
-    
-    var body: some View {
-        // 縦方向のスワイプをシミュレート
-        ScrollView(.vertical, showsIndicators: false) {
-            LazyVStack(spacing: 0) {
-                ForEach(viewModel.logs) { log in
-                    ZStack {
-                        LogView(log: log, viewModel: viewModel,profileViewModel: profileViewModel)
-                            .padding()
-                    }
-                    .containerRelativeFrame(.vertical) // 親（画面）の縦幅いっぱいに広げる // 画面いっぱいに表示
-                }
-            }
-            .scrollTargetLayout()
-        }
-        .scrollTargetBehavior(.paging) // 縦のスワイプを1枚ずつ止まるようにする（iOS 17+）
-        .ignoresSafeArea()
+    var body: some View{
+        EmptyView()
     }
 }
+
 
 struct RecommendView: View{
     var body: some View{
@@ -86,7 +71,7 @@ struct LogView: View {
     let log: Log
     var viewModel: ViewModel
     var profileViewModel: ProfileViewModel
-    
+
     var body: some View {
         // 投稿カードの内容
         VStack{
@@ -147,7 +132,7 @@ struct LogView: View {
                         Text("RoastLevel:") // ラベル
                         Text(log.roastLevel)
                     }
-                    
+
                     //　星評価
                     HStack {
                         Text("BitternessRating:")
@@ -160,7 +145,7 @@ struct LogView: View {
                                     Image(systemName: "star")
                                 }
                             }
-                            
+
                             // 2. 前面の星（オレンジ・5つ）
                             HStack(spacing: 4) {
                                 ForEach(0..<5) { _ in
@@ -177,7 +162,7 @@ struct LogView: View {
                             )
                         }
                     }
-                    
+
                     HStack {
                         Text("AcidityRating:")
                             .padding(8)
@@ -189,7 +174,7 @@ struct LogView: View {
                                     Image(systemName: "star")
                                 }
                             }
-                            
+
                             // 2. 前面の星（オレンジ・5つ）
                             HStack(spacing: 4) {
                                 ForEach(0..<5) { _ in
@@ -218,7 +203,7 @@ struct LogView: View {
                                     Image(systemName: "star")
                                 }
                             }
-                            
+
                             // 2. 前面の星（オレンジ・5つ）
                             HStack(spacing: 4) {
                                 ForEach(0..<5) { _ in

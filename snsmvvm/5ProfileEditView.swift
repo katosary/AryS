@@ -83,84 +83,38 @@ struct ProfileEditView: View {
                         }
                         .padding(.bottom, profileSize * 0.5 + 20) // 💡 下のフィールドとの余白を確保
                         
+                        
                         // --- 2. テキスト入力エリア ---
-                        VStack(alignment: .leading, spacing: 25) {
-                            editField(label: "ユーザー名", text: $profileViewModel.userName, placeholder: "ユーザー名を入力")
-                            TextField("自己紹介を入力してください",text: $profileViewModel.selfIntroduction, axis: .vertical)
-                                    .font(.body)
-                                    .lineLimit(3...6) // 最小3行、最大6行まで表示
-                            editField(label: "お気に入りのコーヒー", text: $profileViewModel.favoriteCoffee, placeholder: "例: エチオピア イルガチェフェ")
-                            HStack {
-                                Text("苦味")
-                                    .padding(5)
-                                    .font(.system(size:30))
-                                Text("弱い").padding(5)
-                                HStack {
-                                    ForEach(1...profileViewModel.maxRating, id: \.self) { number in
-                                        profileViewModel.image(for: number, rating: profileViewModel.probitter)
-                                            .font(.system(size: 20))
-                                            .foregroundColor(number > profileViewModel.probitter ? profileViewModel.offColor : profileViewModel.onColor)
-                                            .onTapGesture { profileViewModel.probitter = number }
-                                    }
-                                }
-                                Text("強い").padding(5)
-                            }
-                            Spacer()
+                        VStack(alignment: .leading, spacing: 0) { // 💡間隔を0にして各field内のpaddingで調整
+                            editField(label: "名前",
+                                      text: $profileViewModel.userName,
+                                      placeholder: "名前")
                             
-                            HStack {
-                                Text("酸味")
-                                    .padding(5)
-                                    .font(.system(size:30))
-                                Text("弱い").padding(5)
-                                HStack {
-                                    ForEach(1...profileViewModel.maxRating, id: \.self) { number in
-                                        profileViewModel.image(for: number, rating: profileViewModel.proacidity)
-                                            .font(.system(size: 20))
-                                            .foregroundColor(number > profileViewModel.proacidity ? profileViewModel.offColor : profileViewModel.onColor)
-                                            .onTapGesture { profileViewModel.proacidity = number }
-                                    }
-                                }
-                                Text("強い").padding(5)
-                            }
-                            Spacer()
+                            editField(label: "自己紹介",
+                                      text: $profileViewModel.selfIntroduction,
+                                      placeholder: "自己紹介を入力してください",
+                                      isMultiLine: true)
                             
-                            HStack {
-                                Text("コク")
-                                    .padding(5)
-                                    .font(.system(size:30))
-                                Text("弱い").padding(5)
-                                HStack {
-                                    ForEach(1...profileViewModel.maxRating, id: \.self) { number in
-                                        profileViewModel.image(for: number, rating: profileViewModel.probody)
-                                            .font(.system(size: 20))
-                                            .foregroundColor(number > profileViewModel.probody ? profileViewModel.offColor : profileViewModel.onColor)
-                                            .onTapGesture { profileViewModel.probody = number }
-                                    }
-                                }
-                                Text("強い").padding(5)
-                            }
+                            editField(label: "国名", text: $profileViewModel.favoriteCoffee,placeholder: "好きな国")
                             
-                            Spacer()
+                            Text("味の好み")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(.secondary)
+                                .padding(.top, 20)
+                                .padding(.bottom, 10)
+                                .padding(.leading, 0) // 必要に応じて調整
                             
-                            HStack {
-                                Text("香り")
-                                    .padding(5)
-                                    .font(.system(size:30))
-                                Text("弱い").padding(5)
-                                HStack {
-                                    ForEach(1...profileViewModel.maxRating, id: \.self) { number in
-                                        profileViewModel.image(for: number, rating: profileViewModel.proaroma)
-                                            .font(.system(size: 20))
-                                            .foregroundColor(number > profileViewModel.proaroma ? profileViewModel.offColor : profileViewModel.onColor)
-                                            .onTapGesture { profileViewModel.proaroma = number }
-                                    }
-                                }
-                                Text("強い").padding(5)
-                            }
+                            ratingRow(label: "苦味", rating: $profileViewModel.probitter)
+                            ratingRow(label: "酸味", rating: $profileViewModel.proacidity)
+                            ratingRow(label: "コク", rating: $profileViewModel.probody)
+                            ratingRow(label: "香り", rating: $profileViewModel.proaroma)
+                            editField(label: "フレーバー", text: $profileViewModel.proflavor, placeholder: "好みのフレーバーがあれば教えてください")
                         }
-                        .padding(.horizontal, 20)
-                        .frame(width: screenWidth) // 💡 入力エリアの幅も画面幅に固定
+                        .padding(.top, 10)
                     }
+                    .padding(.horizontal, 20)
+                    .frame(width: screenWidth) // 💡 入力エリアの幅も画面幅に固定
                 }
             }
             .navigationTitle("プロフィール編集")
@@ -180,19 +134,88 @@ struct ProfileEditView: View {
         }
     }
     
+    
+    
     @ViewBuilder
-    private func editField(label: String, text: Binding<String>, placeholder: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(label)
-                .font(.caption)
-                .fontWeight(.bold)
-                .foregroundColor(.secondary)
+    private func editField(label: String, text: Binding<String>, placeholder: String, isMultiLine: Bool = false) -> some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .top) {
+                // 見出しラベル
+                Text(label)
+                    .font(.body)
+                    .frame(width: 100, alignment: .leading)
+                    .padding(.vertical, 12)
+                
+                // 入力欄
+                if isMultiLine {
+                    // 複数行の場合
+                    TextField(placeholder, text: text, axis: .vertical)
+                        .font(.body)
+                        .lineLimit(3...6) // 3行〜6行
+                        .padding(.vertical, 12)
+                } else {
+                    // 1行の場合
+                    TextField(placeholder, text: text)
+                        .font(.body)
+                        .lineLimit(1) // 1行固定
+                        .padding(.vertical, 12)
+                }
+            }
             
-            TextField(placeholder, text: text)
+            Divider()
+                .padding(.leading, 0) // 必要に応じてラベルの末尾から線を開始させるなら調整
+        }
+    }
+    
+    @ViewBuilder
+    private func ratingRow(label: String, rating: Binding<Int>) -> some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .top) {
+                // 1. 左側の見出し（ここを 100 に固定しているので、右側の開始位置が決まる）
+                Text(label)
+                    .font(.body)
+                    .frame(width: 100, alignment: .leading)
+                    .padding(.vertical, 12)
+                
+                // 2. 右側の解答エリア（全体を一つのHStackで包む）
+                HStack(spacing: 8) { // 弱い・星・強い の間の微調整
+                    Text("弱い")
+                        .foregroundColor(.secondary)
+                    
+                    HStack(spacing: 4) {
+                        ForEach(1...profileViewModel.maxRating, id: \.self) { number in
+                            profileViewModel.image(for: number, rating: rating.wrappedValue)
+                                .foregroundColor(number > rating.wrappedValue ? profileViewModel.offColor : profileViewModel.onColor)
+                                .onTapGesture {
+                                    rating.wrappedValue = number
+                                }
+                        }
+                    }
+                    
+                    Text("強い")
+                        .foregroundColor(.secondary)
+                }
                 .font(.body)
-                .padding(.vertical, 4)
-            
+                .padding(.vertical, 12) // editFieldの文字の高さと揃える
+                
+                Spacer() // 右側を空ける
+            }
             Divider()
         }
     }
+}
+
+#Preview {
+    // 1. プレビュー用のダミーデータを作成
+    let previewViewModel = ProfileViewModel()
+    
+    //    // 2. 初期値をセット（必要に応じて）
+    //    previewViewModel.userName = "コーヒー愛好家"
+    //    previewViewModel.selfIntroduction = "毎日自宅で豆を挽いています。\n美味しいコーヒーを探求中。"
+    //    previewViewModel.favoriteCoffee = "エチオピア"
+    //    previewViewModel.probitter = 3
+    //    previewViewModel.proacidity = 4
+    
+    // 3. Constantを使ってBindingとして渡す
+    return ProfileEditView(profileViewModel: .constant(previewViewModel))
 }

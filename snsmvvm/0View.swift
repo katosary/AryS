@@ -41,7 +41,7 @@ struct ContentView: View {
                         switch viewModel.selectedTab {
                         case 0: HomeView(viewModel: viewModel, profileViewModel: profileViewModel)
                         case 1: SearchView(viewModel: viewModel)
-                        case 2: PostSendView().environment(viewModel)
+                        case 2: SelectShopView().environment(viewModel)
                         case 3: MatchingView(matchingViewModel: matchingViewModel)
                         case 4: ProfileView(viewModel: viewModel, profileViewModel: profileViewModel)
                         default: EmptyView()

@@ -58,8 +58,8 @@
             filePath = "snsmvvm/3CoffeeLogVIew.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "303"
-            endingLineNumber = "303"
+            startingLineNumber = "329"
+            endingLineNumber = "329"
             landmarkName = "confirmationPage()"
             landmarkType = "7">
          </BreakpointContent>

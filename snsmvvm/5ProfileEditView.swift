@@ -10,12 +10,14 @@ import PhotosUI
 
 struct ProfileEditView: View {
     @Environment(\.dismiss) private var dismiss
-    @Binding var profileViewModel: ProfileViewModel
+    @Environment(ViewModel.self) var viewModel
+    var profileViewModel: ProfileViewModel
     
     let coverHeight: CGFloat = 200 // 編集時は少し低めが見やすい
     let profileSize: CGFloat = 100
     
     var body: some View {
+        @Bindable var profileViewModel = profileViewModel
         NavigationStack {
             // 💡 GeometryReaderで画面の横幅を取得
             GeometryReader { geometry in
@@ -95,9 +97,50 @@ struct ProfileEditView: View {
                                       placeholder: "自己紹介を入力してください",
                                       isMultiLine: true)
                             
-                            editField(label: "国名", text: $profileViewModel.favoriteCoffee,placeholder: "好きな国")
+                            Button(action: {
+                                profileViewModel.isShowingAgePicker = true
+                            }) {
+                                HStack {
+                                    Text("年齢")
+                                        .foregroundColor(.primary)
+                                    Spacer()
+                                    Text(profileViewModel.userAge == 0 ? "選択してください" : "\(profileViewModel.userAge) 歳")
+                                        .foregroundColor(.secondary)
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                }
+                            }
+                            .padding(.top, 20)
+                            // シートの定義
+                            .sheet(isPresented: $profileViewModel.isShowingAgePicker) {
+                                AgeSelectionView(profileViewModel: profileViewModel)
+                            }
+                            Divider()
                             
-                            Text("味の好み")
+                            Button(action: {
+                                profileViewModel.isShowingBirthPlacePicker = true
+                            }) {
+                                HStack {
+                                    Text("出身地")
+                                        .foregroundColor(.primary)
+                                    Spacer()
+                                    Text(profileViewModel.birthPlace.isEmpty ? "選択してください" : profileViewModel.birthPlace)
+                                        .foregroundColor(.secondary)
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                }
+                            }
+                            .padding(.top, 20)
+                            // シートの定義
+                            .sheet(isPresented: $profileViewModel.isShowingBirthPlacePicker) {
+                                PrefectureSelectionView(profileViewModel: profileViewModel)
+                            }
+                            Divider()
+                            
+                            
+                            Text("コーヒーの好み")
                                 .font(.caption)
                                 .fontWeight(.bold)
                                 .foregroundColor(.secondary)
@@ -105,6 +148,7 @@ struct ProfileEditView: View {
                                 .padding(.bottom, 10)
                                 .padding(.leading, 0) // 必要に応じて調整
                             
+                            editField(label: "国名", text: $profileViewModel.favoriteCoffee,placeholder: "好きな国")
                             ratingRow(label: "苦味", rating: $profileViewModel.probitter)
                             ratingRow(label: "酸味", rating: $profileViewModel.proacidity)
                             ratingRow(label: "コク", rating: $profileViewModel.probody)
@@ -125,7 +169,7 @@ struct ProfileEditView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("保存") {
-                        profileViewModel.updateUser()
+                        profileViewModel.updateUser(viewModel: viewModel)
                         dismiss()
                     }
                     .bold()
@@ -200,22 +244,96 @@ struct ProfileEditView: View {
                 
                 Spacer() // 右側を空ける
             }
+            
             Divider()
         }
     }
 }
 
-#Preview {
-    // 1. プレビュー用のダミーデータを作成
-    let previewViewModel = ProfileViewModel()
+struct AgeSelectionView: View {
+    // @ObservableなViewModelを双方向バインディング可能にするために @Bindable を使用
+    @Environment(ViewModel.self) var viewModel
+    @Bindable var profileViewModel: ProfileViewModel
     
-    //    // 2. 初期値をセット（必要に応じて）
-    //    previewViewModel.userName = "コーヒー愛好家"
-    //    previewViewModel.selfIntroduction = "毎日自宅で豆を挽いています。\n美味しいコーヒーを探求中。"
-    //    previewViewModel.favoriteCoffee = "エチオピア"
-    //    previewViewModel.probitter = 3
-    //    previewViewModel.proacidity = 4
+    // シートを閉じるための環境変数
+    @Environment(\.dismiss) private var dismiss
     
-    // 3. Constantを使ってBindingとして渡す
-    return ProfileEditView(profileViewModel: .constant(previewViewModel))
+    var body: some View {
+        NavigationStack {
+            VStack {
+                // ドラムロール形式のピッカー
+                Picker("年齢", selection: $profileViewModel.userAge) {
+                    ForEach(profileViewModel.ages, id: \.self) { age in
+                        // ageは数値なので、文字列に変換して表示
+                        Text("\(age) 歳").tag(age)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .labelsHidden() // 余計なラベルを消して中央に配置
+                
+                Text("選択中の年齢: \(profileViewModel.userAge) 歳")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .padding(.top)
+            }
+            .navigationTitle("年齢を選択")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("完了") {
+                        // ユーザー情報を更新してから閉じる
+                        profileViewModel.updateUser(viewModel: viewModel)
+                        dismiss()
+                    }
+                }
+            }
+        }
+        // ハーフモーダルとして表示（iOS 16.0+）
+        .presentationDetents([.height(300)])
+        // ドラッグで閉じられないようにする場合は以下（任意）
+        // .interactiveDismissDisabled()
+    }
 }
+
+struct PrefectureSelectionView: View {
+    // ViewModelを双方向バインディング可能にする
+    @Environment(ViewModel.self) var viewModel
+    @Bindable var profileViewModel: ProfileViewModel
+    
+    // シートを閉じるための環境変数
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            VStack {
+                // ドラムロール形式のピッカー
+                Picker("都道府県", selection: $profileViewModel.birthPlace) {
+                    ForEach(profileViewModel.prefectures, id: \.self) { pref in
+                        // pref は「東京都」などの文字列。そのまま表示し、tagにも文字列を渡す
+                        Text(pref).tag(pref)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .labelsHidden() // 中央に配置
+                
+                Text("選択中: \(profileViewModel.birthPlace.isEmpty ? "未選択" : profileViewModel.birthPlace)")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .padding(.top)
+            }
+            .navigationTitle("都道府県を選択")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("完了") {
+                        profileViewModel.updateUser(viewModel: viewModel) // 必要に応じて更新処理
+                        dismiss()
+                    }
+                }
+            }
+        }
+        // 年齢と同じくハーフモーダルで表示
+        .presentationDetents([.height(300)])
+    }
+}
+

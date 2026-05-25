@@ -25,7 +25,7 @@ struct Log: Identifiable {
     var acidityrating2: Int
     var bodyrating2: Int
     var createdAt: Date
-    var logImage: UIImage?
+    var logImages: [UIImage]
     var textOffset: CGSize = .zero
     var tagX: CGFloat = 0
     var tagY: CGFloat = 0
@@ -36,6 +36,8 @@ struct User: Identifiable{
     let userNo: Int
     var userName: String
     var selfIntroduction: String
+    var userAge: Int
+    var birthPlace: String
     var favoriteCoffee: String
     var favoriteCoffeeImage: UIImage?
     var profileImage: UIImage?

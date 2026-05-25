@@ -69,7 +69,7 @@ struct MatchProfileView: View {
                                 endPoint: .bottom
                             )
                         )
-                        // カードの半分弱を画像にする
+                    // カードの半分弱を画像にする
                         .frame(height: screenHeight * 0.4)
                     
                     // プロフィール写真（中央に配置）
@@ -91,20 +91,6 @@ struct MatchProfileView: View {
                     // 名前
                     Text(profile.name)
                         .font(.system(size: 26, weight: .bold, design: .rounded))
-                    
-                    // コーヒーのスタイル
-                    Text(profile.coffeeStyle)
-                        .font(.caption)
-                        .fontWeight(.bold)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 4)
-                        .background(Color.brown.opacity(0.1))
-                        .foregroundColor(.brown)
-                        .cornerRadius(4) // ここも角を少し硬めに
-                    
-                    Divider()
-                        .padding(.horizontal, 40)
-                    
                     // 自己紹介（スクロールなしで収まるよう最大3行などに制限可能）
                     Text(profile.bio)
                         .font(.subheadline)
@@ -113,17 +99,18 @@ struct MatchProfileView: View {
                         .padding(.horizontal, 20)
                         .foregroundColor(.secondary)
                     
+                    Divider()
+                        .padding(.horizontal, 40)
+                    
+                    
                     Spacer()
                     
-                    // --- C. アクションボタン ---
-                    HStack(spacing: 60) {
-                        ActionButton(icon: "xmark", color: .red)
-                            .onTapGesture { print("Skip") }
-                        
-                        ActionButton(icon: "heart.fill", color: .green)
-                            .onTapGesture { print("Like") }
+                    Button{
+                    } label: {
+                        Text("フォロー")
+                            .font(.caption.bold())
+                            .foregroundColor(.blue)
                     }
-                    .padding(.bottom, 30)
                 }
                 .frame(maxWidth: .infinity)
             }
@@ -156,6 +143,8 @@ struct ActionButton: View {
     var body: some View {
         Image(systemName: icon)
             .font(.title.bold())
+        
+        
             .foregroundColor(color)
             .frame(width: 60, height: 60)
             .background(Color.white)

@@ -71,7 +71,7 @@ struct LogView: View {
     let log: Log
     var viewModel: ViewModel
     var profileViewModel: ProfileViewModel
-
+    
     var body: some View {
         // 投稿カードの内容
         VStack{
@@ -105,14 +105,36 @@ struct LogView: View {
             }
             ZStack(alignment: .bottomTrailing){
                 // --- 画像の表示処理 ---
-                if let uiImage = log.logImage {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .scaledToFill() // 枠いっぱいに広げる
-                        .aspectRatio(4/3, contentMode: .fit) // 👈 これを追加（4:3を維持）
-                        .frame(maxWidth: .infinity)
-                        .clipped() // 枠からはみ出た分をカット
-                        .cornerRadius(12)
+                // 画像が1枚以上ある場合
+                if !viewModel.logImages.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(0..<viewModel.logImages.count, id: \.self) { index in
+                                Image(uiImage: viewModel.logImages[index])
+                                    .resizable()
+                                    .scaledToFill() // 複数枚のときはFillで見栄えを統一
+                                    .frame(width: 200, height: 250) // 横スクロールしやすいサイズに
+                                    .cornerRadius(12)
+                                    .clipped()
+                            }
+                        }
+                        .padding(.horizontal, 4)
+                    }
+                    .frame(height: 250)
+                } else {
+                    // 画像がまだ選択されていない場合
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.secondary.opacity(0.1))
+                        .frame(height: 250)
+                        .overlay(
+                            VStack(spacing: 10) {
+                                Image(systemName: "photo.on.rectangle")
+                                    .font(.largeTitle)
+                                Text("写真が選択されていません")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                        )
                 }
                 VStack{
                     HStack {
@@ -132,7 +154,7 @@ struct LogView: View {
                         Text("RoastLevel:") // ラベル
                         Text(log.roastLevel)
                     }
-
+                    
                     //　星評価
                     HStack {
                         Text("BitternessRating:")
@@ -145,7 +167,7 @@ struct LogView: View {
                                     Image(systemName: "star")
                                 }
                             }
-
+                            
                             // 2. 前面の星（オレンジ・5つ）
                             HStack(spacing: 4) {
                                 ForEach(0..<5) { _ in
@@ -162,7 +184,7 @@ struct LogView: View {
                             )
                         }
                     }
-
+                    
                     HStack {
                         Text("AcidityRating:")
                             .padding(8)
@@ -174,7 +196,7 @@ struct LogView: View {
                                     Image(systemName: "star")
                                 }
                             }
-
+                            
                             // 2. 前面の星（オレンジ・5つ）
                             HStack(spacing: 4) {
                                 ForEach(0..<5) { _ in
@@ -203,7 +225,7 @@ struct LogView: View {
                                     Image(systemName: "star")
                                 }
                             }
-
+                            
                             // 2. 前面の星（オレンジ・5つ）
                             HStack(spacing: 4) {
                                 ForEach(0..<5) { _ in

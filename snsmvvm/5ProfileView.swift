@@ -8,153 +8,124 @@
 import SwiftUI
 
 struct ProfileView: View {
-    @State private var profileSelection = 0
     var viewModel: ViewModel
-    @State var profileViewModel = ProfileViewModel()
-    
-    // 画面の横幅を取得
-    //let screenWidth = UIScreen.main.bounds.width   ←これは古い
+    var profileViewModel: ProfileViewModel
+    @State private var profileSelection = 0
     
     // --- 【設定値】サイズ・デザイン ---
     let coverHeight: CGFloat = 250         // カバー写真の高さ
     let profileSize: CGFloat = 100         // プロフィール写真のサイズ（直径）
-    let overlapAmount: CGFloat = 0.4       // プロフィール写真がカバーに重なる割合（0.0〜1.0）
+    let overlapAmount: CGFloat = 0.6       // プロフィール写真がカバーからはみ出る割合
     let profileBorderColor: Color = .white   // プロフィール写真の縁取りの色
     
     var body: some View {
-        GeometryReader { geometry in
-            let screenWidth = geometry.size.width // ここで横幅を取得
-            NavigationStack{
-                ScrollView{
-                    // プロフィール編集ボタン
-                    HStack{
+        NavigationStack {
+            // 💡 画面全体のスクロールを1つに統合
+            ScrollView {
+                VStack(spacing: 0) {
+                    // --- 2. プロフィール編集ボタン ---
+                    HStack {
                         Spacer()
-                        Button{
+                        Button {
                             profileViewModel.isProfileEditSheet = true
                         } label: {
                             Text("プロフィールを編集")
                                 .font(Font.headline.bold())
-                                .padding(.vertical, 5)    // 上下の厚み（大きくしたい分だけ数値を増やす）
-                                .padding(.horizontal, 10)  // 左右の幅
+                                .padding(.vertical, 6)
+                                .padding(.horizontal, 12)
                                 .background(Color(.systemGray6))
                                 .foregroundColor(.primary)
                                 .cornerRadius(8)
                         }
-                        .padding(.top, 5)
-                        .padding(.trailing, 5)
-                        
                     }
-                    VStack {
+                    .padding(.horizontal, 16)
+                    
+                    // --- 1. 上部：画像重なりエリア (カバー写真 + プロフィール写真) ---
+                    ZStack(alignment: .bottom) {
+                        // --- A. カバー写真 ---
+                        if let uiImage = profileViewModel.favoriteCoffeeImage {
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(height: coverHeight)
+                                .clipped()
+                        } else {
+                            Color.gray.opacity(0.5)
+                                .frame(height: coverHeight)
+                        }
                         
-                        VStack(spacing: 0) {
-                            
-                            // 1. 上部：画像重なりエリア (カバー写真 + プロフィール写真)
-                            ZStack(alignment: .bottom) { // 下基準で重ねる
-                                
-                                // --- A. カバー写真 (一番奥) ---
-                                // Image(coverImageName) // 実画像を使う場合
-                                if let uiImage = profileViewModel.favoriteCoffeeImage {
-                                    // 画像がある場合
-                                    Image(uiImage: uiImage)
-                                        .resizable()
-                                        .scaledToFill()//これを入れないと、画像が元のサイズのまま表示されて枠からはみ出したり、逆に小さすぎたりします。
-                                        .frame(width: screenWidth, height: coverHeight)
-                                        .clipped()//指定した frame（枠）からはみ出た部分をきれいにカットしてくれます。
-                                } else {
-                                    // 画像がない場合（灰色の四角）
-                                    Color.gray.opacity(0.5)
-                                        .frame(width: screenWidth, height: coverHeight)
-                                }
-                                
-                                
-                                // .clipped() // 画像がはみ出る場合
-                                
-                                // --- B. プロフィール写真 (手前) ---
-                                // Image(profileImageName) // 実画像を使う場合
-                                if let uiImage = profileViewModel.profileImage {
-                                    // ✅ 画像がある場合：丸く切り抜いて表示
-                                    Image(uiImage: uiImage)
-                                        .resizable()
-                                        .scaledToFill()
-                                        .frame(width: profileSize, height: profileSize)
-                                        .clipShape(Circle()) // 画像を丸く切り抜く
-                                    // 👇 0.4 から 0.6 くらいに上げると、より「半分以上はみ出した」感じになります
-                                        .offset(y: profileSize * 0.6)
-                                    
-                                } else {
-                                    // ✅ 画像がない場合：人型アイコンを灰色で表示
-                                    Image(systemName: "person.crop.circle.fill")
-                                        .resizable() // アイコンもサイズ変更可能にする
-                                        .scaledToFit()
-                                        .frame(width: profileSize, height: profileSize)
-                                        .foregroundColor(.gray.opacity(0.6)) // アイコンの色を灰色に
-                                        .background(Color.white) // アイコンの後ろを白にして透過を防ぐ
-                                        .clipShape(Circle()) // 背景色も含めて丸くする
-                                        .offset(y: profileSize * 0.6)
-                                }
-                            }
-                            // ZStack自体の高さをカバー写真と同じにする（下のVStackへの影響を防ぐ）
-                            .frame(width: screenWidth, height: coverHeight)
-                            .padding(.bottom,80)
-                            
-                            
-                            VStack{
-                                HStack{
-                                    Spacer()
-                                    
-                                    Text(profileViewModel.user.userName)
-                                        .font(.title)
-                                    
-                                    Spacer()
-                                }
-                                // --- 自己紹介文エリア ---
-                                Text(profileViewModel.user.selfIntroduction)
-                                    .font(.body)
-                                    .padding(.top, 1)
-                                    .padding(.bottom, 15)
-                                    .multilineTextAlignment(.leading)
-                                    .lineSpacing(4) // 行間を少し空けると読みやすい
-                                    .fixedSize(horizontal: false, vertical: true) // テキストが長くても省略されないようにする
-                                //                                HStack(spacing: 2){
-                                //                                    profileViewModel.profileStat(count: "12", label: "投稿")
-                                //                                    profileViewModel.profileStat(count: "150", label: "フォロワー")
+                        // --- B. プロフィール写真 ---
+                        Group {
+                            if let uiImage = profileViewModel.profileImage {
+                                Image(uiImage: uiImage)
+                                    .resizable()
+                                    .scaledToFill()
+                            } else {
+                                Image(systemName: "person.crop.circle.fill")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .foregroundColor(.gray.opacity(0.6))
+                                    .background(Color.white)
                             }
                         }
+                        .frame(width: profileSize, height: profileSize)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(profileBorderColor, lineWidth: 3)) // 縁取りを追加
+                        // 💡 半分ほど下に飛び出させるオフセット処理
+                        .offset(y: profileSize * overlapAmount)
                     }
+                    // 下のコンテンツがプロフィール画像と被らないように、はみ出た分の余白を確保
+                    .padding(.bottom, profileSize * overlapAmount + 10)
                     
                     
-                    VStack{
-                        // 1. 見出し部分（Picker）
-                        Picker("", selection: $profileSelection) {
-                            Text("Post").tag(0)
-                            Text("Favorite Coffee").tag(1)
-                            Text("Favorite Tool").tag(2)
-                        }
-                        .padding(.top, 10)
-                        .padding(.bottom, 40)
-                        .pickerStyle(.segmented) // セグメント表示
+                    // --- 3. ユーザー名 ＆ 自己紹介 ---
+                    VStack(spacing: 8) {
+                        Text(profileViewModel.user.userName)
+                            .font(.title2)
+                            .bold()
                         
-                        TabView(selection: $profileSelection) {
-                            PostView(title: "Favorite Coffee",viewModel: viewModel,profileViewModel: profileViewModel)
-                                .tag(0)
-                            MyProfileView(title: "Post",profileViewModel: profileViewModel)
-                                .tag(1)
-                            FavoriteToolView(title: "Favorite Tool")
-                                .tag(2)
-                        }
-                        .tabViewStyle(.page)
-                        .frame(height: 600)
-                        .ignoresSafeArea()
+                        Text(profileViewModel.user.selfIntroduction)
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(4)
+                            .padding(.horizontal, 24)
+                    }
+                    .padding(.top, 10)
+                    
+                    // --- 4. タブ切り替え（Picker） ---
+                    Picker("", selection: $profileSelection) {
+                        Text("Post").tag(0)
+                        Text("Favorite Coffee").tag(1)
+                        Text("Favorite Tool").tag(2)
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 20)
+                    .padding(.bottom, 10)
+                    
+                    // --- 5. コンテンツエリア（if-elseによる切り替え） ---
+                    // 💡 ScrollViewの中にScrollViewを入れないため、各View内のScrollViewは排除します
+                    switch profileSelection {
+                    case 0:
+                        PostContentView()
+                    case 1:
+                        MyProfileContentView(profileViewModel: profileViewModel)
+                    case 2:
+                        FavoriteToolContentView()
+                    default:
+                        EmptyView()
                     }
                 }
-                .navigationTitle("プロフィール")
-                .navigationBarTitleDisplayMode(.inline)
             }
-            .sheet(isPresented: $profileViewModel.isProfileEditSheet){
-                ProfileEditView(profileViewModel: $profileViewModel)
+            .navigationTitle("プロフィール")
+            .sheet(isPresented: .init(
+                get: { profileViewModel.isProfileEditSheet },
+                set: { profileViewModel.isProfileEditSheet = $0 }
+            )){
+                // ⭕️ 新しく作らず、自分が持っている「本物のprofileViewModel」をそのまま渡す！
+                ProfileEditView(profileViewModel: self.profileViewModel)
                     .onAppear {
-                        // 👈 ここが重要！
-                        // メインの viewModel が持っている logs を、profileViewModel の logs にコピーする
                         profileViewModel.logs = viewModel.logs
                     }
             }
@@ -162,135 +133,149 @@ struct ProfileView: View {
     }
 }
 
-
-
-struct MyProfileView: View {
-    let title: String
+// 💡 各子ビューから重複する「ScrollView」を取り除き、中身だけに分離しました
+struct MyProfileContentView: View {
     var profileViewModel: ProfileViewModel
     
     var body: some View {
-        ScrollView{
-            LazyVStack(spacing: 20){
-                VStack(alignment: .leading, spacing: 10){
-                    HStack{
-                        Text("お気に入りのコーヒー：")
-                        Text(profileViewModel.user.favoriteCoffee)
-                    }
-                    
-                    RatingView(
-                        label: "苦味",
-                        rating: profileViewModel.user.probitter,
-                        maxRating: profileViewModel.maxRating
-                    )
-                    
-                    RatingView(
-                        label: "酸味",
-                        rating: profileViewModel.user.proacidity,
-                        maxRating: profileViewModel.maxRating
-                    )
-                    
-                    RatingView(
-                        label: "コク",
-                        rating: profileViewModel.user.probody,
-                        maxRating: profileViewModel.maxRating
-                    )
-                    
-                    RatingView(
-                        label: "香り",
-                        rating: profileViewModel.user.proaroma,
-                        maxRating: profileViewModel.maxRating
-                    )
-                    
-                    HStack{
-                        Text("フレーバー：")
-                        Text("アッシー")
-                    }
-                }
-                
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("お気に入りのコーヒー：")
+                    .bold()
+                Text(profileViewModel.user.favoriteCoffee)
+            }
+            
+            VStack(spacing: 12) {
+                RatingView(label: "苦味", rating: profileViewModel.user.probitter, maxRating: profileViewModel.maxRating)
+                RatingView(label: "酸味", rating: profileViewModel.user.proacidity, maxRating: profileViewModel.maxRating)
+                RatingView(label: "コク", rating: profileViewModel.user.probody, maxRating: profileViewModel.maxRating)
+                RatingView(label: "香り", rating: profileViewModel.user.proaroma, maxRating: profileViewModel.maxRating)
+            }
+            
+            HStack {
+                Text("フレーバー：").bold()
+                Text("アッシー")
             }
         }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
-struct PostView: View {
-    let title: String
-    var viewModel: ViewModel
-    var profileViewModel: ProfileViewModel
+struct PostContentView: View {
+    @Environment(ViewModel.self) var viewModel
+    @Environment(ProfileViewModel.self) var profileViewModel
     
     var body: some View {
-        // 縦方向のスワイプをシミュレート
-        ScrollView(.vertical, showsIndicators: false) {
-            LazyVStack(spacing: 0) {
-                ForEach(viewModel.logs) { log in
-                    VStack {
-                        PostCardView(log: log, viewModel: viewModel,profileViewModel: profileViewModel,isEditable: false)
-                    }
-                }
+        LazyVStack(spacing: 16) {
+            ForEach(viewModel.logs) { log in
+                PostCardView(log: log,isEditable: false)
             }
         }
+        .padding(.vertical, 10)
     }
 }
 
-struct FavoriteToolView: View {
-    let title: String
-    
+struct FavoriteToolContentView: View {
     var body: some View {
-        ScrollView{
-            LazyVStack(spacing: 20){
-                EmptyView()
-            }
+        VStack {
+            Text("お気に入りの器具はまだ登録されていません")
+                .foregroundColor(.secondary)
+                .font(.footnote)
+                .padding(.top, 40)
         }
     }
 }
 
+// --- 以下、PostCardView などのコンポーネントは元のままで綺麗に動きます ---
+/// 単一のポストカード
 /// 単一のポストカード
 struct PostCardView: View {
     let log: Log
-    var viewModel: ViewModel
-    var profileViewModel: ProfileViewModel
+    @Environment(ViewModel.self) var viewModel
+    @Environment(ProfileViewModel.self) var profileViewModel
     var isEditable: Bool
     
     @State private var dragOffset: CGSize = .zero
     let profileSize: CGFloat = 40
     
-    // ✅ 算出プロパティにしてコードをスッキリさせる
     // 投稿者が自分かどうかを判定
     private var isMyPost: Bool {
         log.user.userNo == profileViewModel.user.userNo
     }
     
+    // 💡 表示に使うユーザー情報を動的に切り替えるプロパティ
+    private var displayUser: User {
+        isMyPost ? profileViewModel.user : log.user
+    }
+    
     var body: some View {
-        VStack(spacing: 12) {
-            // --- ヘッダーエリア ---
-            HStack(spacing: 10) {
-                // プロフィール画像：自分なら最新の image、他人なら log 保持の image
-                if let uiImage = isMyPost ? profileViewModel.profileImage : nil { // 他人の画像保持ロジックがあればここに入れる
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: profileSize, height: profileSize)
-                        .clipShape(Circle())
-                } else {
-                    Image(systemName: "person.crop.circle.fill")
-                        .resizable()
-                        .frame(width: profileSize, height: profileSize)
-                        .foregroundColor(.gray.opacity(0.6))
-                        .background(Color.white)
-                        .clipShape(Circle())
+        // ⚠️ bodyの直下を大きなVStackで包むことで、全体のレイアウトを縦に並べます
+        VStack(spacing: 16) {
+            
+            // --- ① ヘッダーエリア ---
+            HStack(spacing: 12) { // ユーザ情報とメニューを横並びにするためHStackがおすすめ
+                // --- B. プロフィール写真 ---
+                Group {
+                    if let uiImage = displayUser.profileImage {
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        Image(systemName: "person.crop.circle.fill")
+                            .resizable()
+                            .scaledToFit()
+                            .foregroundColor(.gray.opacity(0.6))
+                            .background(Color.white)
+                    }
                 }
+                .frame(width: profileSize, height: profileSize)
+                .clipShape(Circle())
+//                // 画像の表示ロジック
+//                if isMyPost {
+//                    if let uiImage = profileViewModel.profileImage {
+//                        Image(uiImage: uiImage)
+//                            .resizable()
+//                            .scaledToFill()
+//                            .frame(width: profileSize, height: profileSize)
+//                            .clipShape(Circle())
+//                    } else {
+//                        Image(systemName: "person.crop.circle.fill")
+//                            .resizable()
+//                            .frame(width: profileSize, height: profileSize)
+//                            .foregroundColor(.gray.opacity(0.6))
+//                    }
+//                } else {
+//                    if let uiImage = log.logImages.first {
+//                        Image(uiImage: uiImage)
+//                            .resizable()
+//                            .scaledToFill()
+//                            .frame(width: profileSize, height: profileSize)
+//                            .clipShape(Circle())
+//                    } else {
+//                        Image(systemName: "person.crop.circle.fill")
+//                            .resizable()
+//                            .frame(width: profileSize, height: profileSize)
+//                            .foregroundColor(.gray.opacity(0.6))
+//                    }
+//                }
                 
-                // 名前：自分なら最新の userName、他人なら log の userName
-                Text(isMyPost ? profileViewModel.user.userName : log.user.userName)
-                    .font(.subheadline)
+                // 名前
+                Text(displayUser.userName.isEmpty ? "名無しのユーザー" : displayUser.userName)
+                    .font(.title2)
                     .bold()
+
+                
+                
                 
                 Spacer()
                 
+                // 日付
                 Text(log.createdAt, style: .date)
                     .font(.caption)
                     .foregroundColor(.secondary)
                 
-                // 自分自身の投稿の時だけメニュー（編集・削除）を出す
+                // 編集・削除メニュー
                 if isMyPost {
                     Menu {
                         Button {
@@ -311,42 +296,51 @@ struct PostCardView: View {
                     }
                 }
             }
-            .padding(.horizontal, 5)
+            .padding(.horizontal, 12)
             
-            // --- 画像・テキストオーバーレイエリア ---
+            // --- ② 画像・テキストオーバーレイエリア ---
             ZStack {
-                if let uiImage = log.logImage {
-                    Image(uiImage: uiImage)
+                if let firstImage = log.logImages.first {
+                    Image(uiImage: firstImage)
                         .resizable()
                         .scaledToFill()
-                        .aspectRatio(4/3, contentMode: .fill) // .fitから.fillに変更して枠を埋める
+                        .frame(height: 250)
                         .frame(maxWidth: .infinity)
                         .cornerRadius(12)
                         .clipped()
                 } else {
-                    // 画像がない時のプレースホルダー
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(.systemGray5))
-                        .aspectRatio(4/3, contentMode: .fit)
+                        .fill(Color.secondary.opacity(0.1))
+                        .frame(height: 250)
+                        .frame(maxWidth: .infinity)
+                        .overlay(
+                            VStack(spacing: 10) {
+                                Image(systemName: "photo.on.rectangle")
+                                    .font(.largeTitle)
+                                Text("写真が選択されていません")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                        )
                 }
                 
                 // ドラッグ可能な情報タグ
                 VStack(alignment: .leading, spacing: 4) {
                     Group {
                         Text("Shop: \(log.shopName)")
-                        Text("Origin: \(log.countryName)") // County -> Origin
+                        Text("Origin: \(log.countryName)")
                         Text("Farm: \(log.farmName)")
                         Text("Roast: \(log.roastLevel)")
                     }
                     .font(.system(size: 12, weight: .bold, design: .monospaced))
                 }
                 .padding(10)
-                .background(.ultraThinMaterial) // iOSらしい半透明背景
+                .background(.ultraThinMaterial)
                 .cornerRadius(8)
                 .foregroundColor(.primary)
                 .offset(
-                    x: isEditable ?viewModel.currentOffsetX + dragOffset.width : log.tagX,
-                    y: isEditable ?viewModel.currentOffsetY + dragOffset.height : log.tagY
+                    x: isEditable ? viewModel.currentOffsetX + dragOffset.width : log.tagX,
+                    y: isEditable ? viewModel.currentOffsetY + dragOffset.height : log.tagY
                 )
                 .gesture(
                     isEditable ?
@@ -355,143 +349,85 @@ struct PostCardView: View {
                             dragOffset = value.translation
                         }
                         .onEnded { value in
-                            // ViewModel の値を直接更新して、動かした位置を「確定」させる
                             viewModel.currentOffsetX += value.translation.width
                             viewModel.currentOffsetY += value.translation.height
-                            dragOffset = .zero// アニメーションや微調整用のドラッグ距離はリセット
+                            dragOffset = .zero
                         }
                     : nil
-                    
-                    // アニメーションや微調整用のドラッグ距離はリセット
-                    
-                    
                 )
             }
-            VStack{
-                //　星評価
+            
+            // --- ③ 評価・コメントエリア ---
+            VStack(alignment: .leading, spacing: 8) {
+                // Bitterness
                 HStack {
-                    Text("BitternessRating:")
-                        .padding(8)
-                    let avgRating =  Double(log.bitternessrating1 + log.bitternessrating2) / 2.0
-                    ZStack(alignment: .leading) {
-                        // 1. 背景の星（グレー・5つ）
-                        HStack(spacing: 4) {
-                            ForEach(0..<5) { _ in
-                                Image(systemName: "star")
-                            }
-                        }
-                        
-                        // 2. 前面の星（オレンジ・5つ）
-                        HStack(spacing: 4) {
-                            ForEach(0..<5) { _ in
-                                Image(systemName: "star.fill")
-                            }
-                        }
-                        // 3. ここがポイント：前面の星を「平均値の割合」で切り抜く
-                        .mask(
-                            GeometryReader { geometry in
-                                Rectangle()
-                                // 星5つ分（100%）に対して、(rating / 5) の幅だけ表示する
-                                    .frame(width: geometry.size.width * CGFloat(avgRating / 5.0))
-                            }
-                        )
-                    }
+                    Text("Bitterness:")
+                        .frame(width: 90, alignment: .leading)
+                    let avgBitterness = Double(log.bitternessrating1 + log.bitternessrating2) / 2.0
+                    CustomStarRating(rating: avgBitterness)
                 }
                 
+                // Acidity
                 HStack {
-                    Text("AcidityRating:")
-                        .padding(8)
-                    let avgRating =  Double(log.acidityrating1 + log.acidityrating2) / 2.0
-                    ZStack(alignment: .leading) {
-                        // 1. 背景の星（グレー・5つ）
-                        HStack(spacing: 4) {
-                            ForEach(0..<5) { _ in
-                                Image(systemName: "star")
-                            }
-                        }
-                        
-                        // 2. 前面の星（オレンジ・5つ）
-                        HStack(spacing: 4) {
-                            ForEach(0..<5) { _ in
-                                Image(systemName: "star.fill")
-                            }
-                        }
-                        // 3. ここがポイント：前面の星を「平均値の割合」で切り抜く
-                        .mask(
-                            GeometryReader { geometry in
-                                Rectangle()
-                                // 星5つ分（100%）に対して、(rating / 5) の幅だけ表示する
-                                    .frame(width: geometry.size.width * CGFloat(avgRating / 5.0))
-                            }
-                        )
-                    }
+                    Text("Acidity:")
+                        .frame(width: 90, alignment: .leading)
+                    let avgAcidity = Double(log.acidityrating1 + log.acidityrating2) / 2.0
+                    CustomStarRating(rating: avgAcidity)
                 }
                 
+                // Body
                 HStack {
-                    Text("BodyRating:")
-                        .padding(8)
-                    let avgRating =  Double(log.bodyrating1 + log.bodyrating2) / 2.0
-                    ZStack(alignment: .leading) {
-                        // 1. 背景の星（グレー・5つ）
-                        HStack(spacing: 4) {
-                            ForEach(0..<5) { _ in
-                                Image(systemName: "star")
-                            }
-                        }
-                        
-                        // 2. 前面の星（オレンジ・5つ）
-                        HStack(spacing: 4) {
-                            ForEach(0..<5) { _ in
-                                Image(systemName: "star.fill")
-                            }
-                        }
-                        // 3. ここがポイント：前面の星を「平均値の割合」で切り抜く
-                        .mask(
-                            GeometryReader { geometry in
-                                Rectangle()
-                                // 星5つ分（100%）に対して、(rating / 5) の幅だけ表示する
-                                    .frame(width: geometry.size.width * CGFloat(avgRating / 5.0))
-                            }
-                        )
-                    }
+                    Text("Body:")
+                        .frame(width: 90, alignment: .leading)
+                    let avgBody = Double(log.bodyrating1 + log.bodyrating2) / 2.0
+                    CustomStarRating(rating: avgBody)
                 }
                 
+                // Aroma
                 HStack {
-                    Text("AromaRating:")
-                        .padding(8)
-                    ZStack(alignment: .leading) {
-                        // 1. 背景の星（グレー・5つ）
-                        HStack(spacing: 4) {
-                            ForEach(0..<5) { _ in
-                                Image(systemName: "star")
-                            }
-                        }
-                        
-                        // 2. 前面の星（オレンジ・5つ）
-                        HStack(spacing: 4) {
-                            ForEach(0..<5) { _ in
-                                Image(systemName: "star.fill")
-                            }
-                        }
-                        // 3. ここがポイント：前面の星を「平均値の割合」で切り抜く
-                        .mask(
-                            GeometryReader { geometry in
-                                Rectangle()
-                                // 星5つ分（100%）に対して、(rating / 5) の幅だけ表示する
-                                    .frame(width: geometry.size.width * CGFloat(Double(log.aromarating) / 5.0))//Doubleどうしてこれが必要なのか
-                            }
-                        )
-                    }
+                    Text("Aroma:")
+                        .frame(width: 90, alignment: .leading)
+                    CustomStarRating(rating: Double(log.aromarating))
                 }
-                HStack {
-                    Text("香りの種類:") // ラベル
-                    Text(log.aromaComment)
+                
+                if !log.aromaComment.isEmpty {
+                    HStack {
+                        Text("香りの種類:")
+                            .foregroundColor(.secondary)
+                        Text(log.aromaComment)
+                    }
+                    .font(.footnote)
+                    .padding(.top, 4)
                 }
             }
-            .padding(15)
-            .foregroundColor(.black)
+            .font(.subheadline)
+            .padding(.horizontal, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(40)
+        .padding(.horizontal, 16) // 全体の余白
+        .padding(.vertical, 12)
+    } // <- body の閉じ括弧
+} // <- PostCardView の閉じ括弧
+
+// 💡 星のマスク描画部分を、すっきり共通コンポーネント化しました
+struct CustomStarRating: View {
+    let rating: Double
+    
+    var body: some View {
+        ZStack(alignment: .leading) {
+            HStack(spacing: 4) {
+                ForEach(0..<5) { _ in Image(systemName: "star").foregroundColor(.gray.opacity(0.4)) }
+            }
+            HStack(spacing: 4) {
+                ForEach(0..<5) { _ in Image(systemName: "star.fill").foregroundColor(.orange) }
+            }
+            .mask(
+                GeometryReader { geometry in
+                    Rectangle()
+                        .frame(width: geometry.size.width * CGFloat(rating / 5.0))
+                }
+            )
+        }
     }
 }
 
@@ -523,6 +459,7 @@ struct RatingView: View {
 
 
 
+
 #Preview {
     // 1. メインの ViewModel を作成し、サンプル投稿を追加
     let sharedViewModel = ViewModel()
@@ -532,6 +469,8 @@ struct RatingView: View {
         userNo: 1,
         userName: "コーヒー愛好家",
         selfIntroduction: "毎日自宅で豆を挽いてドリップしています。\n浅煎りのエチオピアが特に好きです。",
+        userAge: 21,
+        birthPlace: "神奈川県",
         favoriteCoffee: "エチオピア イルガチェフェ",
         probitter: 2,
         proacidity: 5,
@@ -557,7 +496,7 @@ struct RatingView: View {
             acidityrating2: 4,
             bodyrating2: 3,
             createdAt: Date(),
-            logImage: UIImage(systemName: "cup.and.saucer.fill"),
+            logImages: [UIImage(systemName: "bean.fill") ?? UIImage()],
             tagX: 10,
             tagY: 20
         ),
@@ -576,17 +515,17 @@ struct RatingView: View {
             acidityrating2: 3,
             bodyrating2: 4,
             createdAt: Date().addingTimeInterval(-86400), // 1日前
-            logImage: UIImage(systemName: "bean.fill"),
+            logImages: [UIImage(systemName: "bean.fill") ?? UIImage()],
             tagX: -30,
             tagY: -10
         )
     ]
-    
-    // 2. プロフィール用の ViewModel を作成
+    // ProfileView.swift の #Preview の中
     let sharedProfileViewModel = ProfileViewModel()
     sharedProfileViewModel.user = sampleUser
-    // 初期表示のために同期
-    sharedProfileViewModel.logs = sharedViewModel.logs
+    // 💡 プレビュー用のダミー画像をセットしてあげる
+    sharedProfileViewModel.profileImage = UIImage(systemName: "person.circle.fill")
+    sharedProfileViewModel.favoriteCoffeeImage = UIImage(systemName: "photo")
     
     // 3. ProfileView 本体をプレビュー
     return ProfileView(
@@ -594,4 +533,3 @@ struct RatingView: View {
         profileViewModel: sharedProfileViewModel
     )
 }
-

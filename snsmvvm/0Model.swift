@@ -31,6 +31,18 @@ struct Log: Identifiable {
     var tagY: CGFloat = 0
 }
 
+struct Tool: Identifiable{
+    let id: UUID = UUID()
+    var dripper: String
+    var paperFilter: String
+    var kettle: String
+    var server: String
+    var mill: String
+    var grinder: String
+    var espressoMachine: String
+    var toolImage: UIImage?
+}
+
 struct User: Identifiable{
     let id: UUID = UUID()
     let userNo: Int
@@ -46,4 +58,5 @@ struct User: Identifiable{
     var probody: Int
     var proaroma: Int
     var proflavor: String
+    //var tool: Tool
 }

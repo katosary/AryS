@@ -5,30 +5,62 @@
 //  Created by katoso on 2026/02/25.
 //
 
-// このファイルは、投稿一覧を表示し、新規投稿や編集・削除を行うためのメイン画面(View)を定義します
-
-// MARK: - View 本体
-
 import SwiftUI
 
 struct ContentView: View {
     @State var viewModel = ViewModel()
-    @State var profileViewModel = ProfileViewModel()
+    @Environment(ProfileViewModel.self) var profileViewModel
     @State var matchingViewModel = MatchingViewModel()
     
+    // 💡 メニューの開閉状態を管理するStateを追加
+    @State private var isMenuPresented = false
+    @State private var isShowingSelectShop = false
+    
     // 配色の定義
-    let backgroundColor = Color(red: 0.98, green: 0.96, blue: 0.94)
+    let backgroundColor = Color(.white)//red: 0.98, green: 0.96, blue: 0.94
     let barColor = Color(red: 0.23, green: 0.23, blue: 0.23)
     
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // --- 1. 自作の細い上部ナビゲーションバー ---
+                // --- 1. 自作の上部ナビゲーションバー ---
                 ZStack {
                     barColor.ignoresSafeArea(edges: .top)
+                    
+                    // アプリ名
                     Text("アプリ名")
                         .font(.system(size: 16, weight: .regular))
                         .foregroundColor(.white)
+                    
+                    // 💡 左右のボタンを配置するHStack
+                    HStack {
+                        // 【追加】左側のメニューボタン
+                        Button {
+                            isMenuPresented = true // タップでメニューを開く
+                        } label: {
+                            Image(systemName: "line.3.horizontal")
+                                .font(.body)
+                                .fontWeight(.bold)
+                                .padding(8)
+                                .foregroundColor(.white)
+                        }
+                        .padding(.leading, 12) // 左側に少し余白を作る
+
+                        Spacer() // これでプラスボタンは左、メニューボタンは右に押し分けられます
+                        
+                        // 右側の投稿ボタン
+                        Button {
+                            // プラスボタンが押された時のアクションをここに書く
+                            isShowingSelectShop = true
+                        } label: {
+                            Image(systemName: "plus")
+                                .font(.body)
+                                .fontWeight(.bold)
+                                .padding(8)
+                                .foregroundColor(.white)
+                        }
+                        .padding(.trailing, 12) // 右側に少し余白を作る
+                    }
                 }
                 .frame(height: 40) // 高さを自由に調整
                 
@@ -40,8 +72,8 @@ struct ContentView: View {
                     Group {
                         switch viewModel.selectedTab {
                         case 0: HomeView(viewModel: viewModel, profileViewModel: profileViewModel)
-                        case 1: SearchView(viewModel: viewModel)
-                        case 2: SelectShopView().environment(viewModel)
+                        case 1: SearchView(viewModel: viewModel,profileViewModel: profileViewModel)
+                        case 2: TalkView()
                         case 3: MatchingView(matchingViewModel: matchingViewModel)
                         case 4: ProfileView(viewModel: viewModel, profileViewModel: profileViewModel)
                         default: EmptyView()
@@ -53,6 +85,28 @@ struct ContentView: View {
                 customTabBar
             }
             .navigationBarHidden(true) // 標準バーを隠す
+            // 💡 メニューシートの表示ロジックをここへ引っ越し
+            .sheet(isPresented: $isMenuPresented) {
+                ProfileMenuView(profileViewModel: profileViewModel)
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            }
+            // 💡 プロフィール編集シートも、ProfileMenuView内のボタンから連動して開くためここに配置
+            .sheet(isPresented: .init(
+                get: { profileViewModel.isProfileEditSheet },
+                set: { profileViewModel.isProfileEditSheet = $0 }
+            )){
+                ProfileEditView(profileViewModel: self.profileViewModel)
+                    .onAppear {
+                        profileViewModel.logs = viewModel.logs
+                    }
+            }
+            .sheet(isPresented: $isShowingSelectShop) {
+                // SelectShopView は遷移先を持つため NavigationStack で囲むのが一般的です
+                NavigationStack {
+                    SelectShopView()
+                }
+            }
         }
     }
 }
@@ -63,7 +117,7 @@ extension ContentView {
         HStack(spacing: 0) {
             tabButton(image: "house", fillImage: "house.fill", label: "ホーム", tag: 0)
             tabButton(image: "magnifyingglass", fillImage: "magnifyingglass", label: "見つける", tag: 1)
-            tabButton(image: "plus.app", fillImage: "plus.app.fill", label: "投稿", tag: 2)
+            tabButton(image: "message", fillImage: "message.fill", label: "トーク", tag: 2)
             tabButton(image: "person.3", fillImage: "person.3.fill", label: "マッチ", tag: 3)
             tabButton(image: "person.circle", fillImage: "person.circle.fill", label: "プロフィール", tag: 4)
         }
@@ -90,6 +144,7 @@ extension ContentView {
         }
     }
 }
+
 // MARK: - Preview
 #Preview {
     ContentView()

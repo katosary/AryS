@@ -9,7 +9,6 @@ import SwiftUI
 import PhotosUI
 
 struct SelectShopView : View {
-    // --- 追加: 環境から ViewModel を取得 ---
     @Environment(ViewModel.self) var viewModel
     @Environment(ProfileViewModel.self) var profileViewModel
     
@@ -20,29 +19,60 @@ struct SelectShopView : View {
                 .fontWeight(.bold)
                 .padding(.bottom, 20)
             
-            // カフェを探すボタン
-            // これで viewModel と profileViewModel がこのスコープ内で使えるようになります
             NavigationLink(destination: ShopLogView()) {
-                SearchMenuButton(title: "カフェ", subtitle: "お近くの店舗", icon: "mappin.and.ellipse", color: .orange)
+                LogSelectButton(title: "カフェ", subtitle: "お近くの店舗", icon: "mappin.and.ellipse", color: .orange)
             }
             
-            // オンラインショップを探すボタン
             NavigationLink(destination: OnlineShopLogView()) {
-                SearchMenuButton(title: "オンラインショップ", subtitle: "お家で楽しむアイテム", icon: "cart.fill", color: .blue)
+                LogSelectButton(title: "オンラインショップ", subtitle: "お家で楽しむアイテム", icon: "cart.fill", color: .blue)
             }
             
             NavigationLink(destination: QRcoadView()) {
-                SearchMenuButton(title: "QRコード", subtitle: "QRコードをお持ちの方はこちら", icon: "qrcode.viewfinder", color: .yellow)
+                LogSelectButton(title: "QRコード", subtitle: "QRコードをお持ちの方はこちら", icon: "qrcode.viewfinder", color: .yellow)
             }
-            
-            
-            
             Spacer()
         }
         .padding(20)
         .navigationTitle("検索")
     }
 }
+
+// ボタンの共通スタイル
+struct LogSelectButton: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        HStack {
+            Image(systemName: icon)
+                .font(.system(size: 30))
+                .foregroundColor(.white)
+                .frame(width: 60)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.headline)
+                    .foregroundColor(.white)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.8))
+            }
+            
+            Spacer()
+            
+            Image(systemName: "chevron.right")
+                .foregroundColor(.white.opacity(0.5))
+        }
+        .padding()
+        .frame(maxWidth: .infinity, minHeight: 100)
+        .background(color)
+        .cornerRadius(15)
+        .shadow(radius: 5)
+    }
+}
+
 
 
 struct ShopLogView: View {
@@ -346,8 +376,6 @@ struct ShopLogView: View {
         VStack(spacing: 20) {
             Text("表示位置を調整してください").font(.headline)
             Text("アイコンをドラッグして、味のポジションを微調整できます。").font(.caption).foregroundColor(.secondary)
-            // プレビュー用のカードを表示
-            // ここではまだ投稿前なので、現在入力中のデータから一時的な Log を生成して表示します
             if let previewLog = createPreviewLog() {
                 PostCardView(log: previewLog, isEditable: true)
                     .frame(height: 500) // プレビューに適したサイズに調整
@@ -355,9 +383,8 @@ struct ShopLogView: View {
                     .cornerRadius(15)
                     .shadow(radius: 5)
             }
-            //---投稿ボタン　※最後のページに貼り付ける ---
+            
             Button {
-                // アクションの処理をしっかり { } で囲む
                 viewModel.addLog(currentUser: profileViewModel.user)
                 dismiss()
             } label: {
@@ -365,7 +392,6 @@ struct ShopLogView: View {
                     .bold()
                     .frame(maxWidth: .infinity)
                     .padding()
-                    // 条件分岐をスッキリさせる（SwiftUIのモダンな書き方）
                     .background(viewModel.aromarating == 0 ? Color.gray : Color.blue)
                     .foregroundColor(.white)
                     .cornerRadius(10)
@@ -378,21 +404,17 @@ struct ShopLogView: View {
     private func editField(label: String, text: Binding<String>, placeholder: String, isMultiLine: Bool = false) -> some View {
         VStack(spacing: 0) {
             HStack(alignment: .top) {
-                // 見出しラベル
                 Text(label)
                     .font(.body)
                     .frame(width: 100, alignment: .leading)
                     .padding(.vertical, 12)
                 
-                // 入力欄
                 if isMultiLine {
-                    // 複数行の場合
                     TextField(placeholder, text: text, axis: .vertical)
                         .font(.body)
                         .lineLimit(3...6) // 3行〜6行
                         .padding(.vertical, 12)
                 } else {
-                    // 1行の場合
                     TextField(placeholder, text: text)
                         .font(.body)
                         .lineLimit(1) // 1行固定

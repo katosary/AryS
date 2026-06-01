@@ -11,7 +11,7 @@ import PhotosUI
 
 @Observable
 class ProfileViewModel {
-    var user: User = User(userNo: 1, userName: "コーヒー好き", selfIntroduction: "",userAge: 0, birthPlace: "",favoriteCoffee: "",profileImage: UIImage(systemName: "person.circle.fill"),probitter: 0, proacidity: 0, probody: 0, proaroma: 0, proflavor: "")
+    var user: User = User(userNo: 1, userName: "", selfIntroduction: "",userAge: 0, birthPlace: "",favoriteCoffee: "",profileImage: nil,probitter: 0, proacidity: 0, probody: 0, proaroma: 0, proflavor: "")
     var logs: [Log] = []
     var userName: String = ""
     var selfIntroduction: String = ""

@@ -43,7 +43,6 @@ struct MatchingView: View {
     }
 }
 
-// --- 2. 1人分のプロフィール表示 (カードの中身) ---
 // --- 2. 1人分のプロフィール表示 (カードデザイン版) ---
 struct MatchProfileView: View {
     let profile: UserProfile
@@ -105,11 +104,28 @@ struct MatchProfileView: View {
                     
                     Spacer()
                     
-                    Button{
-                    } label: {
-                        Text("フォロー")
-                            .font(.caption.bold())
-                            .foregroundColor(.blue)
+                    HStack{
+                        Button{
+                        } label: {
+                            Image(systemName: "person.crop.circle")
+                                .font(.system(size: 60))
+                                .foregroundColor(.blue)
+                                .padding(20)
+                        }
+                        Button{
+                        } label: {
+                            Image(systemName: "square.and.arrow.down")
+                                .font(.system(size: 60))
+                                .foregroundColor(.red)
+                                .padding(20)
+                        }
+                        Button{
+                        } label: {
+                            Image(systemName: "heart.fill")
+                                .font(.system(size: 60))
+                                .foregroundColor(.red)
+                                .padding(20)
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity)

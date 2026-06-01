@@ -56,14 +56,14 @@ struct HomeView: View {
 // 各リストの表示用
 struct FollowersView: View {
     var body: some View{
-        EmptyView()
+        Text("ここにフォロワーの投稿が表示される")
     }
 }
 
 
 struct RecommendView: View{
     var body: some View{
-        EmptyView()
+        Text("ここにアプリ全体でバズっている投稿が表示される")
     }
 }
 
@@ -244,7 +244,7 @@ struct LogView: View {
                     }
                 }
                 .padding(15)
-                .foregroundColor(.white)
+                .foregroundColor(.black)
             }
         }
         .padding(20)

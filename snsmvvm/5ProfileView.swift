@@ -11,6 +11,7 @@ struct ProfileView: View {
     var viewModel: ViewModel
     var profileViewModel: ProfileViewModel
     @State private var profileSelection = 0
+    @State private var isMenuPresented = false
     
     // --- 【設定値】サイズ・デザイン ---
     let coverHeight: CGFloat = 250         // カバー写真の高さ
@@ -19,116 +20,96 @@ struct ProfileView: View {
     let profileBorderColor: Color = .white   // プロフィール写真の縁取りの色
     
     var body: some View {
-        NavigationStack {
-            // 💡 画面全体のスクロールを1つに統合
-            ScrollView {
-                VStack(spacing: 0) {
-                    // --- 2. プロフィール編集ボタン ---
-                    HStack {
-                        Spacer()
-                        Button {
-                            profileViewModel.isProfileEditSheet = true
-                        } label: {
-                            Text("プロフィールを編集")
-                                .font(Font.headline.bold())
-                                .padding(.vertical, 6)
-                                .padding(.horizontal, 12)
-                                .background(Color(.systemGray6))
-                                .foregroundColor(.primary)
-                                .cornerRadius(8)
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    
-                    // --- 1. 上部：画像重なりエリア (カバー写真 + プロフィール写真) ---
-                    ZStack(alignment: .bottom) {
-                        // --- A. カバー写真 ---
-                        if let uiImage = profileViewModel.favoriteCoffeeImage {
-                            Image(uiImage: uiImage)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(height: coverHeight)
-                                .clipped()
-                        } else {
-                            Color.gray.opacity(0.5)
-                                .frame(height: coverHeight)
-                        }
-                        
-                        // --- B. プロフィール写真 ---
-                        Group {
-                            if let uiImage = profileViewModel.profileImage {
+        LazyVStack{
+            NavigationStack {
+                // 💡 画面全体のスクロールを1つに統合
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // --- 1. 上部：画像重なりエリア (カバー写真 + プロフィール写真) ---
+                        ZStack(alignment: .bottom) {
+                            // --- A. カバー写真 ---
+                            if let uiImage = profileViewModel.favoriteCoffeeImage {
                                 Image(uiImage: uiImage)
                                     .resizable()
                                     .scaledToFill()
+                                    .frame(height: coverHeight)
+                                    .clipped()
                             } else {
-                                Image(systemName: "person.crop.circle.fill")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .foregroundColor(.gray.opacity(0.6))
-                                    .background(Color.white)
+                                Color.gray.opacity(0.5)
+                                    .frame(height: coverHeight)
                             }
+                            // --- B. プロフィール写真 ---
+                            Group {
+                                if let uiImage = profileViewModel.profileImage {
+                                    Image(uiImage: uiImage)
+                                        .resizable()
+                                        .scaledToFill()
+                                } else {
+                                    Image(systemName: "person.crop.circle.fill")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .foregroundColor(.gray.opacity(0.6))
+                                        .background(Color.white)
+                                }
+                            }
+                            .frame(width: profileSize, height: profileSize)
+                            .clipShape(Circle())
+                            .overlay(Circle().stroke(profileBorderColor, lineWidth: 3)) // 縁取りを追加
+                            // 💡 半分ほど下に飛び出させるオフセット処理
+                            .offset(y: profileSize * overlapAmount)
+                            
                         }
-                        .frame(width: profileSize, height: profileSize)
-                        .clipShape(Circle())
-                        .overlay(Circle().stroke(profileBorderColor, lineWidth: 3)) // 縁取りを追加
-                        // 💡 半分ほど下に飛び出させるオフセット処理
-                        .offset(y: profileSize * overlapAmount)
-                    }
-                    // 下のコンテンツがプロフィール画像と被らないように、はみ出た分の余白を確保
-                    .padding(.bottom, profileSize * overlapAmount + 10)
-                    
-                    
-                    // --- 3. ユーザー名 ＆ 自己紹介 ---
-                    VStack(spacing: 8) {
-                        Text(profileViewModel.user.userName)
-                            .font(.title2)
-                            .bold()
+                        // 下のコンテンツがプロフィール画像と被らないように、はみ出た分の余白を確保
+                        .padding(.bottom, profileSize * overlapAmount + 10)
                         
-                        Text(profileViewModel.user.selfIntroduction)
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .lineSpacing(4)
-                            .padding(.horizontal, 24)
-                    }
-                    .padding(.top, 10)
-                    
-                    // --- 4. タブ切り替え（Picker） ---
-                    Picker("", selection: $profileSelection) {
-                        Text("Post").tag(0)
-                        Text("Favorite Coffee").tag(1)
-                        Text("Favorite Tool").tag(2)
-                    }
-                    .pickerStyle(.segmented)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 20)
-                    .padding(.bottom, 10)
-                    
-                    // --- 5. コンテンツエリア（if-elseによる切り替え） ---
-                    // 💡 ScrollViewの中にScrollViewを入れないため、各View内のScrollViewは排除します
-                    switch profileSelection {
-                    case 0:
-                        PostContentView()
-                    case 1:
-                        MyProfileContentView(profileViewModel: profileViewModel)
-                    case 2:
-                        FavoriteToolContentView()
-                    default:
-                        EmptyView()
+                        
+                        // --- 3. ユーザー名 ＆ 自己紹介 ---
+                        VStack(spacing: 8) {
+                            Text(profileViewModel.user.userName)
+                                .font(.title2)
+                                .bold()
+                            
+                            Text(profileViewModel.user.selfIntroduction)
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .lineSpacing(4)
+                                .padding(.horizontal, 24)
+                        }
+                        .padding(.top, 10)
+                        
+                        // --- 4. タブ切り替え（Picker） ---
+                        Picker("", selection: $profileSelection) {
+                            Text("Post").tag(0)
+                            Text("Favorite Coffee").tag(1)
+                            Text("Favorite Tool").tag(2)
+                        }
+                        .pickerStyle(.segmented)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 20)
+                        .padding(.bottom, 10)
+                        
+                        // --- 5. コンテンツエリア（if-elseによる切り替え） ---
+                        // 💡 ScrollViewの中にScrollViewを入れないため、各View内のScrollViewは排除します
+                        switch profileSelection {
+                        case 0:
+                            PostContentView()
+                        case 1:
+                            MyProfileContentView(profileViewModel: profileViewModel)
+                        case 2:
+                            FavoriteToolContentView()
+                        default:
+                            EmptyView()
+                        }
                     }
                 }
+                .navigationTitle("プロフィール")
             }
-            .navigationTitle("プロフィール")
-            .sheet(isPresented: .init(
-                get: { profileViewModel.isProfileEditSheet },
-                set: { profileViewModel.isProfileEditSheet = $0 }
-            )){
-                // ⭕️ 新しく作らず、自分が持っている「本物のprofileViewModel」をそのまま渡す！
-                ProfileEditView(profileViewModel: self.profileViewModel)
-                    .onAppear {
-                        profileViewModel.logs = viewModel.logs
-                    }
-            }
+        }
+        .customPullToRefresh {
+            // 💡 ViewModelにある実際の更新処理を呼ぶ
+            // await viewModel.fetchLatestPosts()
+            try? await Task.sleep(nanoseconds: 2 * 1_000_000_000) // シミュレーション
         }
     }
 }
@@ -187,8 +168,60 @@ struct FavoriteToolContentView: View {
     }
 }
 
+struct ProfileMenuView: View {
+    @Environment(\.dismiss) var dismiss // 画面を閉じるための環境変数
+    var profileViewModel: ProfileViewModel
+    
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    // 1. プロフィール編集への導線
+                    Button {
+                        dismiss() // メニューを閉じてからシートを開く、または直接遷移
+                        profileViewModel.isProfileEditSheet = true
+                    } label: {
+                        Label("プロフィールを編集", systemImage: "pencil")
+                            .foregroundColor(.primary)
+                    }
+                    
+                    // 2. ポストを投稿
+                    Button {
+                        dismiss()
+                    } label: {
+                        Label("お知らせ", systemImage: "list.clipboard")
+                            .foregroundColor(.primary)
+                    }
+                }
+                
+                Section("設定とプライバシー") {
+                    NavigationLink {
+                        Text("アカウント設定画面（開発中）")
+                    } label: {
+                        Label("アカウント", systemImage: "person.crop.circle")
+                    }
+                    
+                    NavigationLink {
+                        Text("通知設定画面（開発中）")
+                    } label: {
+                        Label("通知", systemImage: "bell")
+                    }
+                }
+            }
+            .navigationTitle("設定とアクティビティ")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("閉じる") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
 // --- 以下、PostCardView などのコンポーネントは元のままで綺麗に動きます ---
-/// 単一のポストカード
 /// 単一のポストカード
 struct PostCardView: View {
     let log: Log
@@ -458,78 +491,52 @@ struct RatingView: View {
 }
 
 
-
-
 #Preview {
-    // 1. メインの ViewModel を作成し、サンプル投稿を追加
-    let sharedViewModel = ViewModel()
-    
-    // サンプルユーザーの作成
-    let sampleUser = User(
+    // 1. プレビュー用のダミーデータ（不足していた引数を追加）
+    let dummyUser = User(
         userNo: 1,
-        userName: "コーヒー愛好家",
-        selfIntroduction: "毎日自宅で豆を挽いてドリップしています。\n浅煎りのエチオピアが特に好きです。",
-        userAge: 21,
-        birthPlace: "神奈川県",
+        userName: "コーヒー大好きさん",
+        selfIntroduction: "毎日3杯は必ずコーヒーを淹れて飲みます。最近はエチオピアにハマっています！",
+        userAge: 25,              // 追加：年齢（数値）
+        birthPlace: "東京",        // 追加：出身地（文字列）
         favoriteCoffee: "エチオピア イルガチェフェ",
+        profileImage: nil,
         probitter: 2,
         proacidity: 5,
         probody: 3,
-        proaroma: 5,
-        proflavor: "アッシーフ、ベリー、ナッツ"
+        proaroma: 4,
+        proflavor: "ベリー系"     // 追加：フレーバー（文字列）
     )
     
-    // サンプル投稿（Log）を2件ほど追加
-    sharedViewModel.logs = [
-        Log(
-            user: sampleUser,
+    let dummyLog = Log(
+            user: dummyUser,
             shopName: "Blue Bottle Coffee",
             countryName: "Ethiopia",
-            farmName: "Guji Zone",
+            farmName: "Yirgacheffe Clean",
             roastLevel: "Light",
-            aromarating: 5,
-            aromaComment: "ベリーのような酸味",
-            bitternessrating1: 1,
-            acidityrating1: 5,
-            bodyrating1: 2,
+            aromarating: 4,
+            aromaComment: "ジャスミンのような華やかな香り",
+            bitternessrating1: 2,
+            acidityrating1: 4,
+            bodyrating1: 3,
             bitternessrating2: 2,
-            acidityrating2: 4,
+            acidityrating2: 5,
             bodyrating2: 3,
             createdAt: Date(),
-            logImages: [UIImage(systemName: "bean.fill") ?? UIImage()],
-            tagX: 10,
-            tagY: 20
-        ),
-        Log(
-            user: sampleUser,
-            shopName: "自家焙煎所",
-            countryName: "Colombia",
-            farmName: "Unknown",
-            roastLevel: "Medium",
-            aromarating: 4,
-            aromaComment: "ナッツのような香ばしさ",
-            bitternessrating1: 3,
-            acidityrating1: 3,
-            bodyrating1: 4,
-            bitternessrating2: 3,
-            acidityrating2: 3,
-            bodyrating2: 4,
-            createdAt: Date().addingTimeInterval(-86400), // 1日前
-            logImages: [UIImage(systemName: "bean.fill") ?? UIImage()],
-            tagX: -30,
-            tagY: -10
+            logImages: [],
+            textOffset: .zero,  // 新しく追加されたプロパティ（型がCGSizeやString等なら適宜変更してください）
+            tagX: 0,
+            tagY: 0
         )
-    ]
-    // ProfileView.swift の #Preview の中
-    let sharedProfileViewModel = ProfileViewModel()
-    sharedProfileViewModel.user = sampleUser
-    // 💡 プレビュー用のダミー画像をセットしてあげる
-    sharedProfileViewModel.profileImage = UIImage(systemName: "person.circle.fill")
-    sharedProfileViewModel.favoriteCoffeeImage = UIImage(systemName: "photo")
-    
-    // 3. ProfileView 本体をプレビュー
-    return ProfileView(
-        viewModel: sharedViewModel,
-        profileViewModel: sharedProfileViewModel
-    )
+
+    let mockViewModel = ViewModel()
+    mockViewModel.logs = [dummyLog]
+
+    let mockProfileViewModel = ProfileViewModel()
+    mockProfileViewModel.user = dummyUser
+    mockProfileViewModel.maxRating = 5
+
+    return ProfileView(viewModel: mockViewModel, profileViewModel: mockProfileViewModel)
+        .environment(mockViewModel)
+        .environment(mockProfileViewModel)
 }

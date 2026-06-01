@@ -9,14 +9,16 @@ import SwiftUI
 
 @main
 struct snsmvvmApp: App {
-    @State private var mainVM = ViewModel()
-    @State private var profileVM = ProfileViewModel()
+    @State private var viewModel = ViewModel()
+    @State private var profileViewModel = ProfileViewModel()
+    @State private var seachViewModel = SearchViewModel()
     
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environment(mainVM)
-                .environment(profileVM)
+                .environment(viewModel)
+                .environment(profileViewModel)
+                .environment(seachViewModel)
         }
     }
 }

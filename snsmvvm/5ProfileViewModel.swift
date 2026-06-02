@@ -55,19 +55,27 @@ class ProfileViewModel {
     }
     
     init() {
-        // ⭕️ @Observable の init 内では、頭に「_」をつけて代入するのが正しいルールです！
         self._userName = user.userName
         self._selfIntroduction = user.selfIntroduction
         self._profileImage = user.profileImage
     }
     
     
+    //toolの定義
+    var dripper: String = ""
+    var paperFilter: String = ""
+    var kettle: String = ""
+    var server: String = ""
+    var scale: String = ""
+    var mill: String = ""
+    var grinder: String = ""
+    var espressoMachine: String = ""
+    var frenchPress: String = ""
+    var toolImage: UIImage?
+    
+    
     // ユーザー情報編集
     func updateUser(viewModel: ViewModel) {
-        print("--- 🛠 保存ボタン検証 🛠 ---")
-        print("① 入力欄から届いた名前(userName): [ \(self.userName) ]")
-        print("② 現在のユーザーデータ(user.userName): [ \(self.user.userName) ]")
-        
         // ⭕️ ここで入力欄の「self.userName」を使って user を新しく作り直す！
         self.user = User(
             userNo: self.user.userNo,             // 既存の番号をそのまま使う

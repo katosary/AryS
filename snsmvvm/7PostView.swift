@@ -1,0 +1,299 @@
+//
+//  7PostView.swift
+//  snsmvvm
+//
+//  Created by katoso on 2026/06/01.
+//
+
+import SwiftUI
+import PhotosUI
+
+
+struct PostCardView: View {
+    let log: Log
+    @Environment(ViewModel.self) var viewModel
+    @Environment(ProfileViewModel.self) var profileViewModel
+    var isEditable: Bool
+    
+    @State private var dragOffset: CGSize = .zero
+    @State private var isShowingDetailSheet = false
+    let profileSize: CGFloat = 40
+    
+    // 投稿者が自分かどうかを判定
+    private var isMyPost: Bool {
+        log.user.userNo == profileViewModel.user.userNo
+    }
+    
+    // 💡 表示に使うユーザー情報を動的に切り替えるプロパティ
+    private var displayUser: User {
+        isMyPost ? profileViewModel.user : log.user
+    }
+    
+    var body: some View {
+        // ⚠️ bodyの直下を大きなVStackで包むことで、全体のレイアウトを縦に並べます
+        VStack(spacing: 16) {
+            
+            // --- ① ヘッダーエリア ---
+            HStack(spacing: 12) { // ユーザ情報とメニューを横並びにするためHStackがおすすめ
+                // --- B. プロフィール写真 ---
+                Group {
+                    if let uiImage = displayUser.profileImage {
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        Image(systemName: "person.crop.circle.fill")
+                            .resizable()
+                            .scaledToFit()
+                            .foregroundColor(.gray.opacity(0.6))
+                            .background(Color.white)
+                    }
+                }
+                .frame(width: profileSize, height: profileSize)
+                .clipShape(Circle())
+                
+                Text(displayUser.userName)
+                    .font(.title2)
+                    .bold()
+                
+                
+                
+                
+                Spacer()
+                
+                // 日付
+                Text(log.createdAt, style: .date)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                // 編集・削除メニュー
+                if isMyPost {
+                    Menu {
+                        Button {
+                            viewModel.selectedPost = log
+                            viewModel.isEditSheet = true
+                        } label: {
+                            Label("編集", systemImage: "pencil")
+                        }
+                        Button(role: .destructive) {
+                            viewModel.deleteLog(targetPost: log)
+                        } label: {
+                            Label("削除", systemImage: "trash")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .padding(5)
+                            .foregroundColor(.primary)
+                    }
+                }
+            }
+            .padding(.horizontal, 12)
+            
+            // --- ② 画像・テキストオーバーレイエリア ---
+            ZStack {
+                if let firstImage = log.logImages.first {
+                    Image(uiImage: firstImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(maxWidth: .infinity)
+                        .aspectRatio(3/4, contentMode: .fill) // 👈 縦長（横3:縦4）に変更
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                } else {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.secondary.opacity(0.1))
+                        .frame(maxWidth: .infinity)
+                        .aspectRatio(3/4, contentMode: .fit) // 👈 ここも縦長に合わせて統一
+                        .overlay(
+                            VStack(spacing: 10) {
+                                Image(systemName: "photo.on.rectangle")
+                                    .font(.largeTitle)
+                                Text("写真が選択されていません")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                        )
+                }
+                
+                // ドラッグ・タップ可能な情報タグ
+                VStack(alignment: .leading, spacing: 4) {
+                    Group {
+                        Text("Shop: \(log.shopName)")
+                        Text("Origin: \(log.countryName)")
+                        Text("Farm: \(log.farmName)")
+                        Text("Roast: \(log.roastLevel)")
+                    }
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                }
+                .padding(10)
+                .background(.ultraThinMaterial)
+                .cornerRadius(8)
+                .foregroundColor(.primary)
+                .offset(
+                    x: isEditable ? viewModel.currentOffsetX + dragOffset.width : log.tagX,
+                    y: isEditable ? viewModel.currentOffsetY + dragOffset.height : log.tagY
+                )
+                // 💡 タップジェスチャーを追加（編集モードじゃない時はシートを開く）
+                .onTapGesture {
+                    if !isEditable {
+                        isShowingDetailSheet = true
+                    }
+                }
+                // 💡 ドラッグは編集モードの時だけ有効にする
+                .gesture(
+                    isEditable ?
+                    DragGesture()
+                        .onChanged { value in
+                            dragOffset = value.translation
+                        }
+                        .onEnded { value in
+                            viewModel.currentOffsetX += value.translation.width
+                            viewModel.currentOffsetY += value.translation.height
+                            dragOffset = .zero
+                        }
+                    : nil
+                )
+                // 💡 下から出てくる詳細シートの定義
+                .sheet(isPresented: $isShowingDetailSheet) {
+                    NavigationStack {
+                        VStack(alignment: .leading, spacing: 24) {
+                            
+                            // --- シート内のタイトルエリア ---
+                            HStack {
+                                Text("Coffee Review")
+                                    .font(.title2)
+                                    .bold()
+                                Spacer()
+                                Button {
+                                    isShowingDetailSheet = false
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.title2)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .padding(.bottom, 8)
+                            
+                            // --- 引っ越してきた ③ 評価・コメントエリア ---
+                            ScrollView {
+                                VStack(alignment: .leading, spacing: 18) {
+                                    // --- Bitterness ---
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        let avgBitterness = Double(log.bitternessrating1 + log.bitternessrating2) / 2.0
+                                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                            Text("Bitterness").font(.subheadline).bold()
+                                            Text(String(format: "%.1f", avgBitterness)).font(.subheadline).bold().foregroundColor(.orange)
+                                        }
+                                        RatingView(rating: avgBitterness, maxRating: 5)
+                                    }
+                                    
+                                    // --- Acidity ---
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        let avgAcidity = Double(log.acidityrating1 + log.acidityrating2) / 2.0
+                                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                            Text("Acidity").font(.subheadline).bold()
+                                            Text(String(format: "%.1f", avgAcidity)).font(.subheadline).bold().foregroundColor(.orange)
+                                        }
+                                        RatingView(rating: avgAcidity, maxRating: 5)
+                                    }
+                                    
+                                    // --- Body ---
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        let avgBody = Double(log.bodyrating1 + log.bodyrating2) / 2.0
+                                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                            Text("Body").font(.subheadline).bold()
+                                            Text(String(format: "%.1f", avgBody)).font(.subheadline).bold().foregroundColor(.orange)
+                                        }
+                                        RatingView(rating: avgBody, maxRating: 5)
+                                    }
+                                    
+                                    // --- Aroma ---
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        let aromaDouble = Double(log.aromarating)
+                                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                            Text("Aroma").font(.subheadline).bold()
+                                            Text(String(format: "%.1f", aromaDouble)).font(.subheadline).bold().foregroundColor(.orange)
+                                        }
+                                        RatingView(rating: aromaDouble, maxRating: 5)
+                                    }
+                                    
+                                    // --- 香りのコメント ---
+                                    if !log.aromaComment.isEmpty {
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            Text("香りの種類:")
+                                                .font(.subheadline)
+                                                .bold()
+                                                .foregroundColor(.secondary)
+                                            Text(log.aromaComment)
+                                                .font(.body)
+                                        }
+                                        .padding(.top, 8)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(24)
+                        // 💡 画面の半分の高さ（ハーフシート）で止まるように指定（iOS 16以降対応）
+                        .presentationDetents([.medium, .large])
+                        // 👈 シートの上に引っ張るツマミ（インジケータ）を表示
+                        .presentationDragIndicator(.visible)
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
+
+#Preview {
+    // 1. プレビュー用のダミーVMをそれぞれインスタンス化
+    let previewVM = ViewModel()
+    let previewProfileVM = ProfileViewModel()
+    
+    // 2. ユーザーのダミーデータ
+    let dummyUser = User(
+        userNo: 1,
+        userName: "カフェ太郎",
+        selfIntroduction: "毎朝ハンドドリップでコーヒーを淹れています。浅煎りのフルーティーな豆が好みです！☕️",
+        userAge: 28,
+        birthPlace: "東京都",
+        favoriteCoffee: "エチオピア イルガチェフェ",
+        profileImage: UIImage(systemName: "person.circle.fill"),
+        probitter: 2,
+        proacidity: 4,
+        probody: 3,
+        proaroma: 5,
+        proflavor: "ベリー系"
+    )
+    
+    // 3. ログのダミーデータ
+    let dummyLog = Log(
+        user: dummyUser,
+        shopName: "スターバックス コーヒー",
+        countryName: "エチオピア",
+        farmName: "イルガチェフェ農園",
+        roastLevel: "ミディアムロースト",
+        aromarating: 4,
+        aromaComment: "華やかなフローラル香と、レモンのような爽やかな酸味を感じました。",
+        bitternessrating1: 2,
+        acidityrating1: 4,
+        bodyrating1: 3,
+        bitternessrating2: 2,
+        acidityrating2: 5,
+        bodyrating2: 3,
+        createdAt: Date(),
+        logImages: [],
+        textOffset: CGSize(width: 0, height: 0)
+    )
+    
+    // 4. ダミーの環境オブジェクトを注入してビューを返す
+    return PostCardView(
+        log: dummyLog,
+        isEditable: true
+    )
+    .padding()
+    .background(Color(.systemGroupedBackground))
+    .environment(previewVM)         // 👈 これを追加してクラッシュを防ぐ！
+    .environment(previewProfileVM)  // 👈 これを追加してクラッシュを防ぐ！
+}

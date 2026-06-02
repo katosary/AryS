@@ -37,9 +37,11 @@ struct Tool: Identifiable{
     var paperFilter: String
     var kettle: String
     var server: String
+    var scale: String
     var mill: String
     var grinder: String
     var espressoMachine: String
+    var frenchPress: String
     var toolImage: UIImage?
 }
 

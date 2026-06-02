@@ -154,8 +154,55 @@ struct ProfileEditView: View {
                             ratingRow(label: "コク", rating: $profileViewModel.probody)
                             ratingRow(label: "香り", rating: $profileViewModel.proaroma)
                             editField(label: "フレーバー", text: $profileViewModel.proflavor, placeholder: "好みのフレーバーがあれば教えてください")
-                        }
-                        .padding(.top, 10)
+                            Divider()
+                            VStack(alignment: .leading, spacing: 25) {
+                                    
+                                Text("お気に入りの道具")
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.secondary)
+                                    .padding(.top, 20)
+                                    .padding(.bottom, 10)
+                                    .padding(.leading, 0) // 必要に応じて調整
+                                    
+                                    // 1. ドリップ用品セクション
+                                    VStack(alignment: .leading, spacing: 15) {
+                                        Text("ドリップ用品")
+                                            .font(.subheadline)
+                                            .bold()
+                                            .foregroundColor(.secondary)
+                                        
+                                        editField(label: "ドリッパー", text: $profileViewModel.dripper, placeholder: "ドリッパーを入力してください")
+                                        editField(label: "ペーパーフィルター", text: $profileViewModel.paperFilter, placeholder: "ペーパーフィルターを入力してください")
+                                        editField(label: "ケトル", text: $profileViewModel.kettle, placeholder: "ケトルを入力してください")
+                                        editField(label: "サーバー", text: $profileViewModel.server, placeholder: "サーバーを入力してください")
+                                        editField(label: "スケール", text: $profileViewModel.scale, placeholder: "スケールを入力してください")
+                                    }
+                                    
+                                    // 2. 粉砕器具セクション
+                                    VStack(alignment: .leading, spacing: 15) {
+                                        Text("粉砕器具（ミル・グラインダー）")
+                                            .font(.subheadline)
+                                            .bold()
+                                            .foregroundColor(.secondary)
+                                        
+                                        editField(label: "ミル", text: $profileViewModel.mill, placeholder: "ミルを入力してください")
+                                        editField(label: "グラインダー", text: $profileViewModel.grinder, placeholder: "グラインダーを入力してください")
+                                    }
+                                    
+                                    // 3. その他・エスプレッソセクション
+                                    VStack(alignment: .leading, spacing: 15) {
+                                        Text("その他")
+                                            .font(.subheadline)
+                                            .bold()
+                                            .foregroundColor(.secondary)
+                                        
+                                        editField(label: "エスプレッソマシン", text: $profileViewModel.espressoMachine, placeholder: "エスプレッソマシンを入力してください")
+                                        editField(label: "フレンチプレス", text: $profileViewModel.frenchPress, placeholder: "フレンチプレスを入力してください")
+                                    }
+                                }
+                            }
+                            .padding(.top, 10)
                     }
                     .padding(.horizontal, 20)
                     .frame(width: screenWidth) // 💡 入力エリアの幅も画面幅に固定

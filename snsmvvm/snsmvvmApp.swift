@@ -30,7 +30,7 @@ struct snsmvvmApp: App {
     
     var body: some Scene {
         WindowGroup {
-            LoginView()
+            ContentView()
                 .environment(viewModel)
                 .environment(profileViewModel)
                 .environment(seachViewModel)

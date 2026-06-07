@@ -28,6 +28,7 @@ struct ProfileView: View {
             let totalHeight = outerGeometry.size.height
             
             ZStack {
+                Color(.systemBackground).ignoresSafeArea()
                 // ==========================================
                 // レイヤー 1: メインコンテンツ
                 // ==========================================
@@ -36,10 +37,13 @@ struct ProfileView: View {
                         VStack(spacing: 0) {
                             // --- 1. 上部：画像重なりエリア ---
                             ZStack(alignment: .bottom) {
-                                Color.gray.opacity(0.5)
+                                // 💡 Color.gray.opacity(0.5) をシステム標準の背景色に
+                                Color(.secondarySystemBackground)
                                     .frame(height: coverHeight)
+                                
                                 VStack {
                                     Text("自分が投稿したポストの中でいちばんのお気に入りを選べるボタンを作り、\nそれをここに表示する")
+                                        .foregroundColor(.secondary) // 文字色もシステムセカンダリに
                                     Spacer()
                                 }
                                 
@@ -52,13 +56,14 @@ struct ProfileView: View {
                                         Image(systemName: "person.crop.circle.fill")
                                             .resizable()
                                             .scaledToFit()
-                                            .foregroundColor(.gray.opacity(0.6))
-                                            .background(Color.white)
+                                            .foregroundColor(Color(.systemGray3)) // 💡 システムグレーに
+                                            .background(Color(.systemBackground)) // 💡 アイコンの白背景をシステム背景色に
                                     }
                                 }
                                 .frame(width: profileSize, height: profileSize)
                                 .clipShape(Circle())
-                                .overlay(Circle().stroke(profileBorderColor, lineWidth: 3))
+                                // 💡 境界線もシステム背景色に合わせると綺麗です
+                                .overlay(Circle().stroke(Color(.systemBackground), lineWidth: 3))
                                 .offset(y: profileSize * overlapAmount)
                             }
                             .padding(.bottom, profileSize * overlapAmount + 10)
@@ -106,7 +111,9 @@ struct ProfileView: View {
                         }
                     }
                     .navigationTitle("プロフィール")
+                    .background(Color(.systemBackground))
                 }
+                .background(Color(.systemBackground))
                 .customPullToRefresh {
                     try? await Task.sleep(nanoseconds: 2 * 1_000_000_000)
                 }
@@ -135,13 +142,13 @@ struct PostContentView: View {
                 ForEach(viewModel.logs) { log in
                     PostCardView(log: log, isEditable: false)
                         .frame(maxWidth: .infinity)
-                        .onTapGesture {
-                            // 💡 確実にアニメーションを効かせて選択
-                            withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
-                                selectedLog = log
-                                isDetailShowing = true
-                            }
-                        }
+                    //                        .onTapGesture {
+                    //                            // 💡 確実にアニメーションを効かせて選択
+                    //                            withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
+                    //                                selectedLog = log
+                    //                                isDetailShowing = true
+                    //                            }
+                    //                        }
                 }
             }
         }
@@ -165,13 +172,13 @@ struct PostContentView: View {
                         // ツマミ（インジケーター）
                         Capsule()
                             .frame(width: 40, height: 5)
-                            .foregroundColor(.gray.opacity(0.4))
+                            .foregroundColor(Color(.tertiaryLabel)) // 💡 システムのラベル色（グレー系）
                             .padding(.top, 12)
                             .padding(.bottom, 10)
                         
                         ScrollView {
                             VStack(spacing: 16) {
-                                // 📸 ① シートの中に綺麗に収まる縮小画像
+                                // 📸 画像エリア
                                 ZStack {
                                     if !log.logImages.isEmpty, let firstImage = log.logImages.first {
                                         Image(uiImage: firstImage)
@@ -179,12 +186,12 @@ struct PostContentView: View {
                                             .aspectRatio(contentMode: .fill)
                                     } else {
                                         ZStack {
-                                            Color(.systemGray5)
+                                            Color(.systemGray5) // 💡 システム標準のグレー
                                             VStack(spacing: 8) {
                                                 Image(systemName: "photo").font(.title)
                                                 Text("No Image").font(.caption)
                                             }
-                                            .foregroundColor(.gray)
+                                            .foregroundColor(Color(.secondaryLabel)) // 💡 システムのラベル色
                                         }
                                     }
                                 }
@@ -194,7 +201,7 @@ struct PostContentView: View {
                                 .shadow(color: Color.black.opacity(0.1), radius: 6, x: 0, y: 3)
                                 .padding(.horizontal, 24)
                                 
-                                // 📝 ② ユーザー情報・テキスト・評価
+                                // 📝 ユーザー情報・テキスト
                                 VStack(alignment: .leading, spacing: 16) {
                                     HStack(spacing: 12) {
                                         if let uiImage = profileViewModel.profileImage {
@@ -204,22 +211,25 @@ struct PostContentView: View {
                                                 .frame(width: 36, height: 36)
                                                 .clipShape(Circle())
                                         }
-                                        Text(profileViewModel.user.userName).font(.headline)
+                                        Text(profileViewModel.user.userName)
+                                            .font(.headline)
+                                            .foregroundColor(Color(.label)) // 💡 システムのメイン文字色
                                     }
                                     
-                                    Text("いざって時の知識、どれくらい知ってる？🥺\n\n① ツナ缶でランプになる\n② カップ麺は水でも食べられる\n③ 泥水やお風呂の残り湯も飲み水に変える浄水器")
-                                        .font(.body)
-                                    
-                                    Divider()
+                                    Divider() // 💡 システムの色が自動適用されます
                                     
                                     // 評価パラメーター
                                     VStack(alignment: .leading, spacing: 12) {
                                         let avgBitterness = Double(log.bitternessrating1 + log.bitternessrating2) / 2.0
-                                        Text("Bitterness: \(String(format: "%.1f", avgBitterness))").bold()
+                                        Text("Bitterness: \(String(format: "%.1f", avgBitterness))")
+                                            .bold()
+                                            .foregroundColor(Color(.label))
                                         RatingView(rating: avgBitterness, maxRating: 5)
                                         
                                         let avgAcidity = Double(log.acidityrating1 + log.acidityrating2) / 2.0
-                                        Text("Acidity: \(String(format: "%.1f", avgAcidity))").bold()
+                                        Text("Acidity: \(String(format: "%.1f", avgAcidity))")
+                                            .bold()
+                                            .foregroundColor(Color(.label))
                                         RatingView(rating: avgAcidity, maxRating: 5)
                                     }
                                 }
@@ -228,16 +238,16 @@ struct PostContentView: View {
                             }
                         }
                     }
-                    .frame(width: totalWidth, height: totalHeight * 0.65) // 確実に高さを固定
-                    .background(Color(.systemBackground))
+                    .frame(width: totalWidth, height: totalHeight * 0.65)
+                    .background(Color(.systemBackground)) // 💡 シートの背景色
                     .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
                     .shadow(color: Color.black.opacity(0.15), radius: 10, x: 0, y: -5)
-                    .transition(.move(edge: .bottom)) // 💡これが連動して下からシャッと出るようになります
+                    .transition(.move(edge: .bottom))
                 }
             }
             // 💡 画面全体に広げて、セーフエリアを無視させる
-            .frame(width: totalWidth, height: totalHeight)
-            .ignoresSafeArea()
+                .frame(width: totalWidth, height: totalHeight)
+                .ignoresSafeArea()
         )
     }
 }
@@ -294,7 +304,7 @@ struct MyProfileContentView: View {
         .padding(.horizontal, 12) // 💡 カードの内側の左右余白を少しタイトに
         .padding(.vertical, 20)
         .frame(maxWidth: .infinity) // 💡 横幅いっぱいに広げる
-        .background(Color(.systemGray6).opacity(0.5))
+        .background(Color(.secondarySystemBackground))
         .cornerRadius(15)
     }
     
@@ -426,12 +436,12 @@ struct FavoriteToolContentView: View {
             if !hasDripTools && !hasGrinderTools && !hasOtherTools {
                 Text("お気に入りの道具がまだ登録されていません。")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(.secondaryLabel))
             }
         }
         .padding(20) // 💡内側の余白を統一
         .frame(maxWidth: .infinity) // 💡横幅いっぱいに広げる
-        .background(Color(.systemGray6).opacity(0.5))
+        .background(Color(.secondarySystemBackground))
         .cornerRadius(15)
     }
     

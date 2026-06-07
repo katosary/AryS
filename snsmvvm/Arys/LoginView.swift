@@ -10,78 +10,45 @@ import FirebaseAuth
 import FirebaseFirestore
 
 struct LoginView: View {
+    @ObservedObject var authManager: AuthManager
     @State private var email = ""
     @State private var password = ""
     @State private var errorMessage = ""
-
+    @State private var isLoading = false
+    
     var body: some View {
         VStack(spacing: 20) {
             TextField("メールアドレス", text: $email)
                 .textFieldStyle(.roundedBorder)
-                .keyboardType(.emailAddress)
                 .autocapitalization(.none)
-
+                .disabled(isLoading)
+            
             SecureField("パスワード", text: $password)
                 .textFieldStyle(.roundedBorder)
-
-            Button("新規登録してログイン") {
-                registerAndLogin()
+                .disabled(isLoading)
+            
+            Button(action: {
+                isLoading = true
+                authManager.registerAndLogin(email: email, password: password) { error in
+                    DispatchQueue.main.async {
+                        isLoading = false
+                        if let error = error {
+                            self.errorMessage = error
+                        }
+                    }
+                }
+            }) {
+                if isLoading { ProgressView() } else { Text("ログイン") }
             }
             .buttonStyle(.borderedProminent)
-
-            Text(errorMessage)
-                .foregroundColor(.red)
-                .font(.caption)
+            .disabled(isLoading || email.isEmpty || password.isEmpty)
+            
+            Text(errorMessage).foregroundColor(.red).font(.caption)
         }
         .padding()
     }
-
-    func registerAndLogin() {
-            // 1. まず新規登録を試みる
-            Auth.auth().createUser(withEmail: email, password: password) { authResult, error in
-                if let error = error as NSError? {
-                    // すでに登録済みエラーの場合、ログインを試みる
-                    if error.code == AuthErrorCode.emailAlreadyInUse.rawValue {
-                        self.signIn()
-                    } else {
-                        errorMessage = error.localizedDescription
-                    }
-                    return
-                }
-
-                // 新規登録成功時の処理
-                guard let user = authResult?.user else { return }
-                saveUserToFirestore(uid: user.uid)
-            }
-        }
-
-        func signIn() {
-            // ログイン処理
-            Auth.auth().signIn(withEmail: email, password: password) { authResult, error in
-                if let error = error {
-                    errorMessage = "ログイン失敗: \(error.localizedDescription)"
-                } else {
-                    errorMessage = "ログイン成功！"
-                }
-            }
-        }
-
-        func saveUserToFirestore(uid: String) {
-            let db = Firestore.firestore()
-            db.collection("users").document(uid).setData([
-                "email": email,
-                "createdAt": Date()
-            ]) { error in
-                if let error = error {
-                    errorMessage = "Firestore登録失敗: \(error.localizedDescription)"
-                } else {
-                    errorMessage = "新規登録成功！"
-                }
-            }
-        }
 }
 
-
 #Preview {
-    LoginView()
+    LoginView(authManager: AuthManager())
 }

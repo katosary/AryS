@@ -13,25 +13,30 @@ struct MatchingView: View {
     
     var body: some View {
         NavigationStack {
-            Group {
-                if matchingViewModel.isLoading {
-                    VStack {
-                        ProgressView()
-                        Text("コーヒーを淹れています...")
-                            .padding()
-                    }
-                } else {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        LazyHStack(spacing: 0) {
-                            ForEach(matchingViewModel.discoveredProfiles) { profile in
-                                MatchProfileView(profile: profile)
-                                    .containerRelativeFrame(.horizontal)
-                            }
+            // 💡 ここで画面全体の背景色を指定
+            ZStack {
+                Color(.systemBackground).ignoresSafeArea() // 背景をシステム背景色に
+                
+                Group {
+                    if matchingViewModel.isLoading {
+                        VStack {
+                            ProgressView()
+                            Text("コーヒーを淹れています...")
+                                .padding()
                         }
-                        .scrollTargetLayout()
+                    } else {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            LazyHStack(spacing: 0) {
+                                ForEach(matchingViewModel.discoveredProfiles) { profile in
+                                    MatchProfileView(profile: profile)
+                                        .containerRelativeFrame(.horizontal)
+                                }
+                            }
+                            .scrollTargetLayout()
+                        }
+                        .scrollTargetBehavior(.paging)
+                        .scrollContentBackground(.hidden) // 💡 ScrollViewのデフォルト背景を消す
                     }
-                    .scrollTargetBehavior(.paging)
-                    .ignoresSafeArea(edges: .bottom)
                 }
             }
             .task {
@@ -42,55 +47,49 @@ struct MatchingView: View {
         }
     }
 }
-
 // --- 2. 1人分のプロフィール表示 (カードデザイン版) ---
 struct MatchProfileView: View {
     let profile: UserProfile
-    
-    // デザイン定数
     let profileSize: CGFloat = 110
     
     var body: some View {
         GeometryReader { geometry in
             let screenHeight = geometry.size.height
             
-            // カード本体
             VStack(spacing: 0) {
-                
                 // --- A. 上部：ビジュアルエリア ---
                 ZStack(alignment: .bottom) {
-                    // カバー画像部分（グラデーション）
+                    // 背景グラデーション（ダークモードでも違和感のない色に）
                     Rectangle()
                         .fill(
                             LinearGradient(
-                                gradient: Gradient(colors: [Color.brown.opacity(0.6), Color.black.opacity(0.7)]),
+                                gradient: Gradient(colors: [Color.brown.opacity(0.6), Color.primary.opacity(0.3)]),
                                 startPoint: .top,
                                 endPoint: .bottom
                             )
                         )
-                    // カードの半分弱を画像にする
                         .frame(height: screenHeight * 0.4)
                     
-                    // プロフィール写真（中央に配置）
+                    // プロフィール写真
                     Image(systemName: "person.crop.circle.fill")
                         .resizable()
                         .scaledToFit()
                         .frame(width: profileSize, height: profileSize)
-                        .foregroundColor(.white)
-                        .background(Color(.systemGray4))
+                        .foregroundColor(Color(.systemGray3)) // アイコンの色
+                        .background(Color(.systemBackground)) // 背景色
                         .clipShape(Circle())
-                        .overlay(Circle().stroke(Color.white, lineWidth: 3))
-                        .offset(y: profileSize / 3) // 少しだけ下にはみ出させる
+                        .overlay(Circle().stroke(Color(.secondarySystemBackground), lineWidth: 3))
+                        .offset(y: profileSize / 3)
                 }
                 
                 // --- B. 下部：プロフィール詳細エリア ---
                 VStack(spacing: 12) {
                     Spacer().frame(height: profileSize / 3 + 10)
                     
-                    // 名前
                     Text(profile.name)
                         .font(.system(size: 26, weight: .bold, design: .rounded))
-                    // 自己紹介（スクロールなしで収まるよう最大3行などに制限可能）
+                        .foregroundColor(.primary) // 明示的にprimary指定
+                    
                     Text(profile.bio)
                         .font(.subheadline)
                         .multilineTextAlignment(.center)
@@ -101,45 +100,26 @@ struct MatchProfileView: View {
                     Divider()
                         .padding(.horizontal, 40)
                     
-                    
                     Spacer()
                     
-                    HStack{
-                        Button{
-                        } label: {
-                            Image(systemName: "person.crop.circle")
-                                .font(.system(size: 60))
-                                .foregroundColor(.blue)
-                                .padding(20)
-                        }
-                        Button{
-                        } label: {
-                            Image(systemName: "square.and.arrow.down")
-                                .font(.system(size: 60))
-                                .foregroundColor(.red)
-                                .padding(20)
-                        }
-                        Button{
-                        } label: {
-                            Image(systemName: "heart.fill")
-                                .font(.system(size: 60))
-                                .foregroundColor(.red)
-                                .padding(20)
-                        }
+                    // アクションボタン
+                    HStack(spacing: 20) {
+                        ActionButton(icon: "person.crop.circle", color: .blue)
+                        ActionButton(icon: "square.and.arrow.down", color: .red)
+                        ActionButton(icon: "heart.fill", color: .red)
                     }
+                    .padding(.bottom, 20)
                 }
                 .frame(maxWidth: .infinity)
             }
-            .background(Color.white) // カードの背景色
-            // --- 角を尖らせて影をつける設定 ---
-            .cornerRadius(30) // 角を尖らせる
-            .shadow(color: Color.black.opacity(0.15), radius: 10, x: 0, y: 5) // 後ろに影
-            .padding(.horizontal, 20) // 左右に余白を作って「カード」に見せる
-            .padding(.vertical, 30)   // 上下にも余白
+            .background(Color(.secondarySystemBackground)) // カード背景をシステム標準のグレーに
+            .cornerRadius(30)
+            .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 30)
         }
     }
 }
-
 #Preview {
     ContentView()
 }
@@ -152,19 +132,16 @@ struct MatchProfileView: View {
 //    ))
 //}
 
-// ボタン用のサブView
 struct ActionButton: View {
     let icon: String
     let color: Color
     var body: some View {
         Image(systemName: icon)
             .font(.title.bold())
-        
-        
             .foregroundColor(color)
             .frame(width: 60, height: 60)
-            .background(Color.white)
+            .background(Color(.systemBackground)) // 💡 背景をシステム背景色に
             .clipShape(Circle())
-            .shadow(radius: 5)
+            .shadow(color: Color.black.opacity(0.1), radius: 5) // 影を薄く
     }
 }

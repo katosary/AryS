@@ -90,19 +90,19 @@ struct PostCardView: View {
             .padding(.horizontal, 12)
             
             // --- ② 画像・テキストオーバーレイエリア ---
-            ZStack {
+            ZStack(alignment: .bottomLeading) { // 👈 ZStack全体で左下寄せに設定
                 if let firstImage = log.logImages.first {
                     Image(uiImage: firstImage)
                         .resizable()
                         .scaledToFill()
                         .frame(maxWidth: .infinity)
-                        .aspectRatio(3/4, contentMode: .fill) // 👈 縦長（横3:縦4）に変更
+                        .aspectRatio(3/4, contentMode: .fill)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 } else {
                     RoundedRectangle(cornerRadius: 12)
                         .fill(Color.secondary.opacity(0.1))
                         .frame(maxWidth: .infinity)
-                        .aspectRatio(3/4, contentMode: .fit) // 👈 ここも縦長に合わせて統一
+                        .aspectRatio(3/4, contentMode: .fit)
                         .overlay(
                             VStack(spacing: 10) {
                                 Image(systemName: "photo.on.rectangle")
@@ -114,7 +114,45 @@ struct PostCardView: View {
                         )
                 }
                 
-                // ドラッグ・タップ可能な情報タグ
+                //                // ドラッグ・タップ可能な情報タグ
+                //                VStack(alignment: .leading, spacing: 4) {
+                //                    Group {
+                //                        Text("Shop: \(log.shopName)")
+                //                        Text("Origin: \(log.countryName)")
+                //                        Text("Farm: \(log.farmName)")
+                //                        Text("Roast: \(log.roastLevel)")
+                //                    }
+                //                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                //                }
+                //                .padding(10)
+                //                .background(.ultraThinMaterial)
+                //                .cornerRadius(8)
+                //                .foregroundColor(.primary)
+                //                .offset(
+                //                    x: isEditable ? viewModel.currentOffsetX + dragOffset.width : log.tagX,
+                //                    y: isEditable ? viewModel.currentOffsetY + dragOffset.height : log.tagY
+                //                )
+                //                // 💡 タップジェスチャーを追加（編集モードじゃない時はシートを開く）
+                //                .onTapGesture {
+                //                    if !isEditable {
+                //                        isShowingDetailSheet = true
+                //                    }
+                //                }
+                //                // 💡 ドラッグは編集モードの時だけ有効にする
+                //                .gesture(
+                //                    isEditable ?
+                //                    DragGesture()
+                //                        .onChanged { value in
+                //                            dragOffset = value.translation
+                //                        }
+                //                        .onEnded { value in
+                //                            viewModel.currentOffsetX += value.translation.width
+                //                            viewModel.currentOffsetY += value.translation.height
+                //                            dragOffset = .zero
+                //                        }
+                //                    : nil
+                //                )
+                // --- 情報タグ（offsetを削除して固定配置） ---
                 VStack(alignment: .leading, spacing: 4) {
                     Group {
                         Text("Shop: \(log.shopName)")
@@ -122,126 +160,114 @@ struct PostCardView: View {
                         Text("Farm: \(log.farmName)")
                         Text("Roast: \(log.roastLevel)")
                     }
-                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white)
+                    .shadow(color: .black.opacity(0.6), radius: 2, x: 0, y: 1)
                 }
-                .padding(10)
-                .background(.ultraThinMaterial)
-                .cornerRadius(8)
-                .foregroundColor(.primary)
-                .offset(
-                    x: isEditable ? viewModel.currentOffsetX + dragOffset.width : log.tagX,
-                    y: isEditable ? viewModel.currentOffsetY + dragOffset.height : log.tagY
-                )
-                // 💡 タップジェスチャーを追加（編集モードじゃない時はシートを開く）
+                .padding(16) // 左下の端から少し余白を作る
+                
+                // 💡 タップジェスチャーはそのまま有効
                 .onTapGesture {
                     if !isEditable {
                         isShowingDetailSheet = true
                     }
                 }
-                // 💡 ドラッグは編集モードの時だけ有効にする
-                .gesture(
-                    isEditable ?
-                    DragGesture()
-                        .onChanged { value in
-                            dragOffset = value.translation
-                        }
-                        .onEnded { value in
-                            viewModel.currentOffsetX += value.translation.width
-                            viewModel.currentOffsetY += value.translation.height
-                            dragOffset = .zero
-                        }
-                    : nil
-                )
                 // 💡 下から出てくる詳細シートの定義
                 .sheet(isPresented: $isShowingDetailSheet) {
+                    // 💡 画面全体で開く設定（つまみで下にドラッグして閉じられる）
                     NavigationStack {
-                        VStack(alignment: .leading, spacing: 24) {
-                            
-                            // --- シート内のタイトルエリア ---
-                            HStack {
-                                Text("Coffee Review")
-                                    .font(.title2)
-                                    .bold()
-                                Spacer()
-                                Button {
-                                    isShowingDetailSheet = false
-                                } label: {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.title2)
-                                        .foregroundColor(.secondary)
+                        GeometryReader { geometry in
+                            VStack(spacing: 0) {
+                                // --- 1. 画像エリア（角丸付き） ---
+                                if let firstImage = log.logImages.first {
+                                    Image(uiImage: firstImage)
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: geometry.size.width, height: geometry.size.height * 0.45)
+                                        .clipped()
                                 }
-                            }
-                            .padding(.bottom, 8)
-                            
-                            // --- 引っ越してきた ③ 評価・コメントエリア ---
-                            ScrollView {
-                                VStack(alignment: .leading, spacing: 18) {
-                                    // --- Bitterness ---
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        let avgBitterness = Double(log.bitternessrating1 + log.bitternessrating2) / 2.0
-                                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                            Text("Bitterness").font(.subheadline).bold()
-                                            Text(String(format: "%.1f", avgBitterness)).font(.subheadline).bold().foregroundColor(.orange)
+                                
+                                // --- 2. 詳細エリア（角丸付きの背景） ---
+                                ScrollView {
+                                    // --- 2. 下部：詳細エリア ---
+                                    VStack(alignment: .leading, spacing: 18) {
+                                        Text("Coffee Review")
+                                            .font(.title2).bold()
+                                            .padding(.top, 20)
+                                        
+                                        VStack(alignment: .leading, spacing: 18) {
+                                            // --- Bitterness ---
+                                            VStack(alignment: .leading, spacing: 6) {
+                                                let avgBitterness = Double(log.bitternessrating1 + log.bitternessrating2) / 2.0
+                                                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                                    Text("Bitterness").font(.subheadline).bold()
+                                                    Text(String(format: "%.1f", avgBitterness)).font(.subheadline).bold().foregroundColor(.orange)
+                                                }
+                                                RatingView(rating: avgBitterness, maxRating: 5)
+                                            }
+                                            
+                                            // --- Acidity ---
+                                            VStack(alignment: .leading, spacing: 6) {
+                                                let avgAcidity = Double(log.acidityrating1 + log.acidityrating2) / 2.0
+                                                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                                    Text("Acidity").font(.subheadline).bold()
+                                                    Text(String(format: "%.1f", avgAcidity)).font(.subheadline).bold().foregroundColor(.orange)
+                                                }
+                                                RatingView(rating: avgAcidity, maxRating: 5)
+                                            }
+                                            
+                                            // --- Body ---
+                                            VStack(alignment: .leading, spacing: 6) {
+                                                let avgBody = Double(log.bodyrating1 + log.bodyrating2) / 2.0
+                                                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                                    Text("Body").font(.subheadline).bold()
+                                                    Text(String(format: "%.1f", avgBody)).font(.subheadline).bold().foregroundColor(.orange)
+                                                }
+                                                RatingView(rating: avgBody, maxRating: 5)
+                                            }
+                                            
+                                            // --- Aroma ---
+                                            VStack(alignment: .leading, spacing: 6) {
+                                                let aromaDouble = Double(log.aromarating)
+                                                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                                    Text("Aroma").font(.subheadline).bold()
+                                                    Text(String(format: "%.1f", aromaDouble)).font(.subheadline).bold().foregroundColor(.orange)
+                                                }
+                                                RatingView(rating: aromaDouble, maxRating: 5)
+                                            }
+                                            
+                                            // --- 香りのコメント ---
+                                            if !log.aromaComment.isEmpty {
+                                                VStack(alignment: .leading, spacing: 6) {
+                                                    Text("香りの種類:")
+                                                        .font(.subheadline)
+                                                        .bold()
+                                                        .foregroundColor(.secondary)
+                                                    Text(log.aromaComment)
+                                                        .font(.body)
+                                                }
+                                                .padding(.top, 8)
+                                            }
                                         }
-                                        RatingView(rating: avgBitterness, maxRating: 5)
+                                        
                                     }
-                                    
-                                    // --- Acidity ---
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        let avgAcidity = Double(log.acidityrating1 + log.acidityrating2) / 2.0
-                                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                            Text("Acidity").font(.subheadline).bold()
-                                            Text(String(format: "%.1f", avgAcidity)).font(.subheadline).bold().foregroundColor(.orange)
-                                        }
-                                        RatingView(rating: avgAcidity, maxRating: 5)
-                                    }
-                                    
-                                    // --- Body ---
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        let avgBody = Double(log.bodyrating1 + log.bodyrating2) / 2.0
-                                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                            Text("Body").font(.subheadline).bold()
-                                            Text(String(format: "%.1f", avgBody)).font(.subheadline).bold().foregroundColor(.orange)
-                                        }
-                                        RatingView(rating: avgBody, maxRating: 5)
-                                    }
-                                    
-                                    // --- Aroma ---
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        let aromaDouble = Double(log.aromarating)
-                                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                            Text("Aroma").font(.subheadline).bold()
-                                            Text(String(format: "%.1f", aromaDouble)).font(.subheadline).bold().foregroundColor(.orange)
-                                        }
-                                        RatingView(rating: aromaDouble, maxRating: 5)
-                                    }
-                                    
-                                    // --- 香りのコメント ---
-                                    if !log.aromaComment.isEmpty {
-                                        VStack(alignment: .leading, spacing: 6) {
-                                            Text("香りの種類:")
-                                                .font(.subheadline)
-                                                .bold()
-                                                .foregroundColor(.secondary)
-                                            Text(log.aromaComment)
-                                                .font(.body)
-                                        }
-                                        .padding(.top, 8)
-                                    }
+                                    .padding(24)
                                 }
+                                .frame(maxWidth: .infinity)
+                                .background(Color(.systemBackground))
                             }
                         }
-                        .padding(24)
-                        // 💡 画面の半分の高さ（ハーフシート）で止まるように指定（iOS 16以降対応）
-                        .presentationDetents([.medium, .large])
-                        // 👈 シートの上に引っ張るツマミ（インジケータ）を表示
-                        .presentationDragIndicator(.visible)
+                        .presentationDetents([.fraction(1.0)]) // 💡 100%表示
+                        .presentationDragIndicator(.visible)   // 💡 つまみを表示
+                        .presentationCornerRadius(20)          // 💡 シート全体の角丸
                     }
                 }
             }
         }
     }
 }
+
+
 
 
 

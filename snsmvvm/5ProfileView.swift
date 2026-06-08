@@ -479,6 +479,7 @@ struct FavoriteToolContentView: View {
 
 struct ProfileMenuView: View {
     @Environment(\.dismiss) var dismiss // 画面を閉じるための環境変数
+    @EnvironmentObject var authManager: AuthManager
     var profileViewModel: ProfileViewModel
     
     var body: some View {
@@ -514,6 +515,15 @@ struct ProfileMenuView: View {
                         Text("通知設定画面（開発中）")
                     } label: {
                         Label("通知", systemImage: "bell")
+                    }
+                }
+                Section {
+                    // ログアウトボタン
+                    Button(role: .destructive) { // .destructiveで赤字にできます
+                        authManager.signOut()
+                        dismiss()
+                    } label: {
+                        Label("ログアウト", systemImage: "rectangle.portrait.and.arrow.right")
                     }
                 }
             }

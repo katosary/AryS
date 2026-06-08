@@ -11,6 +11,7 @@ struct ContentView: View {
     @State var viewModel = ViewModel()
     @Environment(ProfileViewModel.self) var profileViewModel
     @State var matchingViewModel = MatchingViewModel()
+    @EnvironmentObject var authManager: AuthManager
     
     // 💡 メニューの開閉状態を管理するStateを追加
     @State private var isMenuPresented = false
@@ -88,6 +89,7 @@ struct ContentView: View {
             // 💡 メニューシートの表示ロジックをここへ引っ越し
             .sheet(isPresented: $isMenuPresented) {
                 ProfileMenuView(profileViewModel: profileViewModel)
+                    .environmentObject(authManager)
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
             }

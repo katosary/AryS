@@ -58,6 +58,16 @@ class AuthManager: ObservableObject {
             completion(error?.localizedDescription)
         }
     }
+    
+    func signOut() {
+        do {
+            try Auth.auth().signOut()
+            // ※ addStateDidChangeListener が検知して自動的に
+            // isLoggedIn が false になり、RootView がログイン画面へ切り替わります
+        } catch {
+            print("ログアウトエラー: \(error.localizedDescription)")
+        }
+    }
 
 }
 

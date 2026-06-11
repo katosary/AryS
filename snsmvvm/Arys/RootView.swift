@@ -10,8 +10,11 @@ import SwiftUI
 import FirebaseAuth
 
 struct RootView: View {
-    @EnvironmentObject var authManager: AuthManager
-    @EnvironmentObject var userManager: UserManager
+    @State private var authManager = AuthManager()
+    @State private var userManager = UserManager()
+    @State private var viewModel = ViewModel()
+    @State private var profileViewModel = ProfileViewModel()
+    @State private var searchViewModel = SearchViewModel()
     
     var body: some View {
         Group {
@@ -27,5 +30,10 @@ struct RootView: View {
                 LoginView(authManager: authManager)
             }
         }
+        .environmentObject(authManager)
+        .environmentObject(userManager)
+        .environment(viewModel)
+        .environment(profileViewModel)
+        .environment(searchViewModel)
     }
 }

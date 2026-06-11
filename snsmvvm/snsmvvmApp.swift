@@ -22,22 +22,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 struct snsmvvmApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     
-    // 💡 @StateObject を @State に変更します
-    @State private var authManager = AuthManager()
-    @State private var userManager = UserManager()
-    @State private var viewModel = ViewModel()
-    @State private var profileViewModel = ProfileViewModel()
-    @State private var searchViewModel = SearchViewModel()
-    
     var body: some Scene {
         WindowGroup {
             RootView()
-                // 💡 .environmentObject はそのまま、または .environment で注入
-                .environmentObject(authManager)
-                .environmentObject(userManager)
-                .environment(viewModel)
-                .environment(profileViewModel)
-                .environment(searchViewModel)
         }
     }
 }

@@ -8,9 +8,23 @@
 import Observation
 import SwiftUI
 import PhotosUI
+import FirebaseCore       // Firebase自体の初期化（configure）に必要
+import FirebaseFirestore  // Firestoreのデータベース操作に必要
 
 @Observable
 class ProfileViewModel {
+    // 1. db をオプショナル、または後から代入する形にする
+    private var db: Firestore
+    
+    init() {
+        // 2. init 内で初期化する
+        self.db = Firestore.firestore()
+        
+        // --- 既存の初期化処理 ---
+        self.userName = user.userName
+        self.selfIntroduction = user.selfIntroduction
+        self.profileImage = user.profileImage
+    }
     var user: User = User(userNo: 1, userName: "", selfIntroduction: "",userAge: 0, birthPlace: "",favoriteCoffee: "",profileImage: nil,probitter: 0, proacidity: 0, probody: 0, proaroma: 0, proflavor: "")
     var logs: [Log] = []
     var userName: String = ""
@@ -54,11 +68,6 @@ class ProfileViewModel {
         didSet{ Task { await loadProfileImage() } }
     }
     
-    init() {
-        self._userName = user.userName
-        self._selfIntroduction = user.selfIntroduction
-        self._profileImage = user.profileImage
-    }
     
     
     //toolの定義
@@ -74,17 +83,15 @@ class ProfileViewModel {
     var toolImage: UIImage?
     
     
-    // ユーザー情報編集
     func updateUser(viewModel: ViewModel) {
-        // ⭕️ ここで入力欄の「self.userName」を使って user を新しく作り直す！
         self.user = User(
-            userNo: self.user.userNo,             // 既存の番号をそのまま使う
-            userName: self.userName,             // 👈 ここを「self.userName」（加藤）にする！
-            selfIntroduction: self.selfIntroduction, // 👈 入力された自己紹介
-            userAge: self.user.userAge,
+            userNo: self.user.userNo,
+            userName: self.userName,
+            selfIntroduction: self.selfIntroduction,
+            userAge: self.userAge,
             birthPlace: self.user.birthPlace,
             favoriteCoffee: self.user.favoriteCoffee,
-            profileImage: self.profileImage,     // 👈 選んだ写真
+            profileImage: self.profileImage,
             probitter: self.user.probitter,
             proacidity: self.user.proacidity,
             probody: self.user.probody,
@@ -92,21 +99,20 @@ class ProfileViewModel {
             proflavor: self.user.proflavor
         )
         
-        // ⭕️ タイムライン側（mainVM）にも、新しく作った user を叩き込む！
         viewModel.synchronizeMyProfile(with: self.user)
     }
     
-//    //プロフィール数字情報
-//    func profileStat(count: String, label: String) -> some View {
-//        VStack {
-//            Text(count)
-//                .font(.headline)
-//            Text(label)
-//                .font(.caption)
-//                .foregroundColor(.gray)
-//        }
-//        .frame(maxWidth: .infinity) // 均等に並ぶように幅を広げる
-//    }
+    //    //プロフィール数字情報
+    //    func profileStat(count: String, label: String) -> some View {
+    //        VStack {
+    //            Text(count)
+    //                .font(.headline)
+    //            Text(label)
+    //                .font(.caption)
+    //                .foregroundColor(.gray)
+    //        }
+    //        .frame(maxWidth: .infinity) // 均等に並ぶように幅を広げる
+    //    }
     
     func image(for number: Int, rating: Int) -> Image {
         if number > rating {
@@ -118,7 +124,7 @@ class ProfileViewModel {
     
     
     
-
+    
     
     @MainActor
     private func loadCoffeeImage() async {

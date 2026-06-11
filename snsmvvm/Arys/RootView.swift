@@ -10,18 +10,19 @@ import SwiftUI
 import FirebaseAuth
 
 struct RootView: View {
-    @ObservedObject var authManager = AuthManager()
-    
-//    init() {
-//            try? Auth.auth().signOut()
-//        }
+    @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var userManager: UserManager
     
     var body: some View {
         Group {
-            let _ = print("現在のログイン状態: \(authManager.isLoggedIn)")
             if authManager.isLoggedIn {
                 ContentView()
-                    .environmentObject(authManager)
+                    .task {
+                        // ログイン成功時にUIDを取得してデータを読み込む
+                        if let uid = Auth.auth().currentUser?.uid {
+                            await userManager.fetchCurrentUser(uid: uid)
+                        }
+                    }
             } else {
                 LoginView(authManager: authManager)
             }

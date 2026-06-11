@@ -7,9 +7,16 @@
 
 import Observation
 import SwiftUI
+import FirebaseCore       // Firebase自体の初期化（configure）に必要
+import FirebaseFirestore  // Firestoreのデータベース操作に必要
 
 @Observable
 class SearchViewModel {
+    private var db: Firestore
+    
+    init() {
+        self.db = Firestore.firestore()
+    }
     var isShowingLocationPicker = false
     var location: String = ""
     let prefectures: [String] = [

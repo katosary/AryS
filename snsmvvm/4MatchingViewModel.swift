@@ -6,39 +6,50 @@
 //
 
 import Foundation
-import Observation // iOS 17+ の場合
+import Observation
+import FirebaseCore       // Firebase自体の初期化（configure）に必要
+import FirebaseFirestore  // Firestoreのデータベース操作に必要
 
-@Observable // @StateObjectを使う場合は class & ObservableObject
+@Observable
+@MainActor
 class MatchingViewModel {
-    var discoveredProfiles: [UserProfile] = []
+    private var db: Firestore
+    // モデル名を CoffeeProfile に変更
+    var discoveredProfiles: [CoffeeProfile] = []
     var isLoading = false
     
-    // 他人のプロフィールを取得する関数
+    init() {
+        self.db = Firestore.firestore()
+    }
+    
     func fetchRecommendedProfiles() async {
         isLoading = true
         
-        // --- ここで本来はAPI通信やFirebaseの取得処理を行う ---
-        // 例: FirebaseFirestore.collection("users").where("uid", "!=", currentUid).get()
+        // モダンな待ち時間の書き方
+        try? await Task.sleep(for: .seconds(1))
         
-        // 擬似的な待ち時間
-        //try? await Task.sleep(forNanoseconds: 1_000_000_000)
-        
-        // テストデータ
+        // 変更したモデル名で初期化
         self.discoveredProfiles = [
-            UserProfile(name: "田中 健太", coffeeStyle: "深煎り派", bio: "週末は自家焙煎しています。"),
-            UserProfile(name: "佐藤 美咲", coffeeStyle: "カフェラテ好き", bio: "可愛いラテアートのお店を探しています。"),
-            UserProfile(name: "鈴木 亮", coffeeStyle: "浅煎り・フルーティー", bio: "酸味のあるエチオピアが好きです。")
+            CoffeeProfile(name: "田中 健太", coffeeStyle: "深煎り派", bio: "週末は自家焙煎しています。"),
+            CoffeeProfile(name: "佐藤 美咲", coffeeStyle: "カフェラテ好き", bio: "可愛いラテアートのお店を探しています。"),
+            CoffeeProfile(name: "鈴木 亮", coffeeStyle: "浅煎り・フルーティー", bio: "酸味のあるエチオピアが好きです。")
         ]
         
         isLoading = false
     }
 }
 
-// ユーザー情報のモデル
-struct UserProfile: Identifiable {
-    let id = UUID()
+// Sendable を追加
+struct CoffeeProfile: Identifiable, Sendable {
+    let id: UUID
     let name: String
     let coffeeStyle: String
     let bio: String
-    // let profileImageUrl: String // 実際にはURLで管理
+    
+    init(id: UUID = UUID(), name: String, coffeeStyle: String, bio: String) {
+        self.id = id
+        self.name = name
+        self.coffeeStyle = coffeeStyle
+        self.bio = bio
+    }
 }

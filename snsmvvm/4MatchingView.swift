@@ -49,7 +49,7 @@ struct MatchingView: View {
 }
 // --- 2. 1人分のプロフィール表示 (カードデザイン版) ---
 struct MatchProfileView: View {
-    let profile: UserProfile
+    let profile: CoffeeProfile
     let profileSize: CGFloat = 110
     
     var body: some View {

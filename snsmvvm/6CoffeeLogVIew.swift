@@ -427,9 +427,9 @@ struct ShopLogView: View {
         }
     }
     
-    // 入力中のデータからプレビュー用モデルを作成する補助関数
     private func createPreviewLog() -> Log? {
-        return Log(
+        // 1. init で要求されている引数通りに初期化する
+        var newLog = Log(
             user: profileViewModel.user,
             shopName: viewModel.shopName,
             countryName: viewModel.countryName,
@@ -444,9 +444,15 @@ struct ShopLogView: View {
             acidityrating2: viewModel.acidityrating2,
             bodyrating2: viewModel.bodyrating2,
             createdAt: Date(),
-            logImages: viewModel.logImages,
-            textOffset: CGSize(width: viewModel.currentOffsetX, height: viewModel.currentOffsetY)
+            tagX: viewModel.currentOffsetX, // 👈 logImages の代わりに tagX
+            tagY: viewModel.currentOffsetY  // 👈 textOffset の代わりに tagY
         )
+        
+        // 2. init に含めなかったプロパティは、生成後に代入する
+        newLog.logImages = viewModel.logImages
+        newLog.textOffset = CGSize(width: viewModel.currentOffsetX, height: viewModel.currentOffsetY)
+        
+        return newLog
     }
     
     

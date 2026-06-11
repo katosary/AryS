@@ -6,12 +6,15 @@
 //
 
 import SwiftUI
+import FirebaseAuth
+import FirebaseFirestore
 
 struct ContentView: View {
     @State var viewModel = ViewModel()
     @Environment(ProfileViewModel.self) var profileViewModel
     @State var matchingViewModel = MatchingViewModel()
     @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var userManager: UserManager
     
     // 💡 メニューの開閉状態を管理するStateを追加
     @State private var isMenuPresented = false
@@ -46,7 +49,7 @@ struct ContentView: View {
                                 .foregroundColor(.white)
                         }
                         .padding(.leading, 12) // 左側に少し余白を作る
-
+                        
                         Spacer() // これでプラスボタンは左、メニューボタンは右に押し分けられます
                         
                         // 右側の投稿ボタン
@@ -69,11 +72,20 @@ struct ContentView: View {
                 ZStack {
                     backgroundColor.ignoresSafeArea()
                     
-                    // 現在のタブに応じてViewを出し分ける
                     Group {
                         switch viewModel.selectedTab {
-                        case 0: HomeView(viewModel: viewModel, profileViewModel: profileViewModel)
-                        case 1: SearchView(viewModel: viewModel,profileViewModel: profileViewModel)
+                        case 0:
+                            // 例: ホーム画面にユーザー情報を表示する
+                            VStack {
+                                if let user = userManager.currentUser {
+                                    Text("ようこそ、\(user.email) さん")
+                                        .padding()
+                                } else {
+                                    ProgressView("読み込み中...")
+                                }
+                                HomeView(viewModel: viewModel, profileViewModel: profileViewModel)
+                            }
+                        case 1: SearchView(viewModel: viewModel, profileViewModel: profileViewModel)
                         case 2: TalkView()
                         case 3: MatchingView(matchingViewModel: matchingViewModel)
                         case 4: ProfileView(viewModel: viewModel, profileViewModel: profileViewModel)
@@ -107,6 +119,11 @@ struct ContentView: View {
                 // SelectShopView は遷移先を持つため NavigationStack で囲むのが一般的です
                 NavigationStack {
                     SelectShopView()
+                }
+            }
+            .task {
+                if let uid = Auth.auth().currentUser?.uid {
+                    await userManager.fetchCurrentUser(uid: uid)
                 }
             }
         }

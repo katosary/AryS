@@ -9,6 +9,8 @@
 import Observation
 import SwiftUI
 import PhotosUI
+import FirebaseCore       // Firebase自体の初期化（configure）に必要
+import FirebaseFirestore  // Firestoreのデータベース操作に必要
 
 @Observable
 class ViewModel {
@@ -16,6 +18,18 @@ class ViewModel {
     var shopName: String = ""
     var countryName: String = ""
     var isShowingCountryPicker: Bool = false
+    // 1. 型定義だけしておき、初期値は代入しない
+        private var db: Firestore
+
+        init() {
+            // 2. initの中で初期化する
+            // これにより、アプリが起動してFirebaseApp.configure()が呼ばれた後で
+            // ViewModelが作られるため、クラッシュしなくなります
+            self.db = Firestore.firestore()
+            
+            // 3. 必要であればここでフェッチを開始する
+            fetchLogs()
+        }
     
     let regions = [
         "中南米": ["ブラジル", "コロンビア", "ホンジュラス", "グアテマラ", "ペルー", "メキシコ", "ニカラグア", "コスタリカ", "エルサルバドル", "パナマ", "ボリビア", "エクアドル", "ジャマイカ", "キューバ", "ドミニカ共和国"],
@@ -87,12 +101,24 @@ class ViewModel {
     // 入力中のプレビュー用画像
     var logImages: [UIImage] = []
     
-    var user: User = User(userNo: 1, userName: "", selfIntroduction: "", userAge: 0, birthPlace: "", favoriteCoffee: "", probitter: 0, proacidity: 0, probody: 0, proaroma: 0, proflavor: "")
+    // ViewModel内のプロパティ定義
+    var user: User = User(
+        userNo: 1,
+        userName: "",
+        selfIntroduction: "",
+        userAge: 0,
+        birthPlace: "",
+        favoriteCoffee: "",
+        probitter: 0,
+        proacidity: 0,
+        probody: 0,
+        proaroma: 0,
+        proflavor: ""
+    )
     
-    // 投稿追加
     func addLog(currentUser: User) {
-        // 💡 確実に型が一致するように、Log の定義に合わせて logImages（またはその配列）を渡します
-        let newLog = Log(
+        // id は書かない！Firestore が自動で nil をセットしてくれるため
+        var newLog = Log(
             user: currentUser,
             shopName: shopName,
             countryName: countryName,
@@ -107,31 +133,44 @@ class ViewModel {
             acidityrating2: acidityrating2,
             bodyrating2: bodyrating2,
             createdAt: Date(),
-            logImages: logImages, // 現在選択されている画像をLogに保存！
-            textOffset: CGSize(width: currentOffsetX, height: currentOffsetY),
             tagX: currentOffsetX,
             tagY: currentOffsetY
         )
         
-        logs.append(newLog)
-        
-        // 入力フォームをクリア（ここは今のままで正解です！）
-        shopName = ""
-        countryName = ""
-        farmName = ""
-        roastLevel = ""
-        aromarating = 0
-        aromaComment = ""
-        bitternessrating1 = 0
-        acidityrating1 = 0
-        bodyrating1 = 0
-        bitternessrating2 = 0
-        acidityrating2 = 0
-        bodyrating2 = 0
-        logImages = []
-        selectedItems = []
-        currentOffsetX = 0
-        currentOffsetY = 0
+        // 保存しないプロパティはインスタンス化後に代入
+        newLog.logImages = self.logImages
+        newLog.textOffset = CGSize(width: currentOffsetX, height: currentOffsetY)
+
+        do {
+            _ = try db.collection("posts").addDocument(from: newLog)
+            clearFormFields()
+        } catch {
+            print("保存失敗: \(error)")
+        }
+    }
+    // フォームを空にする処理をメソッド化しました
+    private func clearFormFields() {
+        shopName = ""; countryName = ""; farmName = ""; roastLevel = ""
+        aromarating = 0; aromaComment = ""; bitternessrating1 = 0
+        acidityrating1 = 0; bodyrating1 = 0; bitternessrating2 = 0
+        acidityrating2 = 0; bodyrating2 = 0; logImages = []
+        selectedItems = []; currentOffsetX = 0; currentOffsetY = 0
+    }
+
+    func fetchLogs() {
+        db.collection("posts")
+            .order(by: "createdAt", descending: true)
+            .addSnapshotListener { snapshot, error in
+                if let error = error {
+                    print("データ取得エラー: \(error)")
+                    return
+                }
+                
+                // compactMap で取得したドキュメントを Log 型に変換
+                self.logs = snapshot?.documents.compactMap { document in
+                    try? document.data(as: Log.self)
+                } ?? []
+            }
     }
     
     func updateLog(targetPost: Log) {
@@ -149,9 +188,15 @@ class ViewModel {
         self.editingRating = 0
     }
     
-    func updateLogPosition(id: UUID, offset: CGSize) {
+    func updateLogPosition(id: String, offset: CGSize) {
+        // インデックスを取得し、安全に更新する
         if let index = logs.firstIndex(where: { $0.id == id }) {
+            // Log 構造体に textOffset を追加済みであれば、これでエラーなく代入できます
             logs[index].textOffset = offset
+            
+            // （もし必要であれば）ここで tagX, tagY も更新する
+            logs[index].tagX = offset.width
+            logs[index].tagY = offset.height
         }
     }
     

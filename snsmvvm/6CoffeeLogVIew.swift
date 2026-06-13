@@ -385,8 +385,12 @@ struct ShopLogView: View {
             }
             
             Button {
-                viewModel.addLog(currentUser: profileViewModel.user)
-                dismiss()
+                viewModel.uploadAndSaveLog(currentUser: profileViewModel.user) { success in
+                    if success {
+                        dismiss() // 👈 成功したときだけ閉じる
+                    } else {
+                    }
+                }
             } label: {
                 Text("この内容で投稿する")
                     .bold()

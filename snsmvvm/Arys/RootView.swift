@@ -10,8 +10,8 @@ import SwiftUI
 import FirebaseAuth
 
 struct RootView: View {
-    @State private var authManager = AuthManager()
-    @State private var userManager = UserManager()
+    @StateObject private var authManager = AuthManager()
+    @StateObject private var userManager = UserManager()
     @State private var viewModel = ViewModel()
     @State private var profileViewModel = ProfileViewModel()
     @State private var searchViewModel = SearchViewModel()

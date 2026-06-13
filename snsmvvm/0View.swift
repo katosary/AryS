@@ -88,7 +88,7 @@ struct ContentView: View {
                         case 1: SearchView(viewModel: viewModel, profileViewModel: profileViewModel)
                         case 2: TalkView()
                         case 3: MatchingView(matchingViewModel: matchingViewModel)
-                        case 4: ProfileView(viewModel: viewModel, profileViewModel: profileViewModel)
+                        case 4: ProfileView()
                         default: EmptyView()
                         }
                     }

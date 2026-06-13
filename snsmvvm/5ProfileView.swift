@@ -6,10 +6,12 @@
 //
 
 import SwiftUI
+import FirebaseAuth
 
 struct ProfileView: View {
-    var viewModel: ViewModel
-    var profileViewModel: ProfileViewModel
+    @Environment(ViewModel.self) var viewModel
+    @Environment(ProfileViewModel.self) var profileViewModel
+    @EnvironmentObject var authManager: AuthManager
     @State private var profileSelection = 0
     @State private var isMenuPresented = false
     
@@ -124,6 +126,18 @@ struct ProfileView: View {
             }
         }
         .animation(.spring(response: 0.45, dampingFraction: 0.82), value: isDetailShowing)
+        .task {
+            // 画面表示時に Firestore からデータを読み込む
+            if let uid = Auth.auth().currentUser?.uid {
+                profileViewModel.loadProfile(uid: uid)
+            }
+        }
+        // 必要であれば、プロフィール編集画面が閉じられたときに保存する処理もここに書けます
+        .onDisappear {
+            if let uid = Auth.auth().currentUser?.uid {
+                profileViewModel.saveProfile(uid: uid)
+            }
+        }
     }
 }
 
@@ -141,14 +155,15 @@ struct PostContentView: View {
             VStack(spacing: 16) {
                 ForEach(viewModel.logs) { log in
                     PostCardView(log: log, isEditable: false)
+                        .id(log.id)
                         .frame(maxWidth: .infinity)
-                    //                        .onTapGesture {
-                    //                            // 💡 確実にアニメーションを効かせて選択
-                    //                            withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
-                    //                                selectedLog = log
-                    //                                isDetailShowing = true
-                    //                            }
-                    //                        }
+//                        .onTapGesture {
+//                            // 💡 確実にアニメーションを効かせて選択
+//                            withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
+//                                selectedLog = log
+//                                isDetailShowing = true
+//                            }
+//                        }
                 }
             }
         }
@@ -180,18 +195,22 @@ struct PostContentView: View {
                             VStack(spacing: 16) {
                                 // 📸 画像エリア
                                 ZStack {
-                                    if !log.logImages.isEmpty, let firstImage = log.logImages.first {
-                                        Image(uiImage: firstImage)
-                                            .resizable()
-                                            .aspectRatio(contentMode: .fill)
+                                    // 💡 log.imageUrl を使って表示する
+                                    if let urlString = log.imageUrl, let url = URL(string: urlString) {
+                                        AsyncImage(url: url) { image in
+                                            image.resizable()
+                                                .scaledToFill()
+                                        } placeholder: {
+                                            ProgressView() // ロード中の表示
+                                        }
                                     } else {
+                                        // 画像がない場合の表示
                                         ZStack {
-                                            Color(.systemGray5) // 💡 システム標準のグレー
-                                            VStack(spacing: 8) {
+                                            Color(.systemGray5)
+                                            VStack {
                                                 Image(systemName: "photo").font(.title)
                                                 Text("No Image").font(.caption)
                                             }
-                                            .foregroundColor(Color(.secondaryLabel)) // 💡 システムのラベル色
                                         }
                                     }
                                 }

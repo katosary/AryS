@@ -89,30 +89,42 @@ struct PostCardView: View {
             }
             .padding(.horizontal, 12)
             
-            // --- ② 画像・テキストオーバーレイエリア ---
-            ZStack(alignment: .bottomLeading) { // 👈 ZStack全体で左下寄せに設定
-                if let firstImage = log.logImages.first {
+            ZStack(alignment: .bottomLeading) {
+                if let urlString = log.imageUrl, let url = URL(string: urlString) {
+                    AsyncImage(url: url) { image in
+                        image.resizable()
+                            .scaledToFill()
+                    } placeholder: {
+                        ProgressView()
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 400)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    
+                } else if let firstImage = log.logImages.first {
+                    // ローカル画像
                     Image(uiImage: firstImage)
                         .resizable()
                         .scaledToFill()
                         .frame(maxWidth: .infinity)
-                        .aspectRatio(3/4, contentMode: .fill)
+                        .frame(height: 400) // 上の AsyncImage と高さを合わせると綺麗です
+                        .clipped()
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 } else {
+                    // 画像がない場合
                     RoundedRectangle(cornerRadius: 12)
                         .fill(Color.secondary.opacity(0.1))
                         .frame(maxWidth: .infinity)
-                        .aspectRatio(3/4, contentMode: .fit)
+                        .frame(height: 400)
                         .overlay(
                             VStack(spacing: 10) {
-                                Image(systemName: "photo.on.rectangle")
-                                    .font(.largeTitle)
-                                Text("写真が選択されていません")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                                Image(systemName: "photo.on.rectangle").font(.largeTitle)
+                                Text("No Image").font(.subheadline).foregroundColor(.secondary)
                             }
                         )
                 }
+                
                 
                 //                // ドラッグ・タップ可能な情報タグ
                 //                VStack(alignment: .leading, spacing: 4) {
@@ -174,21 +186,29 @@ struct PostCardView: View {
                 }
                 // 💡 下から出てくる詳細シートの定義
                 .sheet(isPresented: $isShowingDetailSheet) {
-                    // 💡 画面全体で開く設定（つまみで下にドラッグして閉じられる）
                     NavigationStack {
+                        // GeometryReaderを一番外側にするのがポイントです
                         GeometryReader { geometry in
-                            VStack(spacing: 0) {
-                                // --- 1. 画像エリア（角丸付き） ---
-                                if let firstImage = log.logImages.first {
-                                    Image(uiImage: firstImage)
-                                        .resizable()
-                                        .scaledToFit()
+                            ScrollView {
+                                VStack(spacing: 0) {
+                                    
+                                    // --- 1. 画像エリア ---
+                                    if let urlString = log.imageUrl, let url = URL(string: urlString) {
+                                        AsyncImage(url: url) { image in
+                                            image.resizable()
+                                                .scaledToFill()
+                                        } placeholder: {
+                                            ProgressView()
+                                        }
                                         .frame(width: geometry.size.width, height: geometry.size.height * 0.45)
                                         .clipped()
-                                }
-                                
-                                // --- 2. 詳細エリア（角丸付きの背景） ---
-                                ScrollView {
+                                    } else if let firstImage = log.logImages.first {
+                                        Image(uiImage: firstImage)
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: geometry.size.width, height: geometry.size.height * 0.45)
+                                            .clipped()
+                                    }
                                     // --- 2. 下部：詳細エリア ---
                                     VStack(alignment: .leading, spacing: 18) {
                                         Text("Coffee Review")
@@ -249,7 +269,6 @@ struct PostCardView: View {
                                                 .padding(.top, 8)
                                             }
                                         }
-                                        
                                     }
                                     .padding(24)
                                 }

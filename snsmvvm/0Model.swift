@@ -28,6 +28,7 @@ struct Log: Codable, Identifiable {
     var tagX: CGFloat
     var tagY: CGFloat
     
+    var imageUrl: String?
     var logImages: [UIImage] = []
     var textOffset: CGSize = .zero
     
@@ -35,7 +36,7 @@ struct Log: Codable, Identifiable {
         case id, user, shopName, countryName, farmName, roastLevel
         case aromarating, aromaComment, bitternessrating1, acidityrating1, bodyrating1
         case bitternessrating2, acidityrating2, bodyrating2, createdAt
-        case tagX, tagY
+        case tagX, tagY, imageUrl
     }
     
     // 💡 これを追加：Firestoreから読み込むためのイニシャライザ
@@ -58,6 +59,7 @@ struct Log: Codable, Identifiable {
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         tagX = try container.decode(CGFloat.self, forKey: .tagX)
         tagY = try container.decode(CGFloat.self, forKey: .tagY)
+        imageUrl = try container.decodeIfPresent(String.self, forKey: .imageUrl)
     }
 
     // 💡 これを追加：新規作成時に使うイニシャライザ

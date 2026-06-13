@@ -122,6 +122,56 @@ class ProfileViewModel {
         }
     }
     
+    // プロフィールを保存する関数
+    func saveProfile(uid: String) {
+        let data: [String: Any] = [
+            "userName": userName,
+            "selfIntroduction": selfIntroduction,
+            "userAge": userAge,
+            "birthPlace": birthPlace,
+            "favoriteCoffee": favoriteCoffee,
+            "probitter": probitter,
+            "proacidity": proacidity,
+            "probody": probody,
+            "proaroma": proaroma,
+            "proflavor": proflavor
+        ]
+        
+        // Firestoreの users コレクション内の、ログインユーザーのドキュメントに保存
+        db.collection("users").document(uid).setData(data, merge: true) { error in
+            if let error = error {
+                print("保存失敗: \(error.localizedDescription)")
+            } else {
+                print("保存成功")
+            }
+        }
+    }
+
+    func loadProfile(uid: String) {
+        db.collection("users").document(uid).getDocument { [weak self] snapshot, error in
+            // エラーチェックとデータ取得の確認
+            guard let data = snapshot?.data(), error == nil else {
+                print("プロフィールの読み込み失敗またはデータなし: \(error?.localizedDescription ?? "不明なエラー")")
+                return
+            }
+            
+            // 取得したデータを各プロパティに代入
+            // 取得できない場合は初期値（"" や 0）を入れる
+            self?.userName = data["userName"] as? String ?? ""
+            self?.selfIntroduction = data["selfIntroduction"] as? String ?? ""
+            self?.userAge = data["userAge"] as? Int ?? 0
+            self?.birthPlace = data["birthPlace"] as? String ?? ""
+            self?.favoriteCoffee = data["favoriteCoffee"] as? String ?? ""
+            self?.probitter = data["probitter"] as? Int ?? 0
+            self?.proacidity = data["proacidity"] as? Int ?? 0
+            self?.probody = data["probody"] as? Int ?? 0
+            self?.proaroma = data["proaroma"] as? Int ?? 0
+            self?.proflavor = data["proflavor"] as? String ?? ""
+            
+            print("プロフィール読み込み完了")
+        }
+    }
+    
     
     
     

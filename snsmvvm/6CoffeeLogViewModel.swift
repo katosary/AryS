@@ -11,6 +11,7 @@ import SwiftUI
 import PhotosUI
 import FirebaseCore       // Firebase自体の初期化（configure）に必要
 import FirebaseFirestore  // Firestoreのデータベース操作に必要
+import FirebaseStorage
 
 @Observable
 class ViewModel {
@@ -19,17 +20,17 @@ class ViewModel {
     var countryName: String = ""
     var isShowingCountryPicker: Bool = false
     // 1. 型定義だけしておき、初期値は代入しない
-        private var db: Firestore
-
-        init() {
-            // 2. initの中で初期化する
-            // これにより、アプリが起動してFirebaseApp.configure()が呼ばれた後で
-            // ViewModelが作られるため、クラッシュしなくなります
-            self.db = Firestore.firestore()
-            
-            // 3. 必要であればここでフェッチを開始する
-            fetchLogs()
-        }
+    private var db: Firestore
+    
+    init() {
+        // 2. initの中で初期化する
+        // これにより、アプリが起動してFirebaseApp.configure()が呼ばれた後で
+        // ViewModelが作られるため、クラッシュしなくなります
+        self.db = Firestore.firestore()
+        
+        // 3. 必要であればここでフェッチを開始する
+        fetchLogs()
+    }
     
     let regions = [
         "中南米": ["ブラジル", "コロンビア", "ホンジュラス", "グアテマラ", "ペルー", "メキシコ", "ニカラグア", "コスタリカ", "エルサルバドル", "パナマ", "ボリビア", "エクアドル", "ジャマイカ", "キューバ", "ドミニカ共和国"],
@@ -117,7 +118,66 @@ class ViewModel {
     )
     
     func addLog(currentUser: User) {
-        // id は書かない！Firestore が自動で nil をセットしてくれるため
+        // 1. 保存用のインスタンス作成（引数はinitに合わせて）
+        let newLog = Log(
+            user: currentUser,
+            shopName: shopName,
+            countryName: countryName,
+            farmName: farmName,
+            roastLevel: roastLevel,
+            aromarating: aromarating,
+            aromaComment: aromaComment,
+            bitternessrating1: bitternessrating1,
+            acidityrating1: acidityrating1,
+            bodyrating1: bodyrating1,
+            bitternessrating2: bitternessrating2,
+            acidityrating2: acidityrating2,
+            bodyrating2: bodyrating2,
+            createdAt: Date(),
+            tagX: currentOffsetX,
+            tagY: currentOffsetY
+        )
+        
+        // 2. Firestoreに保存
+        do {
+            // .addDocument(from: ) を使うと、Codable準拠のオブジェクトを直接保存できます
+            _ = try db.collection("posts").addDocument(from: newLog)
+            print("🎉 投稿成功！Firestoreのpostsコレクションを確認してください")
+            clearFormFields()
+        } catch {
+            print("❌ 保存失敗: \(error.localizedDescription)")
+        }
+    }
+    
+    func uploadAndSaveLog(currentUser: User, completion: @escaping (Bool) -> Void) {
+        guard let image = logImages.first,
+              let imageData = image.jpegData(compressionQuality: 0.5) else {
+            saveLogToFirestore(currentUser: currentUser, imageUrl: nil, completion: completion)
+            return
+        }
+        
+        let filename = NSUUID().uuidString + ".jpg"
+        let storageRef = Storage.storage().reference().child("post_images").child(filename)
+        
+        storageRef.putData(imageData, metadata: nil) { _, error in
+            if let error = error {
+                print("❌ アップロード失敗: \(error)")
+                completion(false) // 失敗
+                return
+            }
+            storageRef.downloadURL { url, error in
+                if let url = url {
+                    self.saveLogToFirestore(currentUser: currentUser, imageUrl: url.absoluteString, completion: completion)
+                } else {
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    // 既存の addLog の中身を少し改造した保存用関数
+    func saveLogToFirestore(currentUser: User, imageUrl: String?, completion: @escaping (Bool) -> Void) {
+        // 既存のすべてのプロパティを渡して初期化
         var newLog = Log(
             user: currentUser,
             shopName: shopName,
@@ -137,17 +197,19 @@ class ViewModel {
             tagY: currentOffsetY
         )
         
-        // 保存しないプロパティはインスタンス化後に代入
-        newLog.logImages = self.logImages
-        newLog.textOffset = CGSize(width: currentOffsetX, height: currentOffsetY)
-
+        // 画像URLをセット
+        newLog.imageUrl = imageUrl
+        
         do {
             _ = try db.collection("posts").addDocument(from: newLog)
-            clearFormFields()
+            print("🎉 成功")
+            completion(true) // 成功
         } catch {
-            print("保存失敗: \(error)")
+            print("❌ 保存失敗: \(error)")
+            completion(false) // 失敗
         }
     }
+    
     // フォームを空にする処理をメソッド化しました
     private func clearFormFields() {
         shopName = ""; countryName = ""; farmName = ""; roastLevel = ""
@@ -156,7 +218,7 @@ class ViewModel {
         acidityrating2 = 0; bodyrating2 = 0; logImages = []
         selectedItems = []; currentOffsetX = 0; currentOffsetY = 0
     }
-
+    
     func fetchLogs() {
         db.collection("posts")
             .order(by: "createdAt", descending: true)
@@ -215,14 +277,14 @@ class ViewModel {
     }
     
     // 💡 【追加】プロフィールが更新されたら、自分の過去の投稿データを一括更新する
-        func synchronizeMyProfile(with updatedUser: User) {
-            for index in 0..<logs.count {
-                // 投稿のユーザーNOが、更新されたユーザーNOと一致する場合
-                if logs[index].user.userNo == updatedUser.userNo {
-                    logs[index].user = updatedUser
-                }
+    func synchronizeMyProfile(with updatedUser: User) {
+        for index in 0..<logs.count {
+            // 投稿のユーザーNOが、更新されたユーザーNOと一致する場合
+            if logs[index].user.userNo == updatedUser.userNo {
+                logs[index].user = updatedUser
             }
         }
+    }
     
     @MainActor
     private func loadImages() async {

@@ -9,8 +9,9 @@ import Foundation
 import FirebaseFirestore
 import UIKit
 
-struct Log: Codable, Identifiable {
+struct Log: Codable, Identifiable , Equatable{
     @DocumentID var id: String? = nil
+    var userId: String?
     var user: User
     var shopName: String
     var countryName: String
@@ -32,8 +33,13 @@ struct Log: Codable, Identifiable {
     var logImages: [UIImage] = []
     var textOffset: CGSize = .zero
     
+    static func == (lhs: Log, rhs: Log) -> Bool {
+            // IDが同じなら同じものとみなす（画像や他の複雑な型は無視する）
+            return lhs.id == rhs.id
+        }
+    
     enum CodingKeys: String, CodingKey {
-        case id, user, shopName, countryName, farmName, roastLevel
+        case id,userId, user, shopName, countryName, farmName, roastLevel
         case aromarating, aromaComment, bitternessrating1, acidityrating1, bodyrating1
         case bitternessrating2, acidityrating2, bodyrating2, createdAt
         case tagX, tagY, imageUrl
@@ -43,6 +49,7 @@ struct Log: Codable, Identifiable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decodeIfPresent(String.self, forKey: .id)
+        userId = try container.decode(String.self, forKey: .userId)
         user = try container.decode(User.self, forKey: .user)
         shopName = try container.decode(String.self, forKey: .shopName)
         countryName = try container.decode(String.self, forKey: .countryName)
@@ -63,7 +70,8 @@ struct Log: Codable, Identifiable {
     }
 
     // 💡 これを追加：新規作成時に使うイニシャライザ
-    init(user: User, shopName: String, countryName: String, farmName: String, roastLevel: String, aromarating: Int, aromaComment: String, bitternessrating1: Int, acidityrating1: Int, bodyrating1: Int, bitternessrating2: Int, acidityrating2: Int, bodyrating2: Int, createdAt: Date, tagX: CGFloat, tagY: CGFloat) {
+    init(userId: String, user: User, shopName: String, countryName: String, farmName: String, roastLevel: String, aromarating: Int, aromaComment: String, bitternessrating1: Int, acidityrating1: Int, bodyrating1: Int, bitternessrating2: Int, acidityrating2: Int, bodyrating2: Int, createdAt: Date, tagX: CGFloat, tagY: CGFloat) {
+        self.userId = userId
         self.user = user
         self.shopName = shopName
         self.countryName = countryName

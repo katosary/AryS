@@ -141,6 +141,7 @@ struct ProfileView: View {
     }
 }
 
+
 struct PostContentView: View {
     @Environment(ViewModel.self) var viewModel
     var profileViewModel: ProfileViewModel
@@ -151,28 +152,28 @@ struct PostContentView: View {
     @State private var selectedLog: Log? = nil
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 15) {
+        ScrollView { // 投稿が多い場合に備えてScrollViewで囲むのが一般的です
             VStack(spacing: 16) {
-                ForEach(viewModel.logs) { log in
-                    PostCardView(log: log, isEditable: false)
-                        .id(log.id)
-                        .frame(maxWidth: .infinity)
-//                        .onTapGesture {
-//                            // 💡 確実にアニメーションを効かせて選択
-//                            withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
-//                                selectedLog = log
-//                                isDetailShowing = true
-//                            }
-//                        }
+                ForEach(viewModel.logs, id: \.id) { log in
+                    PostCardView(
+                        log: log,
+                        isEditable: false,
+                        onDelete: {
+                            viewModel.deleteLog(targetPost: log) // ここでViewModelのメソッドを呼ぶ
+                        },
+                        onEdit: {
+                            viewModel.selectedPost = log
+                            viewModel.isEditSheet = true
+                        }
+                    )
+                    .id(log.id)
                 }
             }
         }
-        // 💡 ここから修正：ZStackの条件分岐とアニメーションを最適化
         .overlay(
-            ZStack(alignment: .bottom) { // 下詰めに強制する
+            ZStack(alignment: .bottom) {
                 if isDetailShowing, let log = selectedLog {
-                    
-                    // ① 背後の暗いマスク（これ自体は画面全体を覆う）
+                    // ① 背後の暗いマスク
                     Color.black.opacity(0.4)
                         .ignoresSafeArea()
                         .onTapGesture {
@@ -180,96 +181,202 @@ struct PostContentView: View {
                                 isDetailShowing = false
                             }
                         }
-                        .transition(.opacity) // マスクはフェードイン/アウト
+                        .transition(.opacity)
                     
-                    // ② 下からせり出すハーフシート本体
-                    VStack(spacing: 0) {
-                        // ツマミ（インジケーター）
-                        Capsule()
-                            .frame(width: 40, height: 5)
-                            .foregroundColor(Color(.tertiaryLabel)) // 💡 システムのラベル色（グレー系）
-                            .padding(.top, 12)
-                            .padding(.bottom, 10)
-                        
-                        ScrollView {
-                            VStack(spacing: 16) {
-                                // 📸 画像エリア
-                                ZStack {
-                                    // 💡 log.imageUrl を使って表示する
-                                    if let urlString = log.imageUrl, let url = URL(string: urlString) {
-                                        AsyncImage(url: url) { image in
-                                            image.resizable()
-                                                .scaledToFill()
-                                        } placeholder: {
-                                            ProgressView() // ロード中の表示
-                                        }
-                                    } else {
-                                        // 画像がない場合の表示
-                                        ZStack {
-                                            Color(.systemGray5)
-                                            VStack {
-                                                Image(systemName: "photo").font(.title)
-                                                Text("No Image").font(.caption)
-                                            }
-                                        }
-                                    }
-                                }
-                                .frame(width: totalWidth * 0.85, height: totalWidth * 0.85 * 3/4)
-                                .clipped()
-                                .clipShape(RoundedRectangle(cornerRadius: 16))
-                                .shadow(color: Color.black.opacity(0.1), radius: 6, x: 0, y: 3)
-                                .padding(.horizontal, 24)
-                                
-                                // 📝 ユーザー情報・テキスト
-                                VStack(alignment: .leading, spacing: 16) {
-                                    HStack(spacing: 12) {
-                                        if let uiImage = profileViewModel.profileImage {
-                                            Image(uiImage: uiImage)
-                                                .resizable()
-                                                .scaledToFill()
-                                                .frame(width: 36, height: 36)
-                                                .clipShape(Circle())
-                                        }
-                                        Text(profileViewModel.user.userName)
-                                            .font(.headline)
-                                            .foregroundColor(Color(.label)) // 💡 システムのメイン文字色
-                                    }
-                                    
-                                    Divider() // 💡 システムの色が自動適用されます
-                                    
-                                    // 評価パラメーター
-                                    VStack(alignment: .leading, spacing: 12) {
-                                        let avgBitterness = Double(log.bitternessrating1 + log.bitternessrating2) / 2.0
-                                        Text("Bitterness: \(String(format: "%.1f", avgBitterness))")
-                                            .bold()
-                                            .foregroundColor(Color(.label))
-                                        RatingView(rating: avgBitterness, maxRating: 5)
-                                        
-                                        let avgAcidity = Double(log.acidityrating1 + log.acidityrating2) / 2.0
-                                        Text("Acidity: \(String(format: "%.1f", avgAcidity))")
-                                            .bold()
-                                            .foregroundColor(Color(.label))
-                                        RatingView(rating: avgAcidity, maxRating: 5)
-                                    }
-                                }
-                                .padding(.horizontal, 24)
-                                .padding(.bottom, 30)
-                            }
-                        }
-                    }
-                    .frame(width: totalWidth, height: totalHeight * 0.65)
-                    .background(Color(.systemBackground)) // 💡 シートの背景色
-                    .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
-                    .shadow(color: Color.black.opacity(0.15), radius: 10, x: 0, y: -5)
-                    .transition(.move(edge: .bottom))
+                    // ② 詳細ハーフシート
+                    DetailSheetView(log: log, isDetailShowing: $isDetailShowing, profileViewModel: profileViewModel,
+                                    totalWidth: totalWidth,totalHeight: totalHeight)
+                        .transition(.move(edge: .bottom))
                 }
             }
-            // 💡 画面全体に広げて、セーフエリアを無視させる
-                .frame(width: totalWidth, height: totalHeight)
-                .ignoresSafeArea()
         )
+        // 💡 外部から「どのログが選ばれたか」を検知してシートを開く仕組み
+        .onChange(of: viewModel.selectedPost) { _, newLog in
+            if let log = newLog {
+                self.selectedLog = log
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                    isDetailShowing = true
+                }
+            }
+        }
     }
 }
+
+struct DetailSheetView: View {
+    let log: Log
+    @Binding var isDetailShowing: Bool
+    var profileViewModel: ProfileViewModel
+    let totalWidth: CGFloat
+    let totalHeight: CGFloat
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // ツマミ
+            Capsule()
+                .frame(width: 40, height: 5)
+                .foregroundColor(Color(.tertiaryLabel))
+                .padding(.top, 12)
+                .padding(.bottom, 10)
+            
+            ScrollView {
+                VStack(spacing: 16) {
+                    // 画像エリア
+                    if let urlString = log.imageUrl, let url = URL(string: urlString) {
+                        AsyncImage(url: url) { image in
+                            image.resizable().scaledToFill()
+                        } placeholder: { ProgressView() }
+                        .frame(width: totalWidth * 0.85, height: totalWidth * 0.85 * 3/4)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .padding(.horizontal, 24)
+                    }
+                    
+                    // テキスト情報
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Coffee Review").font(.title2).bold()
+                        Divider()
+                        // 評価など（以前のコードをここに配置）
+                        Text("Bitterness: \(log.bitternessrating1)")
+                        // ...ここに他の評価パラメータを配置
+                    }
+                    .padding(24)
+                }
+            }
+        }
+        .frame(width: totalWidth, height: totalHeight * 0.65)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+        .shadow(color: Color.black.opacity(0.15), radius: 10, x: 0, y: -5)
+    }
+}
+//struct PostContentView: View {
+//    @Environment(ViewModel.self) var viewModel
+//    var profileViewModel: ProfileViewModel
+//    let totalWidth: CGFloat
+//    let totalHeight: CGFloat
+//    
+//    @Binding var isDetailShowing: Bool
+//    @State private var selectedLog: Log? = nil
+//    
+//    var body: some View {
+//        VStack(alignment: .leading, spacing: 15) {
+//            VStack(spacing: 16) {
+//                ForEach(viewModel.logs) { log in
+//                    PostCardView(log: log, isEditable: false)
+//                        .id(log.id)
+//                        .frame(maxWidth: .infinity)
+////                        .onTapGesture {
+////                            // 💡 確実にアニメーションを効かせて選択
+////                            withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
+////                                selectedLog = log
+////                                isDetailShowing = true
+////                            }
+////                        }
+//                }
+//            }
+//        }
+//        // 💡 ここから修正：ZStackの条件分岐とアニメーションを最適化
+//        .overlay(
+//            ZStack(alignment: .bottom) { // 下詰めに強制する
+//                if isDetailShowing, let log = selectedLog {
+//                    
+//                    // ① 背後の暗いマスク（これ自体は画面全体を覆う）
+//                    Color.black.opacity(0.4)
+//                        .ignoresSafeArea()
+//                        .onTapGesture {
+//                            withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+//                                isDetailShowing = false
+//                            }
+//                        }
+//                        .transition(.opacity) // マスクはフェードイン/アウト
+//                    
+//                    // ② 下からせり出すハーフシート本体
+//                    VStack(spacing: 0) {
+//                        // ツマミ（インジケーター）
+//                        Capsule()
+//                            .frame(width: 40, height: 5)
+//                            .foregroundColor(Color(.tertiaryLabel)) // 💡 システムのラベル色（グレー系）
+//                            .padding(.top, 12)
+//                            .padding(.bottom, 10)
+//                        
+//                        ScrollView {
+//                            VStack(spacing: 16) {
+//                                // 📸 画像エリア
+//                                ZStack {
+//                                    // 💡 log.imageUrl を使って表示する
+//                                    if let urlString = log.imageUrl, let url = URL(string: urlString) {
+//                                        AsyncImage(url: url) { image in
+//                                            image.resizable()
+//                                                .scaledToFill()
+//                                        } placeholder: {
+//                                            ProgressView() // ロード中の表示
+//                                        }
+//                                    } else {
+//                                        // 画像がない場合の表示
+//                                        ZStack {
+//                                            Color(.systemGray5)
+//                                            VStack {
+//                                                Image(systemName: "photo").font(.title)
+//                                                Text("No Image").font(.caption)
+//                                            }
+//                                        }
+//                                    }
+//                                }
+//                                .frame(width: totalWidth * 0.85, height: totalWidth * 0.85 * 3/4)
+//                                .clipped()
+//                                .clipShape(RoundedRectangle(cornerRadius: 16))
+//                                .shadow(color: Color.black.opacity(0.1), radius: 6, x: 0, y: 3)
+//                                .padding(.horizontal, 24)
+//                                
+//                                // 📝 ユーザー情報・テキスト
+//                                VStack(alignment: .leading, spacing: 16) {
+//                                    HStack(spacing: 12) {
+//                                        if let uiImage = profileViewModel.profileImage {
+//                                            Image(uiImage: uiImage)
+//                                                .resizable()
+//                                                .scaledToFill()
+//                                                .frame(width: 36, height: 36)
+//                                                .clipShape(Circle())
+//                                        }
+//                                        Text(profileViewModel.user.userName)
+//                                            .font(.headline)
+//                                            .foregroundColor(Color(.label)) // 💡 システムのメイン文字色
+//                                    }
+//                                    
+//                                    Divider() // 💡 システムの色が自動適用されます
+//                                    
+//                                    // 評価パラメーター
+//                                    VStack(alignment: .leading, spacing: 12) {
+//                                        let avgBitterness = Double(log.bitternessrating1 + log.bitternessrating2) / 2.0
+//                                        Text("Bitterness: \(String(format: "%.1f", avgBitterness))")
+//                                            .bold()
+//                                            .foregroundColor(Color(.label))
+//                                        RatingView(rating: avgBitterness, maxRating: 5)
+//                                        
+//                                        let avgAcidity = Double(log.acidityrating1 + log.acidityrating2) / 2.0
+//                                        Text("Acidity: \(String(format: "%.1f", avgAcidity))")
+//                                            .bold()
+//                                            .foregroundColor(Color(.label))
+//                                        RatingView(rating: avgAcidity, maxRating: 5)
+//                                    }
+//                                }
+//                                .padding(.horizontal, 24)
+//                                .padding(.bottom, 30)
+//                            }
+//                        }
+//                    }
+//                    .frame(width: totalWidth, height: totalHeight * 0.65)
+//                    .background(Color(.systemBackground)) // 💡 シートの背景色
+//                    .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+//                    .shadow(color: Color.black.opacity(0.15), radius: 10, x: 0, y: -5)
+//                    .transition(.move(edge: .bottom))
+//                }
+//            }
+//            // 💡 画面全体に広げて、セーフエリアを無視させる
+//                .frame(width: totalWidth, height: totalHeight)
+//                .ignoresSafeArea()
+//        )
+//    }
+//}
 
 // --- 1. コーヒーの好みカード ---
 struct MyProfileContentView: View {

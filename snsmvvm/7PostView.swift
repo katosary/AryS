@@ -11,9 +11,11 @@ import PhotosUI
 
 struct PostCardView: View {
     let log: Log
-    @Environment(ViewModel.self) var viewModel
+//    @Environment(ViewModel.self) var viewModel
     @Environment(ProfileViewModel.self) var profileViewModel
     var isEditable: Bool
+    var onDelete: () -> Void
+        var onEdit: () -> Void
     
     @State private var dragOffset: CGSize = .zero
     @State private var isShowingDetailSheet = false
@@ -70,13 +72,12 @@ struct PostCardView: View {
                 if isMyPost {
                     Menu {
                         Button {
-                            viewModel.selectedPost = log
-                            viewModel.isEditSheet = true
+                            onEdit()
                         } label: {
                             Label("編集", systemImage: "pencil")
                         }
                         Button(role: .destructive) {
-                            viewModel.deleteLog(targetPost: log)
+                            onDelete()
                         } label: {
                             Label("削除", systemImage: "trash")
                         }
@@ -184,105 +185,106 @@ struct PostCardView: View {
                         isShowingDetailSheet = true
                     }
                 }
-                // 💡 下から出てくる詳細シートの定義
-                .sheet(isPresented: $isShowingDetailSheet) {
-                    NavigationStack {
-                        // GeometryReaderを一番外側にするのがポイントです
-                        GeometryReader { geometry in
-                            ScrollView {
-                                VStack(spacing: 0) {
-                                    
-                                    // --- 1. 画像エリア ---
-                                    if let urlString = log.imageUrl, let url = URL(string: urlString) {
-                                        AsyncImage(url: url) { image in
-                                            image.resizable()
-                                                .scaledToFill()
-                                        } placeholder: {
-                                            ProgressView()
-                                        }
-                                        .frame(width: geometry.size.width, height: geometry.size.height * 0.45)
-                                        .clipped()
-                                    } else if let firstImage = log.logImages.first {
-                                        Image(uiImage: firstImage)
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: geometry.size.width, height: geometry.size.height * 0.45)
-                                            .clipped()
-                                    }
-                                    // --- 2. 下部：詳細エリア ---
-                                    VStack(alignment: .leading, spacing: 18) {
-                                        Text("Coffee Review")
-                                            .font(.title2).bold()
-                                            .padding(.top, 20)
-                                        
-                                        VStack(alignment: .leading, spacing: 18) {
-                                            // --- Bitterness ---
-                                            VStack(alignment: .leading, spacing: 6) {
-                                                let avgBitterness = Double(log.bitternessrating1 + log.bitternessrating2) / 2.0
-                                                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                                    Text("Bitterness").font(.subheadline).bold()
-                                                    Text(String(format: "%.1f", avgBitterness)).font(.subheadline).bold().foregroundColor(.orange)
-                                                }
-                                                RatingView(rating: avgBitterness, maxRating: 5)
-                                            }
-                                            
-                                            // --- Acidity ---
-                                            VStack(alignment: .leading, spacing: 6) {
-                                                let avgAcidity = Double(log.acidityrating1 + log.acidityrating2) / 2.0
-                                                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                                    Text("Acidity").font(.subheadline).bold()
-                                                    Text(String(format: "%.1f", avgAcidity)).font(.subheadline).bold().foregroundColor(.orange)
-                                                }
-                                                RatingView(rating: avgAcidity, maxRating: 5)
-                                            }
-                                            
-                                            // --- Body ---
-                                            VStack(alignment: .leading, spacing: 6) {
-                                                let avgBody = Double(log.bodyrating1 + log.bodyrating2) / 2.0
-                                                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                                    Text("Body").font(.subheadline).bold()
-                                                    Text(String(format: "%.1f", avgBody)).font(.subheadline).bold().foregroundColor(.orange)
-                                                }
-                                                RatingView(rating: avgBody, maxRating: 5)
-                                            }
-                                            
-                                            // --- Aroma ---
-                                            VStack(alignment: .leading, spacing: 6) {
-                                                let aromaDouble = Double(log.aromarating)
-                                                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                                    Text("Aroma").font(.subheadline).bold()
-                                                    Text(String(format: "%.1f", aromaDouble)).font(.subheadline).bold().foregroundColor(.orange)
-                                                }
-                                                RatingView(rating: aromaDouble, maxRating: 5)
-                                            }
-                                            
-                                            // --- 香りのコメント ---
-                                            if !log.aromaComment.isEmpty {
-                                                VStack(alignment: .leading, spacing: 6) {
-                                                    Text("香りの種類:")
-                                                        .font(.subheadline)
-                                                        .bold()
-                                                        .foregroundColor(.secondary)
-                                                    Text(log.aromaComment)
-                                                        .font(.body)
-                                                }
-                                                .padding(.top, 8)
-                                            }
-                                        }
-                                    }
-                                    .padding(24)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .background(Color(.systemBackground))
-                            }
-                        }
-                        .presentationDetents([.fraction(1.0)]) // 💡 100%表示
-                        .presentationDragIndicator(.visible)   // 💡 つまみを表示
-                        .presentationCornerRadius(20)          // 💡 シート全体の角丸
-                    }
-                }
             }
         }
     }
 }
 
+
+//// 💡 下から出てくる詳細シートの定義
+//.sheet(isPresented: $isShowingDetailSheet) {
+//    NavigationStack {
+//        // GeometryReaderを一番外側にするのがポイントです
+//        GeometryReader { geometry in
+//            ScrollView {
+//                VStack(spacing: 0) {
+//                    
+//                    // --- 1. 画像エリア ---
+//                    if let urlString = log.imageUrl, let url = URL(string: urlString) {
+//                        AsyncImage(url: url) { image in
+//                            image.resizable()
+//                                .scaledToFill()
+//                        } placeholder: {
+//                            ProgressView()
+//                        }
+//                        .frame(width: geometry.size.width, height: geometry.size.height * 0.45)
+//                        .clipped()
+//                    } else if let firstImage = log.logImages.first {
+//                        Image(uiImage: firstImage)
+//                            .resizable()
+//                            .scaledToFill()
+//                            .frame(width: geometry.size.width, height: geometry.size.height * 0.45)
+//                            .clipped()
+//                    }
+//                    // --- 2. 下部：詳細エリア ---
+//                    VStack(alignment: .leading, spacing: 18) {
+//                        Text("Coffee Review")
+//                            .font(.title2).bold()
+//                            .padding(.top, 20)
+//                        
+//                        VStack(alignment: .leading, spacing: 18) {
+//                            // --- Bitterness ---
+//                            VStack(alignment: .leading, spacing: 6) {
+//                                let avgBitterness = Double(log.bitternessrating1 + log.bitternessrating2) / 2.0
+//                                HStack(alignment: .firstTextBaseline, spacing: 8) {
+//                                    Text("Bitterness").font(.subheadline).bold()
+//                                    Text(String(format: "%.1f", avgBitterness)).font(.subheadline).bold().foregroundColor(.orange)
+//                                }
+//                                RatingView(rating: avgBitterness, maxRating: 5)
+//                            }
+//                            
+//                            // --- Acidity ---
+//                            VStack(alignment: .leading, spacing: 6) {
+//                                let avgAcidity = Double(log.acidityrating1 + log.acidityrating2) / 2.0
+//                                HStack(alignment: .firstTextBaseline, spacing: 8) {
+//                                    Text("Acidity").font(.subheadline).bold()
+//                                    Text(String(format: "%.1f", avgAcidity)).font(.subheadline).bold().foregroundColor(.orange)
+//                                }
+//                                RatingView(rating: avgAcidity, maxRating: 5)
+//                            }
+//                            
+//                            // --- Body ---
+//                            VStack(alignment: .leading, spacing: 6) {
+//                                let avgBody = Double(log.bodyrating1 + log.bodyrating2) / 2.0
+//                                HStack(alignment: .firstTextBaseline, spacing: 8) {
+//                                    Text("Body").font(.subheadline).bold()
+//                                    Text(String(format: "%.1f", avgBody)).font(.subheadline).bold().foregroundColor(.orange)
+//                                }
+//                                RatingView(rating: avgBody, maxRating: 5)
+//                            }
+//                            
+//                            // --- Aroma ---
+//                            VStack(alignment: .leading, spacing: 6) {
+//                                let aromaDouble = Double(log.aromarating)
+//                                HStack(alignment: .firstTextBaseline, spacing: 8) {
+//                                    Text("Aroma").font(.subheadline).bold()
+//                                    Text(String(format: "%.1f", aromaDouble)).font(.subheadline).bold().foregroundColor(.orange)
+//                                }
+//                                RatingView(rating: aromaDouble, maxRating: 5)
+//                            }
+//                            
+//                            // --- 香りのコメント ---
+//                            if !log.aromaComment.isEmpty {
+//                                VStack(alignment: .leading, spacing: 6) {
+//                                    Text("香りの種類:")
+//                                        .font(.subheadline)
+//                                        .bold()
+//                                        .foregroundColor(.secondary)
+//                                    Text(log.aromaComment)
+//                                        .font(.body)
+//                                }
+//                                .padding(.top, 8)
+//                            }
+//                        }
+//                    }
+//                    .padding(24)
+//                }
+//                .frame(maxWidth: .infinity)
+//                .background(Color(.systemBackground))
+//            }
+//        }
+//        .presentationDetents([.fraction(1.0)]) // 💡 100%表示
+//        .presentationDragIndicator(.visible)   // 💡 つまみを表示
+//        .presentationCornerRadius(20)          // 💡 シート全体の角丸
+//    }
+//}

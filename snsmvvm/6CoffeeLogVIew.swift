@@ -7,6 +7,7 @@
 
 import SwiftUI
 import PhotosUI
+import FirebaseAuth
 
 struct SelectShopView : View {
     @Environment(ViewModel.self) var viewModel
@@ -377,7 +378,15 @@ struct ShopLogView: View {
             Text("表示位置を調整してください").font(.headline)
             Text("アイコンをドラッグして、味のポジションを微調整できます。").font(.caption).foregroundColor(.secondary)
             if let previewLog = createPreviewLog() {
-                PostCardView(log: previewLog, isEditable: true)
+                PostCardView(log: previewLog, isEditable: true,onDelete: {
+                    // プレビュー画面なので何もしない、または空の処理
+                    print("プレビューのため削除操作は無効です")
+                },
+                onEdit: {
+                    // プレビュー画面なので何もしない、または空の処理
+                    print("プレビューのため編集操作は無効です")
+                }
+            )
                     .frame(height: 500) // プレビューに適したサイズに調整
                     .background(Color.white)
                     .cornerRadius(15)
@@ -432,8 +441,13 @@ struct ShopLogView: View {
     }
     
     private func createPreviewLog() -> Log? {
+        guard let uid = Auth.auth().currentUser?.uid else {
+                print("プレビュー生成失敗: ログインしていません")
+                return nil
+            }
         // 1. init で要求されている引数通りに初期化する
         var newLog = Log(
+            userId: uid,
             user: profileViewModel.user,
             shopName: viewModel.shopName,
             countryName: viewModel.countryName,

@@ -12,6 +12,7 @@ import PhotosUI
 import FirebaseCore       // Firebase自体の初期化（configure）に必要
 import FirebaseFirestore  // Firestoreのデータベース操作に必要
 import FirebaseStorage
+import FirebaseAuth
 
 @Observable
 class ViewModel {
@@ -118,8 +119,13 @@ class ViewModel {
     )
     
     func addLog(currentUser: User) {
+        guard let uid = Auth.auth().currentUser?.uid else {
+                print("❌ ログインしていません")
+                return
+            }
         // 1. 保存用のインスタンス作成（引数はinitに合わせて）
         let newLog = Log(
+            userId: uid,
             user: currentUser,
             shopName: shopName,
             countryName: countryName,
@@ -177,8 +183,14 @@ class ViewModel {
     
     // 既存の addLog の中身を少し改造した保存用関数
     func saveLogToFirestore(currentUser: User, imageUrl: String?, completion: @escaping (Bool) -> Void) {
+        guard let uid = Auth.auth().currentUser?.uid else {
+                print("❌ ユーザーがログインしていません")
+                completion(false)
+                return
+            }
         // 既存のすべてのプロパティを渡して初期化
         var newLog = Log(
+            userId: uid,
             user: currentUser,
             shopName: shopName,
             countryName: countryName,
@@ -220,18 +232,32 @@ class ViewModel {
     }
     
     func fetchLogs() {
+        // 💡 1. ログイン中のユーザーIDを取得
+        guard let uid = Auth.auth().currentUser?.uid else {
+            print("❌ ログインしていないため、自分の投稿を読み込めません")
+            return
+        }
+
+        // 💡 2. whereField を追加して、自分に紐付いた投稿のみを取得する
         db.collection("posts")
+            .whereField("userId", isEqualTo: uid) // 👈 これを追加
             .order(by: "createdAt", descending: true)
             .addSnapshotListener { snapshot, error in
                 if let error = error {
-                    print("データ取得エラー: \(error)")
+                    print("❌ データ取得エラー: \(error)")
                     return
                 }
                 
-                // compactMap で取得したドキュメントを Log 型に変換
                 self.logs = snapshot?.documents.compactMap { document in
-                    try? document.data(as: Log.self)
+                    do {
+                        return try document.data(as: Log.self)
+                    } catch {
+                        print("❌ デコードエラー: \(error)") // ここに原因が出るはずです
+                        return nil
+                    }
                 } ?? []
+                
+                print("✅ 自分の投稿を \(self.logs.count) 件取得しました")
             }
     }
     

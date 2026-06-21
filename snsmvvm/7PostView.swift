@@ -7,59 +7,55 @@
 
 import SwiftUI
 import PhotosUI
+import FirebaseAuth
 
 
 struct PostCardView: View {
     let log: Log
-//    @Environment(ViewModel.self) var viewModel
+    let author: User?
+    let authorName: String
+    @Environment(ViewModel.self) var viewModel
     @Environment(ProfileViewModel.self) var profileViewModel
     var isEditable: Bool
     var onDelete: () -> Void
-        var onEdit: () -> Void
+    var onEdit: () -> Void
     
-    @State private var dragOffset: CGSize = .zero
     @State private var isShowingDetailSheet = false
     let profileSize: CGFloat = 40
+    @State private var dragOffset: CGSize = .zero
     
-    // 投稿者が自分かどうかを判定
     private var isMyPost: Bool {
-        log.user.userNo == profileViewModel.user.userNo
+        log.userId == String(profileViewModel.user.userNo)
     }
     
-    // 💡 表示に使うユーザー情報を動的に切り替えるプロパティ
-    private var displayUser: User {
-        isMyPost ? profileViewModel.user : log.user
-    }
-    
+    // 💡 修正: プロフィール表示ロジック
+    // 他人の投稿の場合、Logモデルにユーザー名や写真URLが含まれていないなら、
+    // "Unknown" や固定のアイコンを表示する形になります。
     var body: some View {
-        // ⚠️ bodyの直下を大きなVStackで包むことで、全体のレイアウトを縦に並べます
         VStack(spacing: 16) {
-            
-            // --- ① ヘッダーエリア ---
-            HStack(spacing: 12) { // ユーザ情報とメニューを横並びにするためHStackがおすすめ
-                // --- B. プロフィール写真 ---
-                Group {
-                    if let uiImage = displayUser.profileImage {
-                        Image(uiImage: uiImage)
-                            .resizable()
-                            .scaledToFill()
-                    } else {
-                        Image(systemName: "person.crop.circle.fill")
-                            .resizable()
-                            .scaledToFit()
-                            .foregroundColor(.gray.opacity(0.6))
-                            .background(Color.white)
-                    }
-                }
-                .frame(width: profileSize, height: profileSize)
-                .clipShape(Circle())
+            HStack(spacing: 12) {
+                // 💡 ここを修正：自分ならViewModelのuser、他人なら引数のauthorを使う
+                let displayUser = isMyPost ? profileViewModel.user : author
                 
-                Text(displayUser.userName)
+                // 💡 displayUser を使って表示ロジックを組む
+                if let urlString = displayUser?.profileImageUrl, !urlString.isEmpty, let url = URL(string: urlString) {
+                    AsyncImage(url: url) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        Circle().fill(Color.gray)
+                    }
+                    .frame(width: 40, height: 40)
+                    .clipShape(Circle())
+                } else {
+                    Image(systemName: "person.circle.fill")
+                        .resizable()
+                        .frame(width: 40, height: 40)
+                        .foregroundColor(.gray)
+                }
+                
+                Text(authorName) 
                     .font(.title2)
                     .bold()
-                
-                
-                
                 
                 Spacer()
                 
@@ -91,42 +87,30 @@ struct PostCardView: View {
             .padding(.horizontal, 12)
             
             ZStack(alignment: .bottomLeading) {
-                if let urlString = log.imageUrl, let url = URL(string: urlString) {
-                    AsyncImage(url: url) { image in
-                        image.resizable()
-                            .scaledToFill()
-                    } placeholder: {
-                        ProgressView()
+                // PostCardView.swift の画像表示部分を修正
+                Group {
+                    if let urlString = log.imageUrl, let url = URL(string: urlString) {
+                        AsyncImage(url: url) { image in
+                            image.resizable().scaledToFill()
+                        } placeholder: {
+                            ProgressView()
+                        }
+                    } else {
+                        // log.logImages.first を削除し、デフォルト表示にする
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.secondary.opacity(0.1))
+                            .overlay(
+                                VStack(spacing: 10) {
+                                    Image(systemName: "photo.on.rectangle").font(.largeTitle)
+                                    Text("No Image").font(.subheadline).foregroundColor(.secondary)
+                                }
+                            )
                     }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 400)
-                    .clipped()
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    
-                } else if let firstImage = log.logImages.first {
-                    // ローカル画像
-                    Image(uiImage: firstImage)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 400) // 上の AsyncImage と高さを合わせると綺麗です
-                        .clipped()
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                } else {
-                    // 画像がない場合
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.secondary.opacity(0.1))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 400)
-                        .overlay(
-                            VStack(spacing: 10) {
-                                Image(systemName: "photo.on.rectangle").font(.largeTitle)
-                                Text("No Image").font(.subheadline).foregroundColor(.secondary)
-                            }
-                        )
                 }
-                
-                
+                .aspectRatio(4/3, contentMode: .fit)
+                .frame(maxWidth: .infinity)
+                .clipped()
+                .clipShape(RoundedRectangle(cornerRadius: 12))
                 //                // ドラッグ・タップ可能な情報タグ
                 //                VStack(alignment: .leading, spacing: 4) {
                 //                    Group {
@@ -186,105 +170,97 @@ struct PostCardView: View {
                     }
                 }
             }
+            // 💡 下から出てくる詳細シートの定義
+            .sheet(isPresented: $isShowingDetailSheet) {
+                NavigationStack {
+                    // GeometryReaderを一番外側にするのがポイントです
+                    GeometryReader { geometry in
+                        ScrollView {
+                            VStack(spacing: 0) {
+                                
+                                // --- 1. 画像エリア ---
+                                if let urlString = log.imageUrl, let url = URL(string: urlString) {
+                                    AsyncImage(url: url) { image in
+                                        image.resizable()
+                                            .scaledToFill()
+                                    } placeholder: {
+                                        ProgressView()
+                                    }
+                                    .frame(width: geometry.size.width, height: geometry.size.height * 0.45)
+                                    .clipped()
+                                } 
+                                // --- 2. 下部：詳細エリア ---
+                                VStack(alignment: .leading, spacing: 18) {
+                                    Text("Coffee Review")
+                                        .font(.title2).bold()
+                                        .padding(.top, 20)
+                                    
+                                    VStack(alignment: .leading, spacing: 18) {
+                                        // --- Bitterness ---
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            let avgBitterness = Double(log.bitternessrating1 + log.bitternessrating2) / 2.0
+                                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                                Text("Bitterness").font(.subheadline).bold()
+                                                Text(String(format: "%.1f", avgBitterness)).font(.subheadline).bold().foregroundColor(.orange)
+                                            }
+                                            RatingView(rating: avgBitterness, maxRating: 5)
+                                        }
+                                        
+                                        // --- Acidity ---
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            let avgAcidity = Double(log.acidityrating1 + log.acidityrating2) / 2.0
+                                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                                Text("Acidity").font(.subheadline).bold()
+                                                Text(String(format: "%.1f", avgAcidity)).font(.subheadline).bold().foregroundColor(.orange)
+                                            }
+                                            RatingView(rating: avgAcidity, maxRating: 5)
+                                        }
+                                        
+                                        // --- Body ---
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            let avgBody = Double(log.bodyrating1 + log.bodyrating2) / 2.0
+                                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                                Text("Body").font(.subheadline).bold()
+                                                Text(String(format: "%.1f", avgBody)).font(.subheadline).bold().foregroundColor(.orange)
+                                            }
+                                            RatingView(rating: avgBody, maxRating: 5)
+                                        }
+                                        
+                                        // --- Aroma ---
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            let aromaDouble = Double(log.aromarating)
+                                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                                Text("Aroma").font(.subheadline).bold()
+                                                Text(String(format: "%.1f", aromaDouble)).font(.subheadline).bold().foregroundColor(.orange)
+                                            }
+                                            RatingView(rating: aromaDouble, maxRating: 5)
+                                        }
+                                        
+                                        // --- 香りのコメント ---
+                                        if !log.aromaComment.isEmpty {
+                                            VStack(alignment: .leading, spacing: 6) {
+                                                Text("香りの種類:")
+                                                    .font(.subheadline)
+                                                    .bold()
+                                                    .foregroundColor(.secondary)
+                                                Text(log.aromaComment)
+                                                    .font(.body)
+                                            }
+                                            .padding(.top, 8)
+                                        }
+                                    }
+                                }
+                                .padding(24)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .background(Color(.systemBackground))
+                        }
+                    }
+                    .presentationDetents([.fraction(1.0)]) // 💡 100%表示
+                    .presentationDragIndicator(.visible)   // 💡 つまみを表示
+                    .presentationCornerRadius(20)          // 💡 シート全体の角丸
+                }
+            }
         }
     }
 }
-
-
-//// 💡 下から出てくる詳細シートの定義
-//.sheet(isPresented: $isShowingDetailSheet) {
-//    NavigationStack {
-//        // GeometryReaderを一番外側にするのがポイントです
-//        GeometryReader { geometry in
-//            ScrollView {
-//                VStack(spacing: 0) {
-//                    
-//                    // --- 1. 画像エリア ---
-//                    if let urlString = log.imageUrl, let url = URL(string: urlString) {
-//                        AsyncImage(url: url) { image in
-//                            image.resizable()
-//                                .scaledToFill()
-//                        } placeholder: {
-//                            ProgressView()
-//                        }
-//                        .frame(width: geometry.size.width, height: geometry.size.height * 0.45)
-//                        .clipped()
-//                    } else if let firstImage = log.logImages.first {
-//                        Image(uiImage: firstImage)
-//                            .resizable()
-//                            .scaledToFill()
-//                            .frame(width: geometry.size.width, height: geometry.size.height * 0.45)
-//                            .clipped()
-//                    }
-//                    // --- 2. 下部：詳細エリア ---
-//                    VStack(alignment: .leading, spacing: 18) {
-//                        Text("Coffee Review")
-//                            .font(.title2).bold()
-//                            .padding(.top, 20)
-//                        
-//                        VStack(alignment: .leading, spacing: 18) {
-//                            // --- Bitterness ---
-//                            VStack(alignment: .leading, spacing: 6) {
-//                                let avgBitterness = Double(log.bitternessrating1 + log.bitternessrating2) / 2.0
-//                                HStack(alignment: .firstTextBaseline, spacing: 8) {
-//                                    Text("Bitterness").font(.subheadline).bold()
-//                                    Text(String(format: "%.1f", avgBitterness)).font(.subheadline).bold().foregroundColor(.orange)
-//                                }
-//                                RatingView(rating: avgBitterness, maxRating: 5)
-//                            }
-//                            
-//                            // --- Acidity ---
-//                            VStack(alignment: .leading, spacing: 6) {
-//                                let avgAcidity = Double(log.acidityrating1 + log.acidityrating2) / 2.0
-//                                HStack(alignment: .firstTextBaseline, spacing: 8) {
-//                                    Text("Acidity").font(.subheadline).bold()
-//                                    Text(String(format: "%.1f", avgAcidity)).font(.subheadline).bold().foregroundColor(.orange)
-//                                }
-//                                RatingView(rating: avgAcidity, maxRating: 5)
-//                            }
-//                            
-//                            // --- Body ---
-//                            VStack(alignment: .leading, spacing: 6) {
-//                                let avgBody = Double(log.bodyrating1 + log.bodyrating2) / 2.0
-//                                HStack(alignment: .firstTextBaseline, spacing: 8) {
-//                                    Text("Body").font(.subheadline).bold()
-//                                    Text(String(format: "%.1f", avgBody)).font(.subheadline).bold().foregroundColor(.orange)
-//                                }
-//                                RatingView(rating: avgBody, maxRating: 5)
-//                            }
-//                            
-//                            // --- Aroma ---
-//                            VStack(alignment: .leading, spacing: 6) {
-//                                let aromaDouble = Double(log.aromarating)
-//                                HStack(alignment: .firstTextBaseline, spacing: 8) {
-//                                    Text("Aroma").font(.subheadline).bold()
-//                                    Text(String(format: "%.1f", aromaDouble)).font(.subheadline).bold().foregroundColor(.orange)
-//                                }
-//                                RatingView(rating: aromaDouble, maxRating: 5)
-//                            }
-//                            
-//                            // --- 香りのコメント ---
-//                            if !log.aromaComment.isEmpty {
-//                                VStack(alignment: .leading, spacing: 6) {
-//                                    Text("香りの種類:")
-//                                        .font(.subheadline)
-//                                        .bold()
-//                                        .foregroundColor(.secondary)
-//                                    Text(log.aromaComment)
-//                                        .font(.body)
-//                                }
-//                                .padding(.top, 8)
-//                            }
-//                        }
-//                    }
-//                    .padding(24)
-//                }
-//                .frame(maxWidth: .infinity)
-//                .background(Color(.systemBackground))
-//            }
-//        }
-//        .presentationDetents([.fraction(1.0)]) // 💡 100%表示
-//        .presentationDragIndicator(.visible)   // 💡 つまみを表示
-//        .presentationCornerRadius(20)          // 💡 シート全体の角丸
-//    }
-//}

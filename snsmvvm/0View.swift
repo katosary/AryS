@@ -78,7 +78,7 @@ struct ContentView: View {
                             // 例: ホーム画面にユーザー情報を表示する
                             VStack {
                                 if let user = userManager.currentUser {
-                                    Text("ようこそ、\(user.email) さん")
+                                    Text("ようこそ、\(user.userName) さん")
                                         .padding()
                                 } else {
                                     ProgressView("読み込み中...")

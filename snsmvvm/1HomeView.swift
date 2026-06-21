@@ -67,13 +67,13 @@ struct LogView: View {
         VStack {
             // ユーザー名・メニューなど
             HStack {
-                Text(log.user.userNo == profileViewModel.user.userNo ? profileViewModel.user.userName : log.user.userName)
-                    .foregroundColor(.primary) // 黒固定を解除
-                    .frame(maxWidth: 150, alignment: .leading)
+                // 修正: userId を使って比較 (Int -> String に変換)
+                let isMyPost = log.userId == String(profileViewModel.user.userNo)
                 
-                Text(log.createdAt, style: .date)
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: 150, alignment: .trailing)
+                // 表示の分岐
+                Text(isMyPost ? profileViewModel.user.userName : "User \(log.userId.prefix(5))")
+                    .foregroundColor(.primary)
+                    .frame(maxWidth: 150, alignment: .leading)
                 
                 Menu {
                     Button { /* ... */ } label: { Label("編集", systemImage: "pencil") }

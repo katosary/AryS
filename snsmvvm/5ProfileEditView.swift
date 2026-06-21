@@ -7,6 +7,8 @@
 
 import SwiftUI
 import PhotosUI
+import FirebaseAuth
+import FirebaseStorage
 
 struct ProfileEditView: View {
     @Environment(\.dismiss) private var dismiss
@@ -215,9 +217,19 @@ struct ProfileEditView: View {
                     Button("キャンセル") { dismiss() }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
+                    // ProfileEditView の保存ボタン内
                     Button("保存") {
-                        profileViewModel.updateUser(viewModel: viewModel)
-                        dismiss()
+                        Task {
+                            if let uid = Auth.auth().currentUser?.uid {
+                                // 1. 画像アップロードと Firestore 更新
+                                try? await profileViewModel.uploadProfileAndSave(uid: uid, viewModel: viewModel)
+                                
+                                // 2. 💡 ここで ViewModel の値を更新する（UI即時反映のため）
+                                profileViewModel.user.profileImageUrl = profileViewModel.profileImageUrl
+                                
+                                dismiss()
+                            }
+                        }
                     }
                     .bold()
                 }

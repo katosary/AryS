@@ -19,20 +19,23 @@ struct AppUser: Codable, Identifiable, Sendable {
 // 2. UserManager: @MainActor を付与して UI更新を保証
 @MainActor
 class UserManager: ObservableObject {
-    @Published var currentUser: AppUser?
+    // 💡 型を AppUser から User に変更
+    @Published var currentUser: User?
     private var db = Firestore.firestore()
 
-    // 3. 非同期メソッドに書き換え
     func fetchCurrentUser(uid: String) async {
+        print("取得開始: \(uid)")
         do {
-            let docRef = db.collection("users").document(uid)
-            // async/await を使用して安全にデータを取得・デコード
-            let user = try await docRef.getDocument(as: AppUser.self)
-            
-            // @MainActor のおかげで直接更新可能
-            self.currentUser = user
+            let doc = try await db.collection("users").document(uid).getDocument()
+            if doc.exists {
+                print("データ発見！")
+                // 💡 ここも User.self を指定しているのでこれでOKです
+                self.currentUser = try doc.data(as: User.self)
+            } else {
+                print("データなし！ドキュメントIDがuidと違っていませんか？")
+            }
         } catch {
-            print("ユーザー取得エラー: \(error.localizedDescription)")
+            print("エラー詳細: \(error)")
         }
     }
 }

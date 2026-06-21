@@ -7,6 +7,8 @@
 
 import SwiftUI
 import FirebaseAuth
+import FirebaseFirestore
+import FirebaseStorage
 
 struct ProfileView: View {
     @Environment(ViewModel.self) var viewModel
@@ -50,16 +52,22 @@ struct ProfileView: View {
                                 }
                                 
                                 Group {
-                                    if let uiImage = profileViewModel.profileImage {
-                                        Image(uiImage: uiImage)
-                                            .resizable()
-                                            .scaledToFill()
+                                    if let urlString = profileViewModel.user.profileImageUrl, let url = URL(string: urlString) {
+                                        // URLから読み込む（キャッシュも効くため効率的）
+                                        AsyncImage(url: url) { image in
+                                            image.resizable().scaledToFill()
+                                        } placeholder: {
+                                            ProgressView()
+                                        }
+                                        .frame(width: profileSize, height: profileSize)
+                                        .clipShape(Circle())
                                     } else {
+                                        // URLがない場合はデフォルトアイコン
                                         Image(systemName: "person.crop.circle.fill")
                                             .resizable()
                                             .scaledToFit()
-                                            .foregroundColor(Color(.systemGray3)) // 💡 システムグレーに
-                                            .background(Color(.systemBackground)) // 💡 アイコンの白背景をシステム背景色に
+                                            .foregroundColor(Color(.systemGray3))
+                                            .frame(width: profileSize, height: profileSize)
                                     }
                                 }
                                 .frame(width: profileSize, height: profileSize)
@@ -98,6 +106,7 @@ struct ProfileView: View {
                             case 0:
                                 // 💡 引数にサイズとBindingフラグを渡すだけ。シートのロジックは子に隠蔽されました！
                                 PostContentView(
+                                    viewModel: viewModel,
                                     profileViewModel: profileViewModel,
                                     totalWidth: totalWidth,
                                     totalHeight: totalHeight,
@@ -116,6 +125,9 @@ struct ProfileView: View {
                     .background(Color(.systemBackground))
                 }
                 .background(Color(.systemBackground))
+                .onAppear {
+                    
+                }
                 .customPullToRefresh {
                     try? await Task.sleep(nanoseconds: 2 * 1_000_000_000)
                 }
@@ -127,158 +139,84 @@ struct ProfileView: View {
         }
         .animation(.spring(response: 0.45, dampingFraction: 0.82), value: isDetailShowing)
         .task {
-            // 画面表示時に Firestore からデータを読み込む
-            if let uid = Auth.auth().currentUser?.uid {
-                profileViewModel.loadProfile(uid: uid)
-            }
-        }
-        // 必要であれば、プロフィール編集画面が閉じられたときに保存する処理もここに書けます
-        .onDisappear {
-            if let uid = Auth.auth().currentUser?.uid {
-                profileViewModel.saveProfile(uid: uid)
+            // 💡 Authから現在ログイン中のuidを取得する
+            if let currentUid = Auth.auth().currentUser?.uid {
+                await profileViewModel.loadProfile(uid: currentUid)
             }
         }
     }
 }
+
 
 
 struct PostContentView: View {
-    @Environment(ViewModel.self) var viewModel
+    var viewModel: ViewModel
     var profileViewModel: ProfileViewModel
     let totalWidth: CGFloat
     let totalHeight: CGFloat
     
     @Binding var isDetailShowing: Bool
-    @State private var selectedLog: Log? = nil
     
     var body: some View {
-        ScrollView { // 投稿が多い場合に備えてScrollViewで囲むのが一般的です
-            VStack(spacing: 16) {
-                ForEach(viewModel.logs, id: \.id) { log in
-                    PostCardView(
-                        log: log,
-                        isEditable: false,
-                        onDelete: {
-                            viewModel.deleteLog(targetPost: log) // ここでViewModelのメソッドを呼ぶ
-                        },
-                        onEdit: {
-                            viewModel.selectedPost = log
-                            viewModel.isEditSheet = true
-                        }
-                    )
-                    .id(log.id)
-                }
-            }
-        }
-        .overlay(
-            ZStack(alignment: .bottom) {
-                if isDetailShowing, let log = selectedLog {
-                    // ① 背後の暗いマスク
-                    Color.black.opacity(0.4)
-                        .ignoresSafeArea()
-                        .onTapGesture {
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
-                                isDetailShowing = false
-                            }
-                        }
-                        .transition(.opacity)
-                    
-                    // ② 詳細ハーフシート
-                    DetailSheetView(log: log, isDetailShowing: $isDetailShowing, profileViewModel: profileViewModel,
-                                    totalWidth: totalWidth,totalHeight: totalHeight)
-                        .transition(.move(edge: .bottom))
-                }
-            }
-        )
-        // 💡 外部から「どのログが選ばれたか」を検知してシートを開く仕組み
-        .onChange(of: viewModel.selectedPost) { _, newLog in
-            if let log = newLog {
-                self.selectedLog = log
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
-                    isDetailShowing = true
-                }
+        VStack(spacing: 16) {
+            Text("ログ件数: \(viewModel.logs.count)")
+            // 💡 ここを profileViewModel.myLogs から viewModel.logs に変更！
+            ForEach(viewModel.logs, id: \.id) { log in
+                AsyncPostRow(
+                    post: log,
+                    // 💡 この fetchUser を追加する必要があります！
+                    fetchUser: { userId in
+                        try await viewModel.fetchUser(userId: userId)
+                    },
+                    content: { author in
+                        PostCardView(
+                            log: log,
+                            author: author,
+                            authorName: author.userName, 
+                            isEditable: false,
+                            onDelete: { viewModel.deleteLog(targetPost: log) },
+                            onEdit: { }
+                        )
+                    }
+                )
+                .id(log.id)
             }
         }
     }
 }
 
-struct DetailSheetView: View {
-    let log: Log
-    @Binding var isDetailShowing: Bool
-    var profileViewModel: ProfileViewModel
-    let totalWidth: CGFloat
-    let totalHeight: CGFloat
+
+struct AsyncPostRow<Content: View>: View {
+    let post: Log
+    let fetchUser: (String) async throws -> User
+    let content: (User) -> Content
     
+    @State private var author: User?
+    @State private var isFetching = false // 💡 二重取得防止
+
     var body: some View {
-        VStack(spacing: 0) {
-            // ツマミ
-            Capsule()
-                .frame(width: 40, height: 5)
-                .foregroundColor(Color(.tertiaryLabel))
-                .padding(.top, 12)
-                .padding(.bottom, 10)
-            
-            ScrollView {
-                VStack(spacing: 16) {
-                    // 画像エリア
-                    if let urlString = log.imageUrl, let url = URL(string: urlString) {
-                        AsyncImage(url: url) { image in
-                            image.resizable().scaledToFill()
-                        } placeholder: { ProgressView() }
-                        .frame(width: totalWidth * 0.85, height: totalWidth * 0.85 * 3/4)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .padding(.horizontal, 24)
+        Group {
+            if let author = author {
+                content(author)
+            } else {
+                ProgressView().task {
+                    guard !isFetching else { return }
+                    isFetching = true
+                    do {
+                        self.author = try await fetchUser(post.userId)
+                    } catch {
+                        print("Error: \(error)")
                     }
-                    
-                    // テキスト情報
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Coffee Review").font(.title2).bold()
-                        Divider()
-                        // 評価など（以前のコードをここに配置）
-                        Text("Bitterness: \(log.bitternessrating1)")
-                        // ...ここに他の評価パラメータを配置
-                    }
-                    .padding(24)
+                    isFetching = false
                 }
             }
         }
-        .frame(width: totalWidth, height: totalHeight * 0.65)
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
-        .shadow(color: Color.black.opacity(0.15), radius: 10, x: 0, y: -5)
     }
 }
-//struct PostContentView: View {
-//    @Environment(ViewModel.self) var viewModel
-//    var profileViewModel: ProfileViewModel
-//    let totalWidth: CGFloat
-//    let totalHeight: CGFloat
-//    
-//    @Binding var isDetailShowing: Bool
-//    @State private var selectedLog: Log? = nil
-//    
-//    var body: some View {
-//        VStack(alignment: .leading, spacing: 15) {
-//            VStack(spacing: 16) {
-//                ForEach(viewModel.logs) { log in
-//                    PostCardView(log: log, isEditable: false)
-//                        .id(log.id)
-//                        .frame(maxWidth: .infinity)
-////                        .onTapGesture {
-////                            // 💡 確実にアニメーションを効かせて選択
-////                            withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
-////                                selectedLog = log
-////                                isDetailShowing = true
-////                            }
-////                        }
-//                }
-//            }
-//        }
 //        // 💡 ここから修正：ZStackの条件分岐とアニメーションを最適化
 //        .overlay(
 //            ZStack(alignment: .bottom) { // 下詰めに強制する
 //                if isDetailShowing, let log = selectedLog {
-//                    
 //                    // ① 背後の暗いマスク（これ自体は画面全体を覆う）
 //                    Color.black.opacity(0.4)
 //                        .ignoresSafeArea()
@@ -288,7 +226,7 @@ struct DetailSheetView: View {
 //                            }
 //                        }
 //                        .transition(.opacity) // マスクはフェードイン/アウト
-//                    
+//
 //                    // ② 下からせり出すハーフシート本体
 //                    VStack(spacing: 0) {
 //                        // ツマミ（インジケーター）
@@ -297,7 +235,7 @@ struct DetailSheetView: View {
 //                            .foregroundColor(Color(.tertiaryLabel)) // 💡 システムのラベル色（グレー系）
 //                            .padding(.top, 12)
 //                            .padding(.bottom, 10)
-//                        
+//
 //                        ScrollView {
 //                            VStack(spacing: 16) {
 //                                // 📸 画像エリア
@@ -326,7 +264,7 @@ struct DetailSheetView: View {
 //                                .clipShape(RoundedRectangle(cornerRadius: 16))
 //                                .shadow(color: Color.black.opacity(0.1), radius: 6, x: 0, y: 3)
 //                                .padding(.horizontal, 24)
-//                                
+//
 //                                // 📝 ユーザー情報・テキスト
 //                                VStack(alignment: .leading, spacing: 16) {
 //                                    HStack(spacing: 12) {
@@ -341,9 +279,9 @@ struct DetailSheetView: View {
 //                                            .font(.headline)
 //                                            .foregroundColor(Color(.label)) // 💡 システムのメイン文字色
 //                                    }
-//                                    
+//
 //                                    Divider() // 💡 システムの色が自動適用されます
-//                                    
+//
 //                                    // 評価パラメーター
 //                                    VStack(alignment: .leading, spacing: 12) {
 //                                        let avgBitterness = Double(log.bitternessrating1 + log.bitternessrating2) / 2.0
@@ -351,7 +289,7 @@ struct DetailSheetView: View {
 //                                            .bold()
 //                                            .foregroundColor(Color(.label))
 //                                        RatingView(rating: avgBitterness, maxRating: 5)
-//                                        
+//
 //                                        let avgAcidity = Double(log.acidityrating1 + log.acidityrating2) / 2.0
 //                                        Text("Acidity: \(String(format: "%.1f", avgAcidity))")
 //                                            .bold()
@@ -375,8 +313,7 @@ struct DetailSheetView: View {
 //                .frame(width: totalWidth, height: totalHeight)
 //                .ignoresSafeArea()
 //        )
-//    }
-//}
+
 
 // --- 1. コーヒーの好みカード ---
 struct MyProfileContentView: View {

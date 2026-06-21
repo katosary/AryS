@@ -378,7 +378,7 @@ struct ShopLogView: View {
             Text("表示位置を調整してください").font(.headline)
             Text("アイコンをドラッグして、味のポジションを微調整できます。").font(.caption).foregroundColor(.secondary)
             if let previewLog = createPreviewLog() {
-                PostCardView(log: previewLog, isEditable: true,onDelete: {
+                PostCardView(log: previewLog,author: profileViewModel.user, authorName: profileViewModel.user.userName,isEditable: true,onDelete: {
                     // プレビュー画面なので何もしない、または空の処理
                     print("プレビューのため削除操作は無効です")
                 },
@@ -446,9 +446,8 @@ struct ShopLogView: View {
                 return nil
             }
         // 1. init で要求されている引数通りに初期化する
-        var newLog = Log(
+        let newLog = Log(
             userId: uid,
-            user: profileViewModel.user,
             shopName: viewModel.shopName,
             countryName: viewModel.countryName,
             farmName: viewModel.farmName,
@@ -465,10 +464,6 @@ struct ShopLogView: View {
             tagX: viewModel.currentOffsetX, // 👈 logImages の代わりに tagX
             tagY: viewModel.currentOffsetY  // 👈 textOffset の代わりに tagY
         )
-        
-        // 2. init に含めなかったプロパティは、生成後に代入する
-        newLog.logImages = viewModel.logImages
-        newLog.textOffset = CGSize(width: viewModel.currentOffsetX, height: viewModel.currentOffsetY)
         
         return newLog
     }

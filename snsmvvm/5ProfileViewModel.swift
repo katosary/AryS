@@ -10,6 +10,8 @@ import SwiftUI
 import PhotosUI
 import FirebaseCore       // Firebase自体の初期化（configure）に必要
 import FirebaseFirestore  // Firestoreのデータベース操作に必要
+import FirebaseAuth
+import FirebaseStorage
 
 @Observable
 class ProfileViewModel {
@@ -23,9 +25,23 @@ class ProfileViewModel {
         // --- 既存の初期化処理 ---
         self.userName = user.userName
         self.selfIntroduction = user.selfIntroduction
-        self.profileImage = user.profileImage
     }
-    var user: User = User(userNo: 1, userName: "", selfIntroduction: "",userAge: 0, birthPlace: "",favoriteCoffee: "",profileImage: nil,probitter: 0, proacidity: 0, probody: 0, proaroma: 0, proflavor: "")
+    var user: User = User(
+        id: nil, // idは最初はnilでOK
+        userNo: 1,
+        userName: "",
+        selfIntroduction: "",
+        userAge: 0,
+        birthPlace: "",
+        favoriteCoffee: "",
+        probitter: 0,
+        proacidity: 0,
+        probody: 0,
+        proaroma: 0,
+        proflavor: "",
+        profileImageUrl: nil, // String? なので nil でOK
+        favoriteCoffeeImageUrl: nil
+    )
     var logs: [Log] = []
     var userName: String = ""
     var selfIntroduction: String = ""
@@ -53,6 +69,8 @@ class ProfileViewModel {
     var probody: Int = 0
     var proaroma: Int = 0
     var proflavor: String = ""
+    var profileImageUrl: String? = nil
+    var favoriteCoffeeImageUrl: String? = nil
     
     var maxRating = 5
     var offImage: Image?
@@ -68,7 +86,10 @@ class ProfileViewModel {
         didSet{ Task { await loadProfileImage() } }
     }
     
-    
+    var myLogs: [Log] {
+        let currentUid = Auth.auth().currentUser?.uid
+        return logs.filter { $0.userId == currentUid }
+    }
     
     //toolの定義
     var dripper: String = ""
@@ -84,35 +105,27 @@ class ProfileViewModel {
     
     
     func updateUser(viewModel: ViewModel) {
+        // 💡 Userの初期化を、プロパティ名を指定した新しい形式に変更
         self.user = User(
             userNo: self.user.userNo,
             userName: self.userName,
             selfIntroduction: self.selfIntroduction,
             userAge: self.userAge,
-            birthPlace: self.user.birthPlace,
-            favoriteCoffee: self.user.favoriteCoffee,
-            profileImage: self.profileImage,
-            probitter: self.user.probitter,
-            proacidity: self.user.proacidity,
-            probody: self.user.probody,
-            proaroma: self.user.proaroma,
-            proflavor: self.user.proflavor
+            birthPlace: self.birthPlace,
+            favoriteCoffee: self.favoriteCoffee,
+            probitter: self.probitter,
+            proacidity: self.proacidity,
+            probody: self.probody,
+            proaroma: self.proaroma,
+            proflavor: self.proflavor,
+            profileImageUrl: self.profileImageUrl, // 💡 新しいプロパティ
+            favoriteCoffeeImageUrl: nil // 💡 必要に応じて
         )
         
         viewModel.synchronizeMyProfile(with: self.user)
     }
     
-    //    //プロフィール数字情報
-    //    func profileStat(count: String, label: String) -> some View {
-    //        VStack {
-    //            Text(count)
-    //                .font(.headline)
-    //            Text(label)
-    //                .font(.caption)
-    //                .foregroundColor(.gray)
-    //        }
-    //        .frame(maxWidth: .infinity) // 均等に並ぶように幅を広げる
-    //    }
+
     
     func image(for number: Int, rating: Int) -> Image {
         if number > rating {
@@ -122,9 +135,23 @@ class ProfileViewModel {
         }
     }
     
-    // プロフィールを保存する関数
-    func saveProfile(uid: String) {
-        let data: [String: Any] = [
+    @MainActor
+    func uploadProfileAndSave(uid: String, viewModel: ViewModel) async throws {
+        // 1. 画像がセットされていればアップロード
+        var imageUrl: String? = self.user.profileImageUrl // 元のURLを保持
+        
+        if let image = profileImage, let data = image.jpegData(compressionQuality: 0.5) {
+            let storageRef = Storage.storage().reference().child("profile_images/\(uid).jpg")
+            
+            // Storage にアップロード
+            _ = try await storageRef.putDataAsync(data)
+            
+            // アップロードした画像のダウンロードURLを取得
+            imageUrl = try await storageRef.downloadURL().absoluteString
+        }
+        
+        // 2. Firestore に保存するデータを作成
+        var data: [String: Any] = [
             "userName": userName,
             "selfIntroduction": selfIntroduction,
             "userAge": userAge,
@@ -137,44 +164,37 @@ class ProfileViewModel {
             "proflavor": proflavor
         ]
         
-        // Firestoreの users コレクション内の、ログインユーザーのドキュメントに保存
-        db.collection("users").document(uid).setData(data, merge: true) { error in
-            if let error = error {
-                print("保存失敗: \(error.localizedDescription)")
-            } else {
-                print("保存成功")
-            }
+        // URLがある場合のみ追加
+        if let url = imageUrl {
+            data["profileImageUrl"] = url
+            self.profileImageUrl = url // ViewModelのプロパティも更新
         }
+        
+        // 3. Firestore に保存
+        try await db.collection("users").document(uid).setData(data, merge: true)
+        
+        // 4. Userモデルを更新
+        self.user.profileImageUrl = imageUrl
+        updateUser(viewModel: viewModel)
     }
+    
 
-    func loadProfile(uid: String) {
-        db.collection("users").document(uid).getDocument { [weak self] snapshot, error in
-            // エラーチェックとデータ取得の確認
-            guard let data = snapshot?.data(), error == nil else {
-                print("プロフィールの読み込み失敗またはデータなし: \(error?.localizedDescription ?? "不明なエラー")")
-                return
-            }
+    @MainActor
+    func loadProfile(uid: String) async {
+        do {
+            let user = try await db.collection("users").document(uid).getDocument(as: User.self)
+            self.user = user
+            self.userName = user.userName
+            self.selfIntroduction = user.selfIntroduction
+            self.profileImageUrl = user.profileImageUrl
             
-            // 取得したデータを各プロパティに代入
-            // 取得できない場合は初期値（"" や 0）を入れる
-            self?.userName = data["userName"] as? String ?? ""
-            self?.selfIntroduction = data["selfIntroduction"] as? String ?? ""
-            self?.userAge = data["userAge"] as? Int ?? 0
-            self?.birthPlace = data["birthPlace"] as? String ?? ""
-            self?.favoriteCoffee = data["favoriteCoffee"] as? String ?? ""
-            self?.probitter = data["probitter"] as? Int ?? 0
-            self?.proacidity = data["proacidity"] as? Int ?? 0
-            self?.probody = data["probody"] as? Int ?? 0
-            self?.proaroma = data["proaroma"] as? Int ?? 0
-            self?.proflavor = data["proflavor"] as? String ?? ""
+            // 💡 URLがある場合は、必要に応じてここで画像をフェッチする処理を追加可能
+            // 基本はView側で AsyncImage(url: URL(string: user.profileImageUrl ?? "")) を使うのがおすすめ
             
-            print("プロフィール読み込み完了")
+        } catch {
+            print("読み込み失敗: \(error)")
         }
     }
-    
-    
-    
-    
     
     @MainActor
     private func loadCoffeeImage() async {

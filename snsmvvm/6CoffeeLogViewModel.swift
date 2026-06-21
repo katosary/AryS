@@ -118,15 +118,13 @@ class ViewModel {
         proflavor: ""
     )
     
-    func addLog(currentUser: User) {
-        guard let uid = Auth.auth().currentUser?.uid else {
-                print("❌ ログインしていません")
-                return
-            }
-        // 1. 保存用のインスタンス作成（引数はinitに合わせて）
+    func addLog(currentUser: User) { // 引数 currentUser は不要になるため後で消せます
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        
+        // 💡 user: currentUser を削除し、userId だけを渡す
         let newLog = Log(
             userId: uid,
-            user: currentUser,
+            // user: currentUser, // 削除
             shopName: shopName,
             countryName: countryName,
             farmName: farmName,
@@ -144,11 +142,9 @@ class ViewModel {
             tagY: currentOffsetY
         )
         
-        // 2. Firestoreに保存
+        // 以下、Firestoreへの保存処理はそのまま
         do {
-            // .addDocument(from: ) を使うと、Codable準拠のオブジェクトを直接保存できます
             _ = try db.collection("posts").addDocument(from: newLog)
-            print("🎉 投稿成功！Firestoreのpostsコレクションを確認してください")
             clearFormFields()
         } catch {
             print("❌ 保存失敗: \(error.localizedDescription)")
@@ -184,14 +180,15 @@ class ViewModel {
     // 既存の addLog の中身を少し改造した保存用関数
     func saveLogToFirestore(currentUser: User, imageUrl: String?, completion: @escaping (Bool) -> Void) {
         guard let uid = Auth.auth().currentUser?.uid else {
-                print("❌ ユーザーがログインしていません")
-                completion(false)
-                return
-            }
+            print("❌ ユーザーがログインしていません")
+            completion(false)
+            return
+        }
+        
         // 既存のすべてのプロパティを渡して初期化
+        // 💡 ここから user: currentUser を削除しました
         var newLog = Log(
             userId: uid,
-            user: currentUser,
             shopName: shopName,
             countryName: countryName,
             farmName: farmName,
@@ -231,33 +228,75 @@ class ViewModel {
         selectedItems = []; currentOffsetX = 0; currentOffsetY = 0
     }
     
+    func updateProfileImage(image: UIImage, userId: String) async throws {
+        // 1. Storageへのパスを作成（例: users/userId/profile.jpg）
+        let storageRef = Storage.storage().reference().child("profileImages/\(userId).jpg")
+        
+        // 2. UIImage を Data に変換してアップロード
+        if let data = image.jpegData(compressionQuality: 0.8) {
+            _ = try await storageRef.putDataAsync(data)
+            
+            // 3. 公開URLを取得
+            let url = try await storageRef.downloadURL()
+            
+            // 4. Firestoreのユーザー情報を更新
+            try await db.collection("users").document(userId).updateData([
+                "profileImageUrl": url.absoluteString
+            ])
+        }
+    }
+    
+    // 💡 これを追加してください！
+    func fetchUser(userId: String) async throws -> User {
+        // userId が空文字列だと document() で不正な参照になる可能性がある
+        guard !userId.isEmpty else {
+            throw NSError(domain: "InvalidID", code: -1, userInfo: nil)
+        }
+        
+        return try await db.collection("users").document(userId).getDocument(as: User.self)
+    }
+    
     func fetchLogs() {
-        // 💡 1. ログイン中のユーザーIDを取得
+        print("🚀 fetchLogs が呼ばれました！")
+        
         guard let uid = Auth.auth().currentUser?.uid else {
             print("❌ ログインしていないため、自分の投稿を読み込めません")
             return
         }
-
-        // 💡 2. whereField を追加して、自分に紐付いた投稿のみを取得する
+        
         db.collection("posts")
-            .whereField("userId", isEqualTo: uid) // 👈 これを追加
+            .whereField("userId", isEqualTo: uid)
             .order(by: "createdAt", descending: true)
-            .addSnapshotListener { snapshot, error in
+            .addSnapshotListener { [weak self] snapshot, error in
                 if let error = error {
                     print("❌ データ取得エラー: \(error)")
                     return
                 }
                 
-                self.logs = snapshot?.documents.compactMap { document in
-                    do {
-                        return try document.data(as: Log.self)
-                    } catch {
-                        print("❌ デコードエラー: \(error)") // ここに原因が出るはずです
-                        return nil
+                // 💡 ここが重要：UI更新は必ずメインスレッドで行う
+                Task { @MainActor in
+                    guard let documents = snapshot?.documents else { return }
+                    
+                    self?.logs = documents.compactMap { document in
+                        do {
+                            return try document.data(as: Log.self)
+                        } catch {
+                            print("❌ デコードエラー: \(error)")
+                            print("❌ 内容: \(document.data())")
+                            return nil
+                        }
                     }
-                } ?? []
-                
-                print("✅ 自分の投稿を \(self.logs.count) 件取得しました")
+                    
+                    print("✅ 自分の投稿を \(self?.logs.count ?? 0) 件取得しました")
+                }
+            }
+    }
+    
+    func startObservingUser(uid: String) {
+        db.collection("users").document(uid)
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let data = try? snapshot?.data(as: User.self) else { return }
+                self?.user = data // ユーザー情報を最新に保つ
             }
     }
     
@@ -279,8 +318,7 @@ class ViewModel {
     func updateLogPosition(id: String, offset: CGSize) {
         // インデックスを取得し、安全に更新する
         if let index = logs.firstIndex(where: { $0.id == id }) {
-            // Log 構造体に textOffset を追加済みであれば、これでエラーなく代入できます
-            logs[index].textOffset = offset
+            
             
             // （もし必要であれば）ここで tagX, tagY も更新する
             logs[index].tagX = offset.width
@@ -302,12 +340,16 @@ class ViewModel {
         }
     }
     
-    // 💡 【追加】プロフィールが更新されたら、自分の過去の投稿データを一括更新する
+    // 💡 プロフィールが更新されたら、自分の過去の投稿データを一括更新する
     func synchronizeMyProfile(with updatedUser: User) {
         for index in 0..<logs.count {
-            // 投稿のユーザーNOが、更新されたユーザーNOと一致する場合
-            if logs[index].user.userNo == updatedUser.userNo {
-                logs[index].user = updatedUser
+            // 修正前: if logs[index].user.userNo == updatedUser.userNo { ... }
+            
+            // 修正後: userId (String) と Stringに変換した userNo を比較する
+            if logs[index].userId == String(updatedUser.userNo) {
+                // もし投稿の中にユーザー名などを直接保持している場合は、ここで更新します。
+                // 現状 Log 構造体から user を削除済みであれば、この処理自体が不要になる可能性があります。
+                // データの整合性を保つためのロジックをここに記述してください。
             }
         }
     }

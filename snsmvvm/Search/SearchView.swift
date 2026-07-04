@@ -8,7 +8,6 @@
 import SwiftUI
 
 struct SearchView: View {
-    var viewModel: ViewModel
     var profileViewModel: ProfileViewModel
     @Environment(SearchViewModel.self) var searchViewModel
     
@@ -64,7 +63,7 @@ struct SearchView: View {
         .navigationTitle("検索")
         .sheet(isPresented: $isShowingFilter) {
             NavigationStack {
-                ConditionView(title:"検索条件", viewModel: viewModel, profileViewModel: profileViewModel, searchViewModel: searchViewModel)
+                ConditionView(title:"検索条件",  profileViewModel: profileViewModel, searchViewModel: searchViewModel)
             }
         }
     }
@@ -72,7 +71,6 @@ struct SearchView: View {
 
 struct ConditionView: View {
     let title: String
-    @Bindable var viewModel: ViewModel
     @Bindable var profileViewModel: ProfileViewModel
     @Bindable var searchViewModel: SearchViewModel
     @Environment(\.dismiss) private var dismiss
@@ -197,12 +195,4 @@ struct SearchCountryView: View {
 }
 
 
-
-
-#Preview {
-    SearchView(
-        viewModel: ViewModel(),
-        profileViewModel: ProfileViewModel(),
-    )
-}
 

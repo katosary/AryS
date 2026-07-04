@@ -1,5 +1,5 @@
 //
-//  SendMessageView.swift
+//  AddCoffeeLogView.swift
 //  snsmvvm
 //
 //  Created by katoso on 2026/02/28.
@@ -10,7 +10,6 @@ import PhotosUI
 import FirebaseAuth
 
 struct SelectShopView : View {
-    @Environment(ViewModel.self) var viewModel
     @Environment(ProfileViewModel.self) var profileViewModel
     
     var body: some View {
@@ -187,45 +186,63 @@ struct ShopLogView: View {
     @ViewBuilder
     private func stepPhotoPage() -> some View {
         @Bindable var viewModel = viewModel
-        VStack(spacing: 20) {
-            Text("目の前のコーヒーの写真を撮ってください").font(.headline)
-            
-            // 💡 修正ポイント：ForEachをやめて、最初（唯一）の1枚があるかどうかだけで判定
-            if let firstImage = viewModel.logImages.first {
-                // 画像が選択されている場合
-                Image(uiImage: firstImage)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(height: 250) // 1枚なので横幅は画面いっぱいに
-                    .frame(maxWidth: .infinity)
-                    .cornerRadius(12)
-                    .clipped()
-            } else {
-                // 画像がまだ選択されていない場合
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.secondary.opacity(0.1))
-                    .frame(height: 250)
-                    .overlay(
-                        VStack(spacing: 10) {
-                            Image(systemName: "photo.on.rectangle")
-                                .font(.largeTitle)
-                            Text("写真が選択されていません")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                        }
-                    )
+
+        // 💡 GeometryReader で囲んで動的に幅を取得する
+        GeometryReader { geometry in
+            let screenWidth = geometry.size.width - 40 // パディング分を引く
+            let containerSize = CGSize(width: screenWidth, height: screenWidth * 4 / 3)
+
+            VStack(spacing: 20) {
+                Text("目の前のコーヒーの写真を撮ってください").font(.headline)
+                
+                ZStack {
+                    if let firstImage = viewModel.logImages.first {
+                        Image(uiImage: firstImage)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: containerSize.width, height: containerSize.height)
+                            .clipped()
+                            .drawingGroup()
+                            .scaleEffect(viewModel.scale)
+                            .offset(viewModel.offset)
+                            .gesture(
+                                DragGesture()
+                                    .onChanged { value in
+                                        viewModel.offset = value.translation
+                                    }
+                            )
+                            .simultaneousGesture(
+                                MagnificationGesture()
+                                    .onChanged { value in
+                                        viewModel.scale = value
+                                    }
+                            )
+                            .cornerRadius(12)
+                    } else {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.secondary.opacity(0.1))
+                            .frame(width: containerSize.width, height: containerSize.height)
+                            .overlay(
+                                VStack(spacing: 10) {
+                                    Image(systemName: "photo.on.rectangle").font(.largeTitle)
+                                    Text("写真が選択されていません").font(.subheadline)
+                                }
+                            )
+                    }
+                }
+                .frame(maxWidth: .infinity) // ZStack自体を中央に配置
+
+                PhotosPicker(selection: $viewModel.selectedItems, maxSelectionCount: 1, matching: .images) {
+                    Label(viewModel.logImages.isEmpty ? "画像を選択" : "画像を変更", systemImage: "photo.badge.plus")
+                }
+                .buttonStyle(.borderedProminent)
+                
+                Spacer()
             }
-            
-            // PhotosPickerの選択上限を1枚（maxSelectionCount: 1）にしておくとより安全です
-            PhotosPicker(selection: $viewModel.selectedItems, maxSelectionCount: 1, matching: .images) {
-                Label(viewModel.logImages.isEmpty ? "画像を選択" : "画像を変更", systemImage: "photo.badge.plus")
-            }
-            .buttonStyle(.borderedProminent)
-            
-            Spacer()
+            .padding()
         }
-        .padding()
     }
+    
     @ViewBuilder
     private func stepAromaPage() -> some View {
         @Bindable var viewModel = viewModel
@@ -375,30 +392,31 @@ struct ShopLogView: View {
     @ViewBuilder
     private func confirmationPage() -> some View {
         VStack(spacing: 20) {
-            Text("表示位置を調整してください").font(.headline)
-            Text("アイコンをドラッグして、味のポジションを微調整できます。").font(.caption).foregroundColor(.secondary)
-            if let previewLog = createPreviewLog() {
-                PostCardView(log: previewLog,author: profileViewModel.user, authorName: profileViewModel.user.userName,isEditable: true,onDelete: {
-                    // プレビュー画面なので何もしない、または空の処理
-                    print("プレビューのため削除操作は無効です")
-                },
-                onEdit: {
-                    // プレビュー画面なので何もしない、または空の処理
-                    print("プレビューのため編集操作は無効です")
-                }
-            )
-                    .frame(height: 500) // プレビューに適したサイズに調整
-                    .background(Color.white)
-                    .cornerRadius(15)
-                    .shadow(radius: 5)
+            Text("投稿内容の確認").font(.headline)
+            
+            // プレビュー表示部分
+            if let previewLog = viewModel.createPreviewLog() {
+                CoffeeLogView(
+                    log: previewLog,
+                    author: profileViewModel.user,
+                    authorName: profileViewModel.user.userName,
+                    isEditable: false, // 編集不可にする
+                    onDelete: {},
+                    onEdit: {}
+                )
+                .background(Color(.systemBackground)) // 白固定ではなくシステムカラー推奨
+                .cornerRadius(15)
+                .shadow(radius: 5)
+            } else {
+                // データが足りない場合の表示
+                ContentUnavailableView("プレビューできません", systemImage: "exclamationmark.triangle", description: Text("必要な情報を入力してください"))
+                    .frame(height: 500)
             }
             
+            // 投稿ボタン
             Button {
                 viewModel.uploadAndSaveLog(currentUser: profileViewModel.user) { success in
-                    if success {
-                        dismiss() // 👈 成功したときだけ閉じる
-                    } else {
-                    }
+                    if success { dismiss() }
                 }
             } label: {
                 Text("この内容で投稿する")
@@ -411,6 +429,7 @@ struct ShopLogView: View {
             }
             .disabled(viewModel.aromarating == 0)
         }
+        .padding()
     }
     
     @ViewBuilder
@@ -467,27 +486,6 @@ struct ShopLogView: View {
         
         return newLog
     }
-    
-    
-    //    @ViewBuilder
-    //    private func navigationControls() -> some View {
-    //        HStack {
-    //            if currentStep > 0 {
-    //                Button("戻る") {
-    //                    withAnimation { currentStep -= 1 }
-    //                }
-    //            }
-    //            Spacer()
-    //            if currentStep < totalSteps - 1 {
-    //                Button("次へ") {
-    //                    withAnimation { currentStep += 1 }
-    //                }
-    //                .buttonStyle(.borderedProminent)
-    //                .disabled(currentStep == 0 && viewModel.countryName.isEmpty)
-    //            }
-    //        }
-    //        .padding()
-    //    }
 }
 
 struct OnlineShopLogView: View {
@@ -592,15 +590,6 @@ struct RoastSelectionView: View {
 
 
 
-#Preview {
-    // 1. プレビュー用のインスタンスを作成
-    let previewVM = ViewModel()
-    let previewProfileVM = ProfileViewModel()
-    
-    // 2. 環境オブジェクトとして注入してビューを返す
-    return ShopLogView()
-        .environment(previewVM)
-        .environment(previewProfileVM)
-}
+
 
 

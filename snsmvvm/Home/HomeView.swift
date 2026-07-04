@@ -1,5 +1,5 @@
 //
-//  ContentView.swift
+//  HomeView.swift
 //  snsmvvm
 //
 //  Created by katoso on 2026/02/25.
@@ -9,9 +9,9 @@ import SwiftUI
 import FirebaseAuth
 import FirebaseFirestore
 
-struct ContentView: View {
-    @State var viewModel = ViewModel()
+struct HomeView: View {
     @Environment(ProfileViewModel.self) var profileViewModel
+    @State var homeViewModel = HomeViewModel()
     @State var matchingViewModel = MatchingViewModel()
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var userManager: UserManager
@@ -73,7 +73,7 @@ struct ContentView: View {
                     backgroundColor.ignoresSafeArea()
                     
                     Group {
-                        switch viewModel.selectedTab {
+                        switch homeViewModel.selectedTab {
                         case 0:
                             // 例: ホーム画面にユーザー情報を表示する
                             VStack {
@@ -83,9 +83,9 @@ struct ContentView: View {
                                 } else {
                                     ProgressView("読み込み中...")
                                 }
-                                HomeView(viewModel: viewModel, profileViewModel: profileViewModel)
+                                ContentView(profileViewModel: profileViewModel)
                             }
-                        case 1: SearchView(viewModel: viewModel, profileViewModel: profileViewModel)
+                        case 1: SearchView(profileViewModel: profileViewModel)
                         case 2: TalkView()
                         case 3: MatchingView(matchingViewModel: matchingViewModel)
                         case 4: ProfileView()
@@ -112,7 +112,7 @@ struct ContentView: View {
             )){
                 ProfileEditView(profileViewModel: self.profileViewModel)
                     .onAppear {
-                        profileViewModel.logs = viewModel.logs
+                        profileViewModel.logs = homeViewModel.logs
                     }
             }
             .sheet(isPresented: $isShowingSelectShop) {
@@ -131,7 +131,7 @@ struct ContentView: View {
 }
 
 // MARK: - 自作タブバーのパーツ
-extension ContentView {
+extension HomeView {
     var customTabBar: some View {
         HStack(spacing: 0) {
             tabButton(image: "house", fillImage: "house.fill", label: "ホーム", tag: 0)
@@ -147,10 +147,10 @@ extension ContentView {
     
     // 各ボタンのデザイン
     func tabButton(image: String, fillImage: String, label: String, tag: Int) -> some View {
-        let isSelected = viewModel.selectedTab == tag
+        let isSelected = homeViewModel.selectedTab == tag
         
         return Button {
-            viewModel.selectedTab = tag
+            homeViewModel.selectedTab = tag
         } label: {
             VStack(spacing: 4) {
                 Image(systemName: isSelected ? fillImage : image)
@@ -164,7 +164,3 @@ extension ContentView {
     }
 }
 
-// MARK: - Preview
-#Preview {
-    ContentView()
-}

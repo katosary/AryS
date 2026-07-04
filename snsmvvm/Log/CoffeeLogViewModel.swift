@@ -1,21 +1,21 @@
 //
-//  PostViewModel.swift
+//  CoffeeLogViewModel.swift
 //  snsmvvm
 //
 //  Created by katoso on 2026/02/28.
 //
 
-//ViewModel
+
 import Observation
 import SwiftUI
 import PhotosUI
-import FirebaseCore       // Firebase自体の初期化（configure）に必要
-import FirebaseFirestore  // Firestoreのデータベース操作に必要
+import FirebaseCore
+import FirebaseFirestore
 import FirebaseStorage
 import FirebaseAuth
 
 @Observable
-class ViewModel {
+class CoffeeLogViewModel {
     var logs: [Log] = []
     var shopName: String = ""
     var countryName: String = ""
@@ -24,12 +24,7 @@ class ViewModel {
     private var db: Firestore
     
     init() {
-        // 2. initの中で初期化する
-        // これにより、アプリが起動してFirebaseApp.configure()が呼ばれた後で
-        // ViewModelが作られるため、クラッシュしなくなります
         self.db = Firestore.firestore()
-        
-        // 3. 必要であればここでフェッチを開始する
         fetchLogs()
     }
     
@@ -54,12 +49,7 @@ class ViewModel {
     var roastLevel: String = ""
     var inputcoffee: String = ""
     var inputcontent: String = ""
-    var editingUser: String = ""
-    var editingCoffee: String = ""
-    var editingFavoCoffee: String = ""
-    var editingContent: String = ""
     var iswritingsheet = false
-    var isEditSheet: Bool = false
     var aromarating: Int = 0
     var aromaComment: String = ""
     var bitternessrating1: Int = 0
@@ -69,13 +59,15 @@ class ViewModel {
     var acidityrating2: Int = 0
     var bodyrating2: Int = 0
     var maxRating = 5
-    var editingRating: Int = 0
     var offImage: Image?
     var onImage = Image(systemName: "star.fill")
     var offColor = Color.gray
     var onColor = Color.yellow
     var selectedPost: Log?
     var selectedTab: Int = 0
+    
+    var scale: CGFloat = 1.0
+    var offset: CGSize = .zero
     
     var currentOffsetX: CGFloat = 0
     var currentOffsetY: CGFloat = 0
@@ -90,8 +82,7 @@ class ViewModel {
     var averagebitternessrating: Double {
         return Double(bitternessrating1 + bitternessrating2) / 2.0
     }
-    
-    // 💡 1枚専用なので、selectedItems から最初の1枚だけを処理するようにしてもOK
+
     var selectedItems: [PhotosPickerItem] = [] {
         didSet {
             Task {
@@ -99,8 +90,6 @@ class ViewModel {
             }
         }
     }
-    
-    // 入力中のプレビュー用画像
     var logImages: [UIImage] = []
     
     // ViewModel内のプロパティ定義
@@ -151,20 +140,98 @@ class ViewModel {
         }
     }
     
+    func createPreviewLog() -> Log? {
+        guard let originalImage = logImages.first else { return nil }
+        
+        let containerSize = CGSize(width: 300, height: 400)
+        let croppedImage = cropImage(image: originalImage, scale: scale, offset: offset, containerSize: containerSize)
+        
+        // 初期化を分割して、エラーの場所を特定しやすくする
+        var log = Log(
+            userId: Auth.auth().currentUser?.uid ?? "",
+            shopName: shopName,
+            countryName: countryName,
+            farmName: farmName,
+            roastLevel: roastLevel,
+            aromarating: aromarating,
+            aromaComment: aromaComment,
+            bitternessrating1: bitternessrating1,
+            acidityrating1: acidityrating1,
+            bodyrating1: bodyrating1,
+            bitternessrating2: bitternessrating2,
+            acidityrating2: acidityrating2,
+            bodyrating2: bodyrating2,
+            createdAt: Date(), // Date() は関数呼び出しなので問題なし
+            tagX: currentOffsetX,
+            tagY: currentOffsetY
+        )
+        
+        log.previewImage = croppedImage
+        return log
+    }
+    
+    func cropImage(image: UIImage, scale: CGFloat, offset: CGSize, containerSize: CGSize) -> UIImage? {
+        let renderer = UIGraphicsImageRenderer(size: containerSize)
+        
+        return renderer.image { context in
+            // 1. 画像の表示サイズを計算
+            // 元のアスペクト比を保ったまま、枠に対して拡大・縮小する
+            let aspectRatio = image.size.width / image.size.height
+            let targetWidth: CGFloat
+            let targetHeight: CGFloat
+            
+            if aspectRatio > (containerSize.width / containerSize.height) {
+                targetHeight = containerSize.height * scale
+                targetWidth = targetHeight * aspectRatio
+            } else {
+                targetWidth = containerSize.width * scale
+                targetHeight = targetWidth / aspectRatio
+            }
+            
+            // 2. 中央揃え + オフセット
+            let x = (containerSize.width - targetWidth) / 2 + offset.width
+            let y = (containerSize.height - targetHeight) / 2 + offset.height
+            
+            // 3. 描画
+            image.draw(in: CGRect(x: x, y: y, width: targetWidth, height: targetHeight))
+        }
+    }
+    
+    func resetImageAdjustment() {
+            scale = 1.0
+            offset = .zero
+        }
+    
+    func getFinalCroppedImage() -> UIImage? {
+        guard let originalImage = logImages.first else { return nil }
+        let containerSize = CGSize(width: 300, height: 400)
+        return cropImage(image: originalImage, scale: scale, offset: offset, containerSize: containerSize)
+    }
+    
     func uploadAndSaveLog(currentUser: User, completion: @escaping (Bool) -> Void) {
-        guard let image = logImages.first,
-              let imageData = image.jpegData(compressionQuality: 0.5) else {
+        guard let originalImage = logImages.first else {
             saveLogToFirestore(currentUser: currentUser, imageUrl: nil, completion: completion)
             return
         }
         
+        let containerSize = CGSize(width: 300, height: 400)
+        
+        // 3. 💡 cropImage を使って切り抜いた画像を生成
+        guard let croppedImage = cropImage(image: originalImage, scale: scale, offset: offset, containerSize: containerSize),
+              let imageData = croppedImage.jpegData(compressionQuality: 0.7) else {
+            print("❌ 画像の切り抜きまたは変換に失敗しました")
+            completion(false)
+            return
+        }
+        
+        // 4. 以降は同じ（切り抜いた imageData をアップロード）
         let filename = NSUUID().uuidString + ".jpg"
         let storageRef = Storage.storage().reference().child("post_images").child(filename)
         
         storageRef.putData(imageData, metadata: nil) { _, error in
             if let error = error {
                 print("❌ アップロード失敗: \(error)")
-                completion(false) // 失敗
+                completion(false)
                 return
             }
             storageRef.downloadURL { url, error in
@@ -246,7 +313,7 @@ class ViewModel {
         }
     }
     
-    // 💡 これを追加してください！
+
     func fetchUser(userId: String) async throws -> User {
         // userId が空文字列だと document() で不正な参照になる可能性がある
         guard !userId.isEmpty else {
@@ -272,8 +339,6 @@ class ViewModel {
                     print("❌ データ取得エラー: \(error)")
                     return
                 }
-                
-                // 💡 ここが重要：UI更新は必ずメインスレッドで行う
                 Task { @MainActor in
                     guard let documents = snapshot?.documents else { return }
                     
@@ -300,27 +365,8 @@ class ViewModel {
             }
     }
     
-    func updateLog(targetPost: Log) {
-        if let id = logs.firstIndex(where: { $0.id == targetPost.id }) {
-            logs[id].countryName = self.editingCoffee
-            logs[id].aromarating = self.editingRating
-            clearEditingLog()
-            self.isEditSheet = false
-        }
-    }
-    
-    func clearEditingLog() {
-        self.editingCoffee = ""
-        self.editingContent = ""
-        self.editingRating = 0
-    }
-    
     func updateLogPosition(id: String, offset: CGSize) {
-        // インデックスを取得し、安全に更新する
         if let index = logs.firstIndex(where: { $0.id == id }) {
-            
-            
-            // （もし必要であれば）ここで tagX, tagY も更新する
             logs[index].tagX = offset.width
             logs[index].tagY = offset.height
         }
@@ -332,24 +378,9 @@ class ViewModel {
     
     var textOffset: CGSize = .zero
     
-    func image(for number: Int, rating: Int) -> Image {
-        if number > rating {
-            return offImage ?? Image(systemName: "star")
-        } else {
-            return onImage
-        }
-    }
-    
-    // 💡 プロフィールが更新されたら、自分の過去の投稿データを一括更新する
     func synchronizeMyProfile(with updatedUser: User) {
         for index in 0..<logs.count {
-            // 修正前: if logs[index].user.userNo == updatedUser.userNo { ... }
-            
-            // 修正後: userId (String) と Stringに変換した userNo を比較する
             if logs[index].userId == String(updatedUser.userNo) {
-                // もし投稿の中にユーザー名などを直接保持している場合は、ここで更新します。
-                // 現状 Log 構造体から user を削除済みであれば、この処理自体が不要になる可能性があります。
-                // データの整合性を保つためのロジックをここに記述してください。
             }
         }
     }

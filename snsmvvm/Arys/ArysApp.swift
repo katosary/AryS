@@ -1,6 +1,6 @@
 //
-//  snsmvvmApp.swift
-//  snsmvvm
+//  ArysApp.swift
+//
 //
 //  Created by katoso on 2026/02/25.
 //
@@ -19,7 +19,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 }
 
 @main
-struct snsmvvmApp: App {
+struct ArysApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     
     var body: some Scene {

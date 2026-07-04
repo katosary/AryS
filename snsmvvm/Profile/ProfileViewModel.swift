@@ -136,7 +136,7 @@ class ProfileViewModel {
     }
     
     @MainActor
-    func uploadProfileAndSave(uid: String, viewModel: ViewModel) async throws {
+    func uploadProfileAndSave(uid: String) async throws {
         // 1. 画像がセットされていればアップロード
         var imageUrl: String? = self.user.profileImageUrl // 元のURLを保持
         
@@ -175,7 +175,7 @@ class ProfileViewModel {
         
         // 4. Userモデルを更新
         self.user.profileImageUrl = imageUrl
-        updateUser(viewModel: viewModel)
+        updateUser(editCoffeeLogViewModel: EditCoffeeLogViewModel)
     }
     
 
@@ -193,6 +193,24 @@ class ProfileViewModel {
             
         } catch {
             print("読み込み失敗: \(error)")
+        }
+    }
+    
+    // ProfileViewModel.swift に追加
+    func loadProfileImageFromUrl() {
+        guard let urlString = user.profileImageUrl, let url = URL(string: urlString) else { return }
+        
+        Task {
+            do {
+                let (data, _) = try await URLSession.shared.data(from: url)
+                if let image = UIImage(data: data) {
+                    await MainActor.run {
+                        self.profileImage = image
+                    }
+                }
+            } catch {
+                print("❌ 画像のロード失敗: \(error)")
+            }
         }
     }
     

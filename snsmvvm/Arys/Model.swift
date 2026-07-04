@@ -29,6 +29,7 @@ struct Log: Codable, Identifiable, Equatable {
     var tagX: CGFloat
     var tagY: CGFloat
     var imageUrl: String?
+    var previewImage: UIImage?
     
     // 💡 Firestoreに保存しないものは CodingKeys に書かない！
     enum CodingKeys: String, CodingKey {

@@ -12,14 +12,13 @@ import FirebaseAuth
 struct RootView: View {
     @StateObject private var authManager = AuthManager()
     @StateObject private var userManager = UserManager()
-    @State private var viewModel = ViewModel()
     @State private var profileViewModel = ProfileViewModel()
     @State private var searchViewModel = SearchViewModel()
     
     var body: some View {
         Group {
             if authManager.isLoggedIn {
-                ContentView()
+                HomeView()
                     .task {
                         // ログイン成功時にUIDを取得してデータを読み込む
                         if let uid = Auth.auth().currentUser?.uid {
@@ -32,7 +31,6 @@ struct RootView: View {
         }
         .environmentObject(authManager)
         .environmentObject(userManager)
-        .environment(viewModel)
         .environment(profileViewModel)
         .environment(searchViewModel)
     }

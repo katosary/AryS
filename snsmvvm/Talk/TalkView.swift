@@ -111,8 +111,3 @@ struct TalkView: View {
     }
 }
 
-#Preview {
-    NavigationStack {
-        TalkView()
-    }
-}

@@ -13,6 +13,7 @@ struct HomeView: View {
     @Environment(ProfileViewModel.self) var profileViewModel
     @State var homeViewModel = HomeViewModel()
     @State var matchingViewModel = MatchingViewModel()
+    @State var profileEditViewModel = ProfileEditViewModel()
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var userManager: UserManager
     
@@ -110,7 +111,7 @@ struct HomeView: View {
                 get: { profileViewModel.isProfileEditSheet },
                 set: { profileViewModel.isProfileEditSheet = $0 }
             )){
-                ProfileEditView(profileViewModel: self.profileViewModel)
+                ProfileEditView(profileEditViewModel: profileEditVIewModel)
                     .onAppear {
                         profileViewModel.logs = homeViewModel.logs
                     }

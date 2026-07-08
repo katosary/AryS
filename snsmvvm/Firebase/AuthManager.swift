@@ -139,7 +139,7 @@ class AuthManager: ObservableObject {
             "userName": "新規ユーザー",
             "selfIntroduction": "",
             "userAge": 0,
-            "birthPlace": "",
+            "prefecture": "",
             "favoriteCoffee": "",
             "probitter": 0,
             "proacidity": 0,

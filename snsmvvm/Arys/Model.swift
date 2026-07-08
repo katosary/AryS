@@ -52,7 +52,7 @@ struct User: Codable, Identifiable {
     var userName: String
     var selfIntroduction: String
     var userAge: Int
-    var birthPlace: String
+    var prefecture: String
     var favoriteCoffee: String
     
     // プロフィールデータ（数値系）
@@ -67,7 +67,7 @@ struct User: Codable, Identifiable {
     var favoriteCoffeeImageUrl: String? = nil
     
     enum CodingKeys: String, CodingKey {
-        case id, userNo, userName, selfIntroduction, userAge, birthPlace, favoriteCoffee
+        case id, userNo, userName, selfIntroduction, userAge, prefecture, favoriteCoffee
         case probitter, proacidity, probody, proaroma, proflavor
         case profileImageUrl, favoriteCoffeeImageUrl
     }

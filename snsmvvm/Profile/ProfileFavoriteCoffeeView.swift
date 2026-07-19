@@ -1,5 +1,5 @@
 //
-//  ProFavoCoffeeView.swift
+//  ProfileFavoriteCoffeeView.swift
 //  snsmvvm
 //
 //  Created by katoso on 2026/06/22.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct ProFavoCoffeeView: View {
+struct ProfileFavoriteCoffeeView: View {
     var profileViewModel: ProfileViewModel
     
     var body: some View {

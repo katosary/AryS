@@ -12,7 +12,7 @@ import FirebaseStorage
 
 struct ProfileEditView: View {
     @Environment(\.dismiss) private var dismiss
-    @Bindable var profileEditViewModel: ProfileEditViewModel
+    @State private var profileEditViewModel = ProfileEditViewModel()
     
     let coverHeight: CGFloat = 200 // 編集時は少し低めが見やすい
     let profileSize: CGFloat = 100
@@ -119,23 +119,26 @@ struct ProfileEditView: View {
                             Divider()
                             
                             Button(action: {
-                                prefectureSelectionViewModel.isShowingPrefecturePicker = true
+                                profileEditViewModel.isShowingPrefecturePicker = true
                             }) {
                                 HStack {
                                     Text("出身地")
                                         .foregroundColor(.primary)
                                     Spacer()
-                                    Text(prefectureSelectionViewModel.prefecture.isEmpty ? "選択してください" : prefectureSelectionViewModel.prefecture)
+                                    // ViewModelの値を表示
+                                    Text(profileEditViewModel.user.prefecture.isEmpty ? "選択してください" : profileEditViewModel.user.prefecture)
                                         .foregroundColor(.secondary)
                                     Image(systemName: "chevron.right")
                                         .font(.caption)
                                         .foregroundColor(.gray)
                                 }
                             }
-                            .padding(.top, 20)
-                            // シートの定義
-                            .sheet(isPresented: $prefectureSelectionViewModel.isShowingPrefecturePicker) {
-                                PrefectureSelectionView(prefectureSelectionViewModel: PrefectureSelectionViewModel())
+                            // ProfileEditView.swift の該当箇所
+                            .sheet(isPresented: $profileEditViewModel.isShowingPrefecturePicker) {
+                                // 引数エラーが出ていた箇所を以下のように直す
+                                PrefectureSelectionView { selectedValue in
+                                    profileEditViewModel.prefecture = selectedValue
+                                }
                             }
                             Divider()
                             

@@ -64,14 +64,6 @@ class ProfileViewModel {
     var offColor = Color.gray
     var onColor = Color.yellow
     
-    var selectedCoffeeItem : PhotosPickerItem? {
-        didSet{ Task { await loadCoffeeImage() }
-        }
-    }
-    var selectedProfileItem : PhotosPickerItem? {
-        didSet{ Task { await loadProfileImage() } }
-    }
-    
     var myLogs: [Log] {
         let currentUid = Auth.auth().currentUser?.uid
         return logs.filter { $0.userId == currentUid }
@@ -135,16 +127,5 @@ class ProfileViewModel {
                 print("❌ 画像のロード失敗: \(error)")
             }
         }
-    }
-    
-    @MainActor
-    private func loadCoffeeImage() async {
-        guard let data = try? await selectedCoffeeItem?.loadTransferable(type: Data.self) else { return }
-        favoriteCoffeeImage = UIImage(data: data)
-    }
-    @MainActor
-    private func loadProfileImage() async {
-        guard let data = try? await selectedProfileItem?.loadTransferable(type: Data.self) else { return }
-        profileImage = UIImage(data: data)
     }
 }

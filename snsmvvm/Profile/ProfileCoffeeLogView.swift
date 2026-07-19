@@ -7,8 +7,8 @@
 
 import SwiftUI
 
-struct ProCoffeeLogView: View {
-    var coffeeLogViewModel: CoffeeLogViewModel
+struct ProfileCoffeeLogView: View {
+    @State var profileCoffeeLogViewModel = ProfileCoffeeLogViewModel()
     let totalWidth: CGFloat
     let totalHeight: CGFloat
     
@@ -16,13 +16,13 @@ struct ProCoffeeLogView: View {
     
     var body: some View {
         VStack(spacing: 16) {
-            Text("ログ件数: \(coffeeLogViewModel.logs.count)")
-            ForEach(coffeeLogViewModel.logs, id: \.id) { log in
+            Text("ログ件数: \(profileCoffeeLogViewModel.logs.count)")
+            ForEach(profileCoffeeLogViewModel.logs, id: \.id) { log in
                 AsyncPostRow(
                     post: log,
                     // 💡 この fetchUser を追加する必要があります！
                     fetchUser: { userId in
-                        try await coffeeLogViewModel.fetchUser(userId: userId)
+                        try await profileCoffeeLogViewModel.fetchUser(userId: userId)
                     },
                     content: { author in
                         CoffeeLogView(
@@ -30,7 +30,7 @@ struct ProCoffeeLogView: View {
                             author: author,
                             authorName: author.userName,
                             isEditable: false,
-                            onDelete: { coffeeLogViewModel.deleteLog(targetPost: log) },
+                            onDelete: { profileCoffeeLogViewModel.deleteLog(targetPost: log) },
                             onEdit: { }
                         )
                     }

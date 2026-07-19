@@ -19,24 +19,20 @@ struct Log: Codable, Identifiable, Equatable {
     var roastLevel: String
     var aromarating: Int
     var aromaComment: String
-    var bitternessrating1: Int
-    var acidityrating1: Int
-    var bodyrating1: Int
-    var bitternessrating2: Int
-    var acidityrating2: Int
-    var bodyrating2: Int
+    var bitternessrating: Int
+    var acidityrating: Int
+    var bodyrating: Int     
     var createdAt: Date
     var tagX: CGFloat
     var tagY: CGFloat
     var imageUrl: String?
-    var previewImage: UIImage?
+    var previewImage: UIImage? = nil
     
-    // 💡 Firestoreに保存しないものは CodingKeys に書かない！
+    // Firestoreに保存するキーをプロパティと一致させる
     enum CodingKeys: String, CodingKey {
         case id, userId, shopName, countryName, farmName, roastLevel
-        case aromarating, aromaComment, bitternessrating1, acidityrating1, bodyrating1
-        case bitternessrating2, acidityrating2, bodyrating2, createdAt
-        case tagX, tagY, imageUrl
+        case aromarating, aromaComment, bitternessrating, acidityrating, bodyrating
+        case createdAt, tagX, tagY, imageUrl
     }
     
     static func == (lhs: Log, rhs: Log) -> Bool {

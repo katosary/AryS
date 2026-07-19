@@ -11,7 +11,7 @@ import FirebaseFirestore
 import FirebaseStorage
 
 struct ProfileView: View {
-    @Environment(ProfileViewModel.self) var profileViewModel
+    @State var profileViewModel = ProfileViewModel()
     @EnvironmentObject var authManager: AuthManager
     @State private var profileSelection = 0
     @State private var isMenuPresented = false
@@ -32,21 +32,17 @@ struct ProfileView: View {
             
             ZStack {
                 Color(.systemBackground).ignoresSafeArea()
-                // ==========================================
-                // レイヤー 1: メインコンテンツ
-                // ==========================================
                 NavigationStack {
                     ScrollView {
                         VStack(spacing: 0) {
                             // --- 1. 上部：画像重なりエリア ---
                             ZStack(alignment: .bottom) {
-                                // 💡 Color.gray.opacity(0.5) をシステム標準の背景色に
                                 Color(.secondarySystemBackground)
                                     .frame(height: coverHeight)
                                 
                                 VStack {
                                     Text("自分が投稿したポストの中でいちばんのお気に入りを選べるボタンを作り、\nそれをここに表示する")
-                                        .foregroundColor(.secondary) // 文字色もシステムセカンダリに
+                                        .foregroundColor(.secondary)
                                     Spacer()
                                 }
                                 
@@ -103,15 +99,15 @@ struct ProfileView: View {
                             // --- 5. コンテンツエリア ---
                             switch profileSelection {
                             case 0:
-                                ProCoffeeLogView(
+                                ProfileCoffeeLogView(
                                     totalWidth: totalWidth,
                                     totalHeight: totalHeight,
                                     isDetailShowing: $isDetailShowing
                                 )
                             case 1:
-                                ProFavoCoffeeView(profileViewModel: profileViewModel)
+                                ProfileFavoriteCoffeeView(profileViewModel: profileViewModel)
                             case 2:
-                                ProFavoToolView(profileViewModel: profileViewModel)
+                                ProfileFavoriteToolView(profileViewModel: profileViewModel)
                             default:
                                 EmptyView()
                             }

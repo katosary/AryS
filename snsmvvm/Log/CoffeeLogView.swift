@@ -92,10 +92,11 @@ struct CoffeeLogView: View {
                     if let urlString = log.imageUrl, let url = URL(string: urlString) {
                         AsyncImage(url: url) { image in image.resizable().scaledToFill() }
                         placeholder: { ProgressView() }
-                            .aspectRatio(4/3, contentMode: .fit) // 💡 ここも aspectRatio に変更
+                            .aspectRatio(4/3, contentMode: .fit)
                             .clipped()
                     }
-//                    --- 2. 下部：詳細エリア ---
+                    
+                    // --- 2. 下部：詳細エリア ---
                     VStack(alignment: .leading, spacing: 18) {
                         Text("Coffee Review")
                             .font(.title2).bold()
@@ -104,42 +105,42 @@ struct CoffeeLogView: View {
                         VStack(alignment: .leading, spacing: 18) {
                             // --- Bitterness ---
                             VStack(alignment: .leading, spacing: 6) {
-                                let avgBitterness = Double(log.bitternessrating1 + log.bitternessrating2) / 2.0
+                                let rating = Double(log.bitternessrating)
                                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                                     Text("Bitterness").font(.subheadline).bold()
-                                    Text(String(format: "%.1f", avgBitterness)).font(.subheadline).bold().foregroundColor(.orange)
+                                    Text(String(format: "%.1f", rating)).font(.subheadline).bold().foregroundColor(.orange)
                                 }
-                                RatingView(rating: avgBitterness, maxRating: 5)
+                                RatingView(rating: rating, maxRating: 5)
                             }
                             
                             // --- Acidity ---
                             VStack(alignment: .leading, spacing: 6) {
-                                let avgAcidity = Double(log.acidityrating1 + log.acidityrating2) / 2.0
+                                let rating = Double(log.acidityrating)
                                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                                     Text("Acidity").font(.subheadline).bold()
-                                    Text(String(format: "%.1f", avgAcidity)).font(.subheadline).bold().foregroundColor(.orange)
+                                    Text(String(format: "%.1f", rating)).font(.subheadline).bold().foregroundColor(.orange)
                                 }
-                                RatingView(rating: avgAcidity, maxRating: 5)
+                                RatingView(rating: rating, maxRating: 5)
                             }
                             
                             // --- Body ---
                             VStack(alignment: .leading, spacing: 6) {
-                                let avgBody = Double(log.bodyrating1 + log.bodyrating2) / 2.0
+                                let rating = Double(log.bodyrating)
                                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                                     Text("Body").font(.subheadline).bold()
-                                    Text(String(format: "%.1f", avgBody)).font(.subheadline).bold().foregroundColor(.orange)
+                                    Text(String(format: "%.1f", rating)).font(.subheadline).bold().foregroundColor(.orange)
                                 }
-                                RatingView(rating: avgBody, maxRating: 5)
+                                RatingView(rating: rating, maxRating: 5)
                             }
                             
                             // --- Aroma ---
                             VStack(alignment: .leading, spacing: 6) {
-                                let aromaDouble = Double(log.aromarating)
+                                let rating = Double(log.aromarating)
                                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                                     Text("Aroma").font(.subheadline).bold()
-                                    Text(String(format: "%.1f", aromaDouble)).font(.subheadline).bold().foregroundColor(.orange)
+                                    Text(String(format: "%.1f", rating)).font(.subheadline).bold().foregroundColor(.orange)
                                 }
-                                RatingView(rating: aromaDouble, maxRating: 5)
+                                RatingView(rating: rating, maxRating: 5)
                             }
                             
                             // --- 香りのコメント ---

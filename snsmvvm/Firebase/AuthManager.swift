@@ -70,12 +70,9 @@ class AuthManager: ObservableObject {
         roastLevel: String,
         aromarating: Int,
         aromaComment: String,
-        bitternessrating1: Int,
-        acidityrating1: Int,
-        bodyrating1: Int,
-        bitternessrating2: Int,
-        acidityrating2: Int,
-        bodyrating2: Int,
+        bitternessrating: Int,
+        acidityrating: Int,
+        bodyrating: Int,
         tagX: CGFloat,
         tagY: CGFloat,
         imageUrl: String?,
@@ -86,9 +83,9 @@ class AuthManager: ObservableObject {
             return
         }
 
-        // データベース参照の定義
         let db = Firestore.firestore()
 
+        // 💡 統合されたプロパティに合わせて初期化
         let newLog = Log(
             userId: uid,
             shopName: shopName,
@@ -97,25 +94,20 @@ class AuthManager: ObservableObject {
             roastLevel: roastLevel,
             aromarating: aromarating,
             aromaComment: aromaComment,
-            bitternessrating1: bitternessrating1,
-            acidityrating1: acidityrating1,
-            bodyrating1: bodyrating1,
-            bitternessrating2: bitternessrating2,
-            acidityrating2: acidityrating2,
-            bodyrating2: bodyrating2,
+            bitternessrating: bitternessrating,
+            acidityrating: acidityrating,
+            bodyrating: bodyrating,
             createdAt: Date(),
             tagX: tagX,
-            tagY: tagY
+            tagY: tagY,
+            imageUrl: imageUrl
         )
         
-        // 省略されていた imageUrl の代入
-        var logToSave = newLog
-        logToSave.imageUrl = imageUrl
-        
         do {
-            _ = try db.collection("posts").addDocument(from: logToSave)
+            _ = try db.collection("posts").addDocument(from: newLog)
             completion(true)
         } catch {
+            print("Error saving log: \(error)") // デバッグ用にエラーを出力しておくと便利です
             completion(false)
         }
     }

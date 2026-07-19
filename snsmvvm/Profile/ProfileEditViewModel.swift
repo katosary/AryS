@@ -46,7 +46,8 @@ class ProfileEditViewModel {
     var selfIntroduction: String = ""
     var userAge: Int = 0
     var isShowingAgePicker: Bool = false
-    
+    var isShowingPrefecturePicker: Bool = false
+    var prefecture: String = ""
     var favoriteCoffee: String = ""
     var userNo: Int = 1
     var isProfileEditSheet: Bool = false
@@ -61,21 +62,22 @@ class ProfileEditViewModel {
     var favoriteCoffeeImageUrl: String? = nil
     
     func updateUser() {
-        var user: User = User(
-            id: nil, // idは最初はnilでOK
-            userNo: 1,
-            userName: "",
-            selfIntroduction: "",
-            userAge: 0,
-            prefecture: "",
-            favoriteCoffee: "",
-            probitter: 0,
-            proacidity: 0,
-            probody: 0,
-            proaroma: 0,
-            proflavor: "",
-            profileImageUrl: nil, // String? なので nil でOK
-            favoriteCoffeeImageUrl: nil
+        // Update the existing user model with current view model values
+        self.user = User(
+            id: self.user.id,
+            userNo: self.userNo,
+            userName: self.userName,
+            selfIntroduction: self.selfIntroduction,
+            userAge: self.userAge,
+            prefecture: self.prefecture,
+            favoriteCoffee: self.favoriteCoffee,
+            probitter: self.probitter,
+            proacidity: self.proacidity,
+            probody: self.probody,
+            proaroma: self.proaroma,
+            proflavor: self.proflavor,
+            profileImageUrl: self.profileImageUrl ?? self.user.profileImageUrl,
+            favoriteCoffeeImageUrl: self.favoriteCoffeeImageUrl ?? self.user.favoriteCoffeeImageUrl
         )
     }
     
@@ -171,5 +173,15 @@ class ProfileEditViewModel {
                 print("❌ 画像のロード失敗: \(error)")
             }
         }
+    }
+    @MainActor
+    private func loadCoffeeImage() async {
+        guard let data = try? await selectedCoffeeItem?.loadTransferable(type: Data.self) else { return }
+        favoriteCoffeeImage = UIImage(data: data)
+    }
+    @MainActor
+    private func loadProfileImage() async {
+        guard let data = try? await selectedProfileItem?.loadTransferable(type: Data.self) else { return }
+        profileImage = UIImage(data: data)
     }
 }

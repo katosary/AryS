@@ -12,8 +12,6 @@ import FirebaseFirestore
 struct HomeView: View {
     @Environment(ProfileViewModel.self) var profileViewModel
     @State var homeViewModel = HomeViewModel()
-    @State var matchingViewModel = MatchingViewModel()
-    @State var profileEditViewModel = ProfileEditViewModel()
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var userManager: UserManager
     
@@ -84,12 +82,12 @@ struct HomeView: View {
                                 } else {
                                     ProgressView("読み込み中...")
                                 }
-                                ContentView(profileViewModel: profileViewModel)
+                                ContentView()//オッケー
                             }
-                        case 1: SearchView(profileViewModel: profileViewModel)
-                        case 2: TalkView()
-                        case 3: MatchingView(matchingViewModel: matchingViewModel)
-                        case 4: ProfileView()
+                        case 1: SearchView()//オッケー
+                        case 2: TalkView()//オッケー
+                        case 3: MatchingView()//オッケー
+                        case 4: ProfileView()//いまいち
                         default: EmptyView()
                         }
                     }
@@ -111,7 +109,7 @@ struct HomeView: View {
                 get: { profileViewModel.isProfileEditSheet },
                 set: { profileViewModel.isProfileEditSheet = $0 }
             )){
-                ProfileEditView(profileEditViewModel: profileEditVIewModel)
+                ProfileEditView()
                     .onAppear {
                         profileViewModel.logs = homeViewModel.logs
                     }

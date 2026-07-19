@@ -13,7 +13,6 @@ struct RootView: View {
     @StateObject private var authManager = AuthManager()
     @StateObject private var userManager = UserManager()
     @State private var profileViewModel = ProfileViewModel()
-    @State private var searchViewModel = SearchViewModel()
     
     var body: some View {
         Group {
@@ -32,6 +31,5 @@ struct RootView: View {
         .environmentObject(authManager)
         .environmentObject(userManager)
         .environment(profileViewModel)
-        .environment(searchViewModel)
     }
 }

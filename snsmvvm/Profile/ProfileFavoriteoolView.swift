@@ -1,5 +1,5 @@
 //
-//  ProFavoToolView.swift
+//  ProfileFavoriteToolView.swift
 //  snsmvvm
 //
 //  Created by katoso on 2026/06/22.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct ProFavoToolView: View {
+struct ProfileFavoriteToolView: View {
     var profileViewModel: ProfileViewModel
     
     var body: some View {

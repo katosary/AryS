@@ -22,7 +22,8 @@ struct CoffeeLogView: View {
     @State private var isShowingDetailSheet = false
     
     private var isMyPost: Bool {
-        log.userId == String(profileViewModel.user.userNo)
+        guard let currentUid = Auth.auth().currentUser?.uid else { return false }
+        return log.userId == currentUid
     }
     
     var body: some View {

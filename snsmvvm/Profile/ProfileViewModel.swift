@@ -1,5 +1,5 @@
 //
-//  5ProfileViewModel.swift
+//  ProfileViewModel.swift
 //  snsmvvm
 //
 //  Created by katoso on 2026/04/18.
@@ -15,21 +15,22 @@ import FirebaseStorage
 
 @Observable
 class ProfileViewModel {
-    // 1. db をオプショナル、または後から代入する形にする
     private var db: Firestore
     
     init() {
-        // 2. init 内で初期化する
         self.db = Firestore.firestore()
         
-        // --- 既存の初期化処理 ---
+        // --- 初期化時の代入 ---
         self.userName = user.userName
         self.selfIntroduction = user.selfIntroduction
     }
+    
+    // 💡 修正後の User モデルの構造（道具のプロパティを含む）に合わせて初期化
     var user: User = User(
-        id: nil, // idは最初はnilでOK
+        id: nil,
         userNo: 1,
         userName: "",
+        email: "",
         selfIntroduction: "",
         userAge: 0,
         prefecture: "",
@@ -39,17 +40,26 @@ class ProfileViewModel {
         probody: 0,
         proaroma: 0,
         proflavor: "",
-        profileImageUrl: nil, // String? なので nil でOK
+        dripper: "",
+        paperFilter: "",
+        kettle: "",
+        server: "",
+        scale: "",
+        mill: "",
+        grinder: "",
+        espressoMachine: "",
+        frenchPress: "",
+        profileImageUrl: nil,
         favoriteCoffeeImageUrl: nil
     )
+    
     var logs: [Log] = []
     var userName: String = ""
     var selfIntroduction: String = ""
     var favoriteCoffee: String = ""
     var userNo: Int = 1
-    var isProfileEditSheet: Bool = false
     var favoriteCoffeeImage: UIImage?
-    var profileImage:  UIImage?
+    var profileImage: UIImage?
     var probitter: Int = 0
     var proacidity: Int = 0
     var probody: Int = 0
@@ -69,7 +79,7 @@ class ProfileViewModel {
         return logs.filter { $0.userId == currentUid }
     }
     
-    //toolの定義
+    // 道具の定義
     var dripper: String = ""
     var paperFilter: String = ""
     var kettle: String = ""
@@ -81,8 +91,7 @@ class ProfileViewModel {
     var frenchPress: String = ""
     var toolImage: UIImage?
     
-    
-
+    var isProfileEditSheet: Bool = false
     
     func image(for number: Int, rating: Int) -> Image {
         if number > rating {
@@ -92,26 +101,31 @@ class ProfileViewModel {
         }
     }
     
-    
-
     @MainActor
     func loadProfile(uid: String) async {
         do {
-            let user = try await db.collection("users").document(uid).getDocument(as: User.self)
-            self.user = user
-            self.userName = user.userName
-            self.selfIntroduction = user.selfIntroduction
-            self.profileImageUrl = user.profileImageUrl
+            let fetchedUser = try await db.collection("users").document(uid).getDocument(as: User.self)
+            self.user = fetchedUser
+            self.userName = fetchedUser.userName
+            self.selfIntroduction = fetchedUser.selfIntroduction
+            self.profileImageUrl = fetchedUser.profileImageUrl
             
-            // 💡 URLがある場合は、必要に応じてここで画像をフェッチする処理を追加可能
-            // 基本はView側で AsyncImage(url: URL(string: user.profileImageUrl ?? "")) を使うのがおすすめ
+            // 💡 必要であれば道具や他のプロパティもここで同期できます
+            self.dripper = fetchedUser.dripper
+            self.paperFilter = fetchedUser.paperFilter
+            self.kettle = fetchedUser.kettle
+            self.server = fetchedUser.server
+            self.scale = fetchedUser.scale
+            self.mill = fetchedUser.mill
+            self.grinder = fetchedUser.grinder
+            self.espressoMachine = fetchedUser.espressoMachine
+            self.frenchPress = fetchedUser.frenchPress
             
         } catch {
             print("読み込み失敗: \(error)")
         }
     }
     
-    // ProfileViewModel.swift に追加
     func loadProfileImageFromUrl() {
         guard let urlString = user.profileImageUrl, let url = URL(string: urlString) else { return }
         

@@ -44,8 +44,9 @@ struct User: Codable, Identifiable {
     @DocumentID var id: String? = nil
     
     // 基本データ
-    var userNo: Int
+    var userNo: Int?
     var userName: String
+    var email: String?
     var selfIntroduction: String
     var userAge: Int
     var prefecture: String
@@ -58,21 +59,7 @@ struct User: Codable, Identifiable {
     var proaroma: Int
     var proflavor: String
     
-    // 💡 Firebase Storage に保存した画像のURLを文字列で保持
-    var profileImageUrl: String? = nil
-    var favoriteCoffeeImageUrl: String? = nil
-    
-    enum CodingKeys: String, CodingKey {
-        case id, userNo, userName, selfIntroduction, userAge, prefecture, favoriteCoffee
-        case probitter, proacidity, probody, proaroma, proflavor
-        case profileImageUrl, favoriteCoffeeImageUrl
-    }
-}
-
-// 💡 補足：もしコード内で一時的に UIImage を保持したい場合は、
-// User モデル自体を汚さずに、View の ViewModel 側で保持する方が設計が綺麗です。
-struct Tool: Identifiable{
-    let id: UUID = UUID()
+    // 💡 お気に入りの道具プロパティを追加
     var dripper: String
     var paperFilter: String
     var kettle: String
@@ -82,7 +69,17 @@ struct Tool: Identifiable{
     var grinder: String
     var espressoMachine: String
     var frenchPress: String
-    var toolImage: UIImage?
+    
+    // 画像URL
+    var profileImageUrl: String? = nil
+    var favoriteCoffeeImageUrl: String? = nil
+    
+    enum CodingKeys: String, CodingKey {
+        case id, userNo, userName, email, selfIntroduction, userAge, prefecture, favoriteCoffee
+        case probitter, proacidity, probody, proaroma, proflavor
+        case dripper, paperFilter, kettle, server, scale, mill, grinder, espressoMachine, frenchPress
+        case profileImageUrl, favoriteCoffeeImageUrl
+    }
 }
 
 

@@ -109,10 +109,15 @@ struct HomeView: View {
                 get: { profileViewModel.isProfileEditSheet },
                 set: { profileViewModel.isProfileEditSheet = $0 }
             )){
-                ProfileEditView()
-                    .onAppear {
-                        profileViewModel.logs = homeViewModel.logs
-                    }
+                // 💡 userManager から currentUser を安全に取り出して渡す
+                if let user = userManager.currentUser {
+                    ProfileEditView(user: user)
+                        .onAppear {
+                            profileViewModel.logs = homeViewModel.logs
+                        }
+                } else {
+                    ProgressView("読み込み中...")
+                }
             }
             .sheet(isPresented: $isShowingSelectShop) {
                 // SelectShopView は遷移先を持つため NavigationStack で囲むのが一般的です

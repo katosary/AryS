@@ -12,7 +12,13 @@ import FirebaseStorage
 
 struct ProfileEditView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var profileEditViewModel = ProfileEditViewModel()
+    // 💡 外部からユーザーデータを受け取れるようにする
+    @State private var profileEditViewModel: ProfileEditViewModel
+    
+    init(user: User) {
+        // 受け取った user を使って ViewModel を初期化
+        _profileEditViewModel = State(initialValue: ProfileEditViewModel(user: user))
+    }
     
     let coverHeight: CGFloat = 200 // 編集時は少し低めが見やすい
     let profileSize: CGFloat = 100

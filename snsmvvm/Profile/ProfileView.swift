@@ -118,10 +118,16 @@ struct ProfileView: View {
                 }
                 .background(Color(.systemBackground))
                 .onAppear {
-                    
+                    if let currentUid = Auth.auth().currentUser?.uid {
+                        Task {
+                            await profileViewModel.loadProfile(uid: currentUid)
+                        }
+                    }
                 }
                 .customPullToRefresh {
-                    try? await Task.sleep(nanoseconds: 2 * 1_000_000_000)
+                    if let currentUid = Auth.auth().currentUser?.uid {
+                        await profileViewModel.loadProfile(uid: currentUid)
+                    }
                 }
                 // 💡 子ビューのシートが開くと、ここが連動して動きます
                 .scaleEffect(isDetailShowing ? 0.93 : 1.0)

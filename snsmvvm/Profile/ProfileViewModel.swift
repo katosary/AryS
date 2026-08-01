@@ -111,15 +111,15 @@ class ProfileViewModel {
             self.profileImageUrl = fetchedUser.profileImageUrl
             
             // 💡 必要であれば道具や他のプロパティもここで同期できます
-            self.dripper = fetchedUser.dripper
-            self.paperFilter = fetchedUser.paperFilter
-            self.kettle = fetchedUser.kettle
-            self.server = fetchedUser.server
-            self.scale = fetchedUser.scale
-            self.mill = fetchedUser.mill
-            self.grinder = fetchedUser.grinder
-            self.espressoMachine = fetchedUser.espressoMachine
-            self.frenchPress = fetchedUser.frenchPress
+            self.dripper = fetchedUser.dripper ?? ""
+            self.paperFilter = fetchedUser.paperFilter ?? ""
+            self.kettle = fetchedUser.kettle ?? ""
+            self.server = fetchedUser.server ?? ""
+            self.scale = fetchedUser.scale ?? ""
+            self.mill = fetchedUser.mill ?? ""
+            self.grinder = fetchedUser.grinder ?? ""
+            self.espressoMachine = fetchedUser.espressoMachine ?? ""
+            self.frenchPress = fetchedUser.frenchPress ?? ""
             
         } catch {
             print("読み込み失敗: \(error)")

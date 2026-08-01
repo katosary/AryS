@@ -104,20 +104,21 @@ struct HomeView: View {
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
             }
-            // 💡 プロフィール編集シートも、ProfileMenuView内のボタンから連動して開くためここに配置
             .sheet(isPresented: .init(
                 get: { profileViewModel.isProfileEditSheet },
                 set: { profileViewModel.isProfileEditSheet = $0 }
             )){
-                // 💡 userManager から currentUser を安全に取り出して渡す
-                if let user = userManager.currentUser {
-                    ProfileEditView(user: user)
-                        .onAppear {
-                            profileViewModel.logs = homeViewModel.logs
+                // 💡 profileViewModel が保持している最新の user データを渡す
+                ProfileEditView(user: profileViewModel.user)
+                    .onAppear {
+                        profileViewModel.logs = homeViewModel.logs
+                        // 万全を期すため、シートが開いた瞬間にも最新データをロードし直す
+                        if let uid = Auth.auth().currentUser?.uid {
+                            Task {
+                                await profileViewModel.loadProfile(uid: uid)
+                            }
                         }
-                } else {
-                    ProgressView("読み込み中...")
-                }
+                    }
             }
             .sheet(isPresented: $isShowingSelectShop) {
                 // SelectShopView は遷移先を持つため NavigationStack で囲むのが一般的です

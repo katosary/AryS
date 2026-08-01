@@ -79,15 +79,15 @@ class ProfileEditViewModel {
         self.proaroma = user.proaroma
         self.proflavor = user.proflavor
         
-        self.dripper = user.dripper
-        self.paperFilter = user.paperFilter
-        self.kettle = user.kettle
-        self.server = user.server
-        self.scale = user.scale
-        self.mill = user.mill
-        self.grinder = user.grinder
-        self.espressoMachine = user.espressoMachine
-        self.frenchPress = user.frenchPress
+        self.dripper = user.dripper ?? ""
+        self.paperFilter = user.paperFilter ?? ""
+        self.kettle = user.kettle ?? ""
+        self.server = user.server ?? ""
+        self.scale = user.scale ?? ""
+        self.mill = user.mill ?? ""
+        self.grinder = user.grinder ?? ""
+        self.espressoMachine = user.espressoMachine ?? ""
+        self.frenchPress = user.frenchPress ?? ""
         
         self.profileImageUrl = user.profileImageUrl
         self.favoriteCoffeeImageUrl = user.favoriteCoffeeImageUrl
@@ -144,12 +144,12 @@ class ProfileEditViewModel {
             imageUrl = "\(rawUrlString)?v=\(timestamp)"
         }
         
-        // 💡 プレフィックスのタイポ（#）を修正済み
+        // 💡 修正1: Firestoreに送るデータを `self.user` から取得するように変更
         var data: [String: Any] = [
-            "userName": userName,
-            "selfIntroduction": selfIntroduction,
-            "userAge": userAge,
-            "prefecture": prefecture,
+            "userName": self.user.userName,
+            "selfIntroduction": self.user.selfIntroduction,
+            "userAge": self.user.userAge,
+            "prefecture": self.user.prefecture, // 👈 ここがポイント！最新の user.prefecture を送る
             "favoriteCoffee": favoriteCoffee,
             "probitter": probitter,
             "proacidity": proacidity,
@@ -169,20 +169,14 @@ class ProfileEditViewModel {
         
         if let url = imageUrl {
             data["profileImageUrl"] = url
-            self.profileImageUrl = url
+            self.user.profileImageUrl = url
         }
         
         try await db.collection("users").document(uid).setData(data, merge: true)
         
-        // ローカルのUserモデルも更新
-        self.user.userName = userName
-        self.user.selfIntroduction = selfIntroduction
-        self.user.userAge = userAge
-        self.user.prefecture = prefecture
+        // 💡 修正2: 画面側（TextFieldなど）の入力内容を `self.user` に反映させてから保存する場合、
+        // もしTextField等が `userName` などの単体変数にバインドされているなら、ここで `self.user` に代入しておく必要があります。
+        // （もしすでにTextFieldが `self.user.userName` に直接バインディングされているなら、以下の代入はそのままでも動きます）
         self.user.profileImageUrl = imageUrl
-    }
-    
-    func image(for number: Int, rating: Int) -> Image {
-        return number > rating ? Image(systemName: "star") : Image(systemName: "star.fill")
     }
 }

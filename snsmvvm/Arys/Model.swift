@@ -59,16 +59,16 @@ struct User: Codable, Identifiable {
     var proaroma: Int
     var proflavor: String
     
-    // 💡 お気に入りの道具プロパティを追加
-    var dripper: String
-    var paperFilter: String
-    var kettle: String
-    var server: String
-    var scale: String
-    var mill: String
-    var grinder: String
-    var espressoMachine: String
-    var frenchPress: String
+    // 💡 すべて 「?」 をつけるか、初期値を設定する
+    var dripper: String? = ""
+    var paperFilter: String? = ""
+    var kettle: String? = ""
+    var server: String? = ""
+    var scale: String? = ""
+    var mill: String? = ""
+    var grinder: String? = ""
+    var espressoMachine: String? = ""
+    var frenchPress: String? = ""
     
     // 画像URL
     var profileImageUrl: String? = nil
@@ -81,7 +81,6 @@ struct User: Codable, Identifiable {
         case profileImageUrl, favoriteCoffeeImageUrl
     }
 }
-
 
 struct Member: Codable {
     let id: String

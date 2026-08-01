@@ -16,7 +16,7 @@ struct ProfileView: View {
     @State private var profileSelection = 0
     @State private var isMenuPresented = false
     
-    // 💡 親側では「背景をぼかす・縮めるため」のフラグだけを残す
+    // 親側では「背景をぼかす・縮めるため」のフラグだけを残す
     @State private var isDetailShowing = false
     
     // --- 【設定値】サイズ・デザイン ---
@@ -48,7 +48,7 @@ struct ProfileView: View {
                                 
                                 Group {
                                     if let urlString = profileViewModel.user.profileImageUrl, let url = URL(string: urlString) {
-                                        // URLから読み込む（キャッシュも効くため効率的）
+                                        // URLから読み込む
                                         AsyncImage(url: url) { image in
                                             image.resizable().scaledToFill()
                                         } placeholder: {
@@ -67,7 +67,6 @@ struct ProfileView: View {
                                 }
                                 .frame(width: profileSize, height: profileSize)
                                 .clipShape(Circle())
-                                // 💡 境界線もシステム背景色に合わせると綺麗です
                                 .overlay(Circle().stroke(Color(.systemBackground), lineWidth: 3))
                                 .offset(y: profileSize * overlapAmount)
                             }
@@ -76,6 +75,17 @@ struct ProfileView: View {
                             // --- 3. ユーザー名 ＆ 自己紹介 ---
                             VStack(spacing: 8) {
                                 Text(profileViewModel.user.userName).font(.title2).bold()
+                                
+                                // 出身地を表示するコード
+                                if !profileViewModel.user.prefecture.isEmpty {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "mappin.and.ellipse")
+                                        Text(profileViewModel.user.prefecture)
+                                    }
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                }
+                                
                                 Text(profileViewModel.user.selfIntroduction)
                                     .font(.body)
                                     .foregroundColor(.secondary)
@@ -117,28 +127,29 @@ struct ProfileView: View {
                     .background(Color(.systemBackground))
                 }
                 .background(Color(.systemBackground))
-                .onAppear {
-                    if let currentUid = Auth.auth().currentUser?.uid {
-                        Task {
-                            await profileViewModel.loadProfile(uid: currentUid)
-                        }
-                    }
-                }
                 .customPullToRefresh {
                     if let currentUid = Auth.auth().currentUser?.uid {
                         await profileViewModel.loadProfile(uid: currentUid)
                     }
                 }
-                // 💡 子ビューのシートが開くと、ここが連動して動きます
+                // 子ビューのシートが開くと連動して動く設定
                 .scaleEffect(isDetailShowing ? 0.93 : 1.0)
                 .blur(radius: isDetailShowing ? 8 : 0)
                 .disabled(isDetailShowing)
             }
         }
         .animation(.spring(response: 0.45, dampingFraction: 0.82), value: isDetailShowing)
-        .task {
-            // 💡 Authから現在ログイン中のuidを取得する
+        // 💡 ここ（.taskの前あたり）に追加する！
+        .onAppear {
             if let currentUid = Auth.auth().currentUser?.uid {
+                Task {
+                    await profileViewModel.loadProfile(uid: currentUid)
+                }
+            }
+        }
+        .task {
+            // 初回起動時（データがまだ空のとき）だけ読み込む
+            if profileViewModel.user.userName.isEmpty, let currentUid = Auth.auth().currentUser?.uid {
                 await profileViewModel.loadProfile(uid: currentUid)
             }
         }

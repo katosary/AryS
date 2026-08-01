@@ -139,11 +139,10 @@ struct ProfileEditView: View {
                                         .foregroundColor(.gray)
                                 }
                             }
-                            // ProfileEditView.swift の該当箇所
                             .sheet(isPresented: $profileEditViewModel.isShowingPrefecturePicker) {
-                                // 引数エラーが出ていた箇所を以下のように直す
                                 PrefectureSelectionView { selectedValue in
-                                    profileEditViewModel.prefecture = selectedValue
+                                    // 💡 修正：user.prefecture に代入する
+                                    profileEditViewModel.user.prefecture = selectedValue
                                 }
                             }
                             Divider()
@@ -230,17 +229,20 @@ struct ProfileEditView: View {
                     Button("キャンセル") { dismiss() }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    // ProfileEditView の保存ボタン内
                     Button("保存") {
                         Task {
                             if let uid = Auth.auth().currentUser?.uid {
-                                // 1. 画像アップロードと Firestore 更新
-                                try? await profileEditViewModel.uploadProfileAndSave(uid: uid)
-                                
-                                // 2. 💡 ここで ViewModel の値を更新する（UI即時反映のため）
-                                profileEditViewModel.user.profileImageUrl = profileEditViewModel.profileImageUrl
-                                
-                                dismiss()
+                                do {
+                                    // 1. 画像アップロードと Firestore への保存が「完了するのを待つ」
+                                    try await profileEditViewModel.uploadProfileAndSave(uid: uid)
+                                    
+                                    // 2. 保存が完全に成功してから画面を閉じる
+                                    await MainActor.run {
+                                        dismiss()
+                                    }
+                                } catch {
+                                    print("保存に失敗しました: \(error)")
+                                }
                             }
                         }
                     }
@@ -300,7 +302,8 @@ struct ProfileEditView: View {
                     
                     HStack(spacing: 4) {
                         ForEach(1...profileEditViewModel.maxRating, id: \.self) { number in
-                            profileEditViewModel.image(for: number, rating: rating.wrappedValue)
+                            let isFilled = number <= rating.wrappedValue
+                            Image(systemName: isFilled ? "star.fill" : "star")
                                 .foregroundColor(number > rating.wrappedValue ? profileEditViewModel.offColor : profileEditViewModel.onColor)
                                 .onTapGesture {
                                     rating.wrappedValue = number
@@ -321,7 +324,4 @@ struct ProfileEditView: View {
         }
     }
 }
-
-
-
 

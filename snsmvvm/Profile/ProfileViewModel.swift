@@ -2,30 +2,18 @@
 //  ProfileViewModel.swift
 //  snsmvvm
 //
-//  Created by katoso on 2026/04/18.
-//
 
 import Observation
 import SwiftUI
-import PhotosUI
-import FirebaseCore
 import FirebaseFirestore
 import FirebaseAuth
-import FirebaseStorage
 
 @Observable
 class ProfileViewModel {
-    private var db: Firestore
+    private var db = Firestore.firestore()
+    private var listenerRegistration: ListenerRegistration?
     
-    init() {
-        self.db = Firestore.firestore()
-        
-        // --- 初期化時の代入 ---
-        self.userName = user.userName
-        self.selfIntroduction = user.selfIntroduction
-    }
-    
-    // 💡 修正後の User モデルの構造（道具のプロパティを含む）に合わせて初期化
+    // 💡 状態は user オブジェクトに一元化（二重管理プロパティを削除）
     var user: User = User(
         id: nil,
         userNo: 1,
@@ -54,20 +42,11 @@ class ProfileViewModel {
     )
     
     var logs: [Log] = []
-    var userName: String = ""
-    var selfIntroduction: String = ""
-    var favoriteCoffee: String = ""
-    var userNo: Int = 1
-    var favoriteCoffeeImage: UIImage?
     var profileImage: UIImage?
-    var probitter: Int = 0
-    var proacidity: Int = 0
-    var probody: Int = 0
-    var proaroma: Int = 0
-    var proflavor: String = ""
-    var profileImageUrl: String? = nil
-    var favoriteCoffeeImageUrl: String? = nil
+    var favoriteCoffeeImage: UIImage?
+    var isProfileEditSheet: Bool = false
     
+    // UI表示用スター関連設定
     var maxRating = 5
     var offImage: Image?
     var onImage = Image(systemName: "star.fill")
@@ -79,67 +58,58 @@ class ProfileViewModel {
         return logs.filter { $0.userId == currentUid }
     }
     
-    // 道具の定義
-    var dripper: String = ""
-    var paperFilter: String = ""
-    var kettle: String = ""
-    var server: String = ""
-    var scale: String = ""
-    var mill: String = ""
-    var grinder: String = ""
-    var espressoMachine: String = ""
-    var frenchPress: String = ""
-    var toolImage: UIImage?
+    deinit {
+        // ViewModel破棄時にリスナーを安全に解除
+        listenerRegistration?.remove()
+    }
     
-    var isProfileEditSheet: Bool = false
+    // MARK: - リアルタイムリスナー
+    
+    /// Firestoreのドキュメント更新を常時監視・即時反映する
+    func listenToProfile(uid: String) {
+        // 重複登録を防止
+        listenerRegistration?.remove()
+        
+        listenerRegistration = db.collection("users").document(uid)
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self = self else { return }
+                
+                if let error = error {
+                    print("❌ プロフィール読み込みエラー: \(error.localizedDescription)")
+                    return
+                }
+                
+                guard let snapshot = snapshot, snapshot.exists else {
+                    print("⚠️ ユーザーデータが存在しません")
+                    return
+                }
+                
+                do {
+                    // Firestoreのドキュメントを User 型にデコード
+                    let fetchedUser = try snapshot.data(as: User.self)
+                    
+                    Task { @MainActor in
+                        // user が更新されると、@Observable により参照している View が即座に自動再描画される
+                        self.user = fetchedUser
+                    }
+                } catch {
+                    print("❌ デコード失敗: \(error)")
+                }
+            }
+    }
+    
+    func stopListening() {
+        listenerRegistration?.remove()
+        listenerRegistration = nil
+    }
+    
+    // MARK: - 補助メソッド
     
     func image(for number: Int, rating: Int) -> Image {
         if number > rating {
             return offImage ?? Image(systemName: "star")
         } else {
             return onImage
-        }
-    }
-    
-    @MainActor
-    func loadProfile(uid: String) async {
-        do {
-            let fetchedUser = try await db.collection("users").document(uid).getDocument(as: User.self)
-            self.user = fetchedUser
-            self.userName = fetchedUser.userName
-            self.selfIntroduction = fetchedUser.selfIntroduction
-            self.profileImageUrl = fetchedUser.profileImageUrl
-            
-            // 💡 必要であれば道具や他のプロパティもここで同期できます
-            self.dripper = fetchedUser.dripper ?? ""
-            self.paperFilter = fetchedUser.paperFilter ?? ""
-            self.kettle = fetchedUser.kettle ?? ""
-            self.server = fetchedUser.server ?? ""
-            self.scale = fetchedUser.scale ?? ""
-            self.mill = fetchedUser.mill ?? ""
-            self.grinder = fetchedUser.grinder ?? ""
-            self.espressoMachine = fetchedUser.espressoMachine ?? ""
-            self.frenchPress = fetchedUser.frenchPress ?? ""
-            
-        } catch {
-            print("読み込み失敗: \(error)")
-        }
-    }
-    
-    func loadProfileImageFromUrl() {
-        guard let urlString = user.profileImageUrl, let url = URL(string: urlString) else { return }
-        
-        Task {
-            do {
-                let (data, _) = try await URLSession.shared.data(from: url)
-                if let image = UIImage(data: data) {
-                    await MainActor.run {
-                        self.profileImage = image
-                    }
-                }
-            } catch {
-                print("❌ 画像のロード失敗: \(error)")
-            }
         }
     }
 }

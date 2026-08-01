@@ -108,16 +108,9 @@ struct HomeView: View {
                 get: { profileViewModel.isProfileEditSheet },
                 set: { profileViewModel.isProfileEditSheet = $0 }
             )){
-                // 💡 profileViewModel が保持している最新の user データを渡す
                 ProfileEditView(user: profileViewModel.user)
                     .onAppear {
                         profileViewModel.logs = homeViewModel.logs
-                        // 万全を期すため、シートが開いた瞬間にも最新データをロードし直す
-                        if let uid = Auth.auth().currentUser?.uid {
-                            Task {
-                                await profileViewModel.loadProfile(uid: uid)
-                            }
-                        }
                     }
             }
             .sheet(isPresented: $isShowingSelectShop) {

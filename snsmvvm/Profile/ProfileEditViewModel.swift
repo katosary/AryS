@@ -15,18 +15,17 @@ import FirebaseFirestore
 class ProfileEditViewModel {
     var user: User
     
-    // 入力項目のプロパティ
+    // 入力項目（ViewのBinding用）
     var userName: String = ""
     var selfIntroduction: String = ""
     var userAge: Int = 0
-    var prefecture: String = ""
     var favoriteCoffee: String = ""
     
     // 評価（コーヒーの好み）
-    var probitter: Int = 3
-    var proacidity: Int = 3
-    var probody: Int = 3
-    var proaroma: Int = 3
+    var probitter: Int = 0
+    var proacidity: Int = 0
+    var probody: Int = 0
+    var proaroma: Int = 0
     var proflavor: String = ""
     
     // 道具
@@ -54,7 +53,7 @@ class ProfileEditViewModel {
     var profileImageUrl: String? = nil
     var favoriteCoffeeImageUrl: String? = nil
     
-    // ピッチャーの表示フラグなど
+    // ピッチャーの表示フラグ
     var isShowingAgePicker: Bool = false
     var isShowingPrefecturePicker: Bool = false
     
@@ -64,13 +63,31 @@ class ProfileEditViewModel {
     
     private let db = Firestore.firestore()
     
-    // 💡 1. 既存のUserデータを受け取って初期化するイニシャライザ
+    // 既存のUserデータを受け取って初期化
     init(user: User) {
+        self.user = user
+        configure(with: user)
+    }
+    
+    // デフォルトイニシャライザ
+    init() {
+        self.user = User(
+            id: "", userName: "", email: "", selfIntroduction: "",
+            userAge: 0, prefecture: "", favoriteCoffee: "",
+            probitter: 0, proacidity: 0, probody: 0, proaroma: 0, proflavor: "",
+            dripper: "", paperFilter: "", kettle: "", server: "", scale: "",
+            mill: "", grinder: "", espressoMachine: "", frenchPress: "",
+            profileImageUrl: nil, favoriteCoffeeImageUrl: nil
+        )
+    }
+    
+    /// 💡 シート表示時などに最新の User 情報で各プロパティを再セットする処理
+    @MainActor
+    func configure(with user: User) {
         self.user = user
         self.userName = user.userName
         self.selfIntroduction = user.selfIntroduction
         self.userAge = user.userAge
-        self.prefecture = user.prefecture
         self.favoriteCoffee = user.favoriteCoffee
         
         self.probitter = user.probitter
@@ -93,19 +110,7 @@ class ProfileEditViewModel {
         self.favoriteCoffeeImageUrl = user.favoriteCoffeeImageUrl
     }
     
-    // デフォルト（引数なし）のイニシャライザ
-    init() {
-        self.user = User(
-            id: "", userName: "", email: "", selfIntroduction: "",
-            userAge: 0, prefecture: "", favoriteCoffee: "",
-            probitter: 3, proacidity: 3, probody: 3, proaroma: 3, proflavor: "",
-            dripper: "", paperFilter: "", kettle: "", server: "", scale: "",
-            mill: "", grinder: "", espressoMachine: "", frenchPress: "",
-            profileImageUrl: nil, favoriteCoffeeImageUrl: nil
-        )
-    }
-    
-    // 2. 写真選択時のロード処理
+    // 写真選択時のロード処理
     private func loadImage(from item: PhotosPickerItem?, isProfile: Bool) async {
         guard let item = item else { return }
         guard let data = try? await item.loadTransferable(type: Data.self) else { return }
@@ -120,21 +125,26 @@ class ProfileEditViewModel {
         }
     }
     
-    // 3. 既存のプロフィール画像をURLから読み込む処理
+    // 既存のプロフィール画像をURLから読み込む処理
+    @MainActor
     func loadProfileImageFromUrl() {
         guard let urlString = user.profileImageUrl, let url = URL(string: urlString) else { return }
-        URLSession.shared.dataTask(with: url) { data, _, _ in
-            if let data = data, let uiImage = UIImage(data: data) {
-                DispatchQueue.main.async {
+        
+        Task {
+            do {
+                let (data, _) = try await URLSession.shared.data(from: url)
+                if let uiImage = UIImage(data: data) {
                     self.profileImage = uiImage
                 }
+            } catch {
+                print("画像の読み込みに失敗しました: \(error)")
             }
-        }.resume()
+        }
     }
     
-    // 4. Firestoreへ保存する処理
     @MainActor
-    func uploadProfileAndSave(uid: String) async throws {
+    func uploadProfileAndSave(uid: String) async throws -> User { // 💡 戻り値として更新後のUserを返す
+        // 1. プロフィール画像のアップロード処理
         var imageUrl: String? = self.user.profileImageUrl
         if let image = profileImage, let data = image.jpegData(compressionQuality: 0.5) {
             let storageRef = Storage.storage().reference().child("profile_images/\(uid).jpg")
@@ -143,40 +153,56 @@ class ProfileEditViewModel {
             let timestamp = Int(Date().timeIntervalSince1970)
             imageUrl = "\(rawUrlString)?v=\(timestamp)"
         }
-        
-        // 💡 修正1: Firestoreに送るデータを `self.user` から取得するように変更
-        var data: [String: Any] = [
+
+        // 2. ViewModel内のプロパティから最新の入力内容を同期
+        self.user.userName = userName
+        self.user.selfIntroduction = selfIntroduction
+        self.user.userAge = userAge
+        self.user.favoriteCoffee = favoriteCoffee
+        self.user.probitter = probitter
+        self.user.proacidity = proacidity
+        self.user.probody = probody
+        self.user.proaroma = proaroma
+        self.user.proflavor = proflavor
+        self.user.dripper = dripper
+        self.user.paperFilter = paperFilter
+        self.user.kettle = kettle
+        self.user.server = server
+        self.user.scale = scale
+        self.user.mill = mill
+        self.user.grinder = grinder
+        self.user.espressoMachine = espressoMachine
+        self.user.frenchPress = frenchPress
+        if let url = imageUrl {
+            self.user.profileImageUrl = url
+        }
+
+        // 3. Firestoreに更新データを送る
+        let updateData: [String: Any] = [
             "userName": self.user.userName,
             "selfIntroduction": self.user.selfIntroduction,
             "userAge": self.user.userAge,
-            "prefecture": self.user.prefecture, // 👈 ここがポイント！最新の user.prefecture を送る
-            "favoriteCoffee": favoriteCoffee,
-            "probitter": probitter,
-            "proacidity": proacidity,
-            "probody": probody,
-            "proaroma": proaroma,
-            "proflavor": proflavor,
-            "dripper": dripper,
-            "paperFilter": paperFilter,
-            "kettle": kettle,
-            "server": server,
-            "scale": scale,
-            "mill": mill,
-            "grinder": grinder,
-            "espressoMachine": espressoMachine,
-            "frenchPress": frenchPress
+            "prefecture": self.user.prefecture,
+            "favoriteCoffee": self.user.favoriteCoffee,
+            "probitter": self.user.probitter,
+            "proacidity": self.user.proacidity,
+            "probody": self.user.probody,
+            "proaroma": self.user.proaroma,
+            "proflavor": self.user.proflavor,
+            "dripper": self.user.dripper ?? "",
+            "paperFilter": self.user.paperFilter ?? "",
+            "kettle": self.user.kettle ?? "",
+            "server": self.user.server ?? "",
+            "scale": self.user.scale ?? "",
+            "mill": self.user.mill ?? "",
+            "grinder": self.user.grinder ?? "",
+            "espressoMachine": self.user.espressoMachine ?? "",
+            "frenchPress": self.user.frenchPress ?? "",
+            "profileImageUrl": self.user.profileImageUrl ?? ""
         ]
+
+        try await db.collection("users").document(uid).setData(updateData, merge: true)
         
-        if let url = imageUrl {
-            data["profileImageUrl"] = url
-            self.user.profileImageUrl = url
-        }
-        
-        try await db.collection("users").document(uid).setData(data, merge: true)
-        
-        // 💡 修正2: 画面側（TextFieldなど）の入力内容を `self.user` に反映させてから保存する場合、
-        // もしTextField等が `userName` などの単体変数にバインドされているなら、ここで `self.user` に代入しておく必要があります。
-        // （もしすでにTextFieldが `self.user.userName` に直接バインディングされているなら、以下の代入はそのままでも動きます）
-        self.user.profileImageUrl = imageUrl
+        return self.user // 💡 更新された User を返す
     }
 }

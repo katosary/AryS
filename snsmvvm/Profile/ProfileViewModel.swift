@@ -3,17 +3,17 @@
 //  snsmvvm
 //
 
+import Foundation
 import Observation
 import SwiftUI
 import FirebaseFirestore
 import FirebaseAuth
 
 @Observable
-class ProfileViewModel {
-    private var db = Firestore.firestore()
-    private var listenerRegistration: ListenerRegistration?
+final class ProfileViewModel {
+    // MARK: - Properties
     
-    // 💡 状態は user オブジェクトに一元化（二重管理プロパティを削除）
+    /// 画面に表示するユーザー情報
     var user: User = User(
         id: nil,
         userNo: 1,
@@ -27,6 +27,7 @@ class ProfileViewModel {
         proacidity: 0,
         probody: 0,
         proaroma: 0,
+        
         proflavor: "",
         dripper: "",
         paperFilter: "",
@@ -41,75 +42,105 @@ class ProfileViewModel {
         favoriteCoffeeImageUrl: nil
     )
     
-    var logs: [Log] = []
-    var profileImage: UIImage?
-    var favoriteCoffeeImage: UIImage?
     var isProfileEditSheet: Bool = false
     
-    // UI表示用スター関連設定
-    var maxRating = 5
-    var offImage: Image?
-    var onImage = Image(systemName: "star.fill")
-    var offColor = Color.gray
-    var onColor = Color.yellow
+    var logs: [Log] = []
     
-    var myLogs: [Log] {
-        let currentUid = Auth.auth().currentUser?.uid
-        return logs.filter { $0.userId == currentUid }
-    }
+    let maxRating: Int = 5
+    /// ローディング状態管理
+    var isLoading: Bool = false
+    
+    /// エラーハンドリング用
+    var errorMessage: String? = nil
+    
+    // Firestoreおよびリスナー管理
+    private let db = Firestore.firestore()
+    private var listenerRegistration: ListenerRegistration?
+    
+    // MARK: - Initializer
+    
+    init() {}
     
     deinit {
-        // ViewModel破棄時にリスナーを安全に解除
-        listenerRegistration?.remove()
+        // ViewModelが解放される際にリスナーを破棄
+        stopListening()
     }
     
-    // MARK: - リアルタイムリスナー
+    // MARK: - Realtime Listener
     
-    /// Firestoreのドキュメント更新を常時監視・即時反映する
+    /// 指定されたUIDのユーザーデータをリアルタイムで購読する
+    /// - Parameter uid: 対象ユーザーのFirebase Auth UID
     func listenToProfile(uid: String) {
-        // 重複登録を防止
-        listenerRegistration?.remove()
+        guard !uid.isEmpty else {
+            self.errorMessage = "有効なユーザーIDが存在しません。"
+            return
+        }
+        
+        // 既存のリスナーがあれば解除
+        stopListening()
+        
+        self.isLoading = true
+        self.errorMessage = nil
         
         listenerRegistration = db.collection("users").document(uid)
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self = self else { return }
                 
-                if let error = error {
-                    print("❌ プロフィール読み込みエラー: \(error.localizedDescription)")
-                    return
-                }
-                
-                guard let snapshot = snapshot, snapshot.exists else {
-                    print("⚠️ ユーザーデータが存在しません")
-                    return
-                }
-                
-                do {
-                    // Firestoreのドキュメントを User 型にデコード
-                    let fetchedUser = try snapshot.data(as: User.self)
+                Task { @MainActor in
+                    self.isLoading = false
                     
-                    Task { @MainActor in
-                        // user が更新されると、@Observable により参照している View が即座に自動再描画される
-                        self.user = fetchedUser
+                    if let error = error {
+                        self.errorMessage = "データの取得に失敗しました: \(error.localizedDescription)"
+                        return
                     }
-                } catch {
-                    print("❌ デコード失敗: \(error)")
+                    
+                    guard let snapshot = snapshot, snapshot.exists else {
+                        self.errorMessage = "ユーザーデータが見つかりませんでした。"
+                        return
+                    }
+                    
+                    do {
+                        // Codableを用いたデコード処理
+                        let fetchedUser = try snapshot.data(as: User.self)
+                        self.user = fetchedUser
+                    } catch {
+                        self.errorMessage = "データの解析に失敗しました: \(error.localizedDescription)"
+                    }
                 }
             }
     }
     
+    /// リアルタイムリスナーの購読を停止する
     func stopListening() {
         listenerRegistration?.remove()
         listenerRegistration = nil
     }
     
-    // MARK: - 補助メソッド
+    // MARK: - Async One-time Fetch
     
-    func image(for number: Int, rating: Int) -> Image {
-        if number > rating {
-            return offImage ?? Image(systemName: "star")
-        } else {
-            return onImage
+    /// 単発でユーザー情報を取得したい場合（非同期処理）
+    /// - Parameter uid: 対象ユーザーのFirebase Auth UID
+    @MainActor
+    func fetchProfile(uid: String) async {
+        guard !uid.isEmpty else {
+            self.errorMessage = "有効なユーザーIDが存在しません。"
+            return
         }
+        
+        self.isLoading = true
+        self.errorMessage = nil
+        
+        do {
+            let snapshot = try await db.collection("users").document(uid).getDocument()
+            if snapshot.exists {
+                self.user = try snapshot.data(as: User.self)
+            } else {
+                self.errorMessage = "ユーザーデータが見つかりませんでした。"
+            }
+        } catch {
+            self.errorMessage = "データの取得に失敗しました: \(error.localizedDescription)"
+        }
+        
+        self.isLoading = false
     }
 }

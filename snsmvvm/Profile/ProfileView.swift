@@ -63,6 +63,13 @@ struct ProfileView: View {
                             VStack(spacing: 8) {
                                 Text(profileViewModel.user.userName).font(.title2).bold()
                                 
+                                if profileViewModel.user.userAge > 0 {
+                                    HStack(spacing: 4) {
+                                        Text("\(profileViewModel.user.userAge)歳")
+                                    }
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                }
                                 if !profileViewModel.user.prefecture.isEmpty {
                                     HStack(spacing: 4) {
                                         Image(systemName: "mappin.and.ellipse")

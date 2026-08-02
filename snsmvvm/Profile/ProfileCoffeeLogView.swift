@@ -38,6 +38,10 @@ struct ProfileCoffeeLogView: View {
                 .id(log.id)
             }
         }
+        .task {
+            // ★ ここで呼び出していますか？
+            await profileCoffeeLogViewModel.fetchUserLogs()
+        }
     }
 }
 
@@ -49,7 +53,7 @@ struct AsyncPostRow<Content: View>: View {
     
     @State private var author: User?
     @State private var isFetching = false // 💡 二重取得防止
-
+    
     var body: some View {
         Group {
             if let author = author {

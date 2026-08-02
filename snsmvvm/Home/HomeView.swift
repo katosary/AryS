@@ -107,11 +107,20 @@ struct HomeView: View {
             .sheet(isPresented: .init(
                 get: { profileViewModel.isProfileEditSheet },
                 set: { profileViewModel.isProfileEditSheet = $0 }
-            )){
-                ProfileEditView(user: profileViewModel.user)
-                    .onAppear {
-                        profileViewModel.logs = homeViewModel.logs
-                    }
+            )) {
+                // 💡 userManager が持つ最新の currentUser を渡す（nil 対策で fallback または if let）
+                if let currentUser = userManager.currentUser {
+                    ProfileEditView(user: currentUser)
+                        .onAppear {
+                            profileViewModel.logs = homeViewModel.logs
+                        }
+                } else {
+                    // 万が一 currentUser が nil の場合は既存の user を使用
+                    ProfileEditView(user: profileViewModel.user)
+                        .onAppear {
+                            profileViewModel.logs = homeViewModel.logs
+                        }
+                }
             }
             .sheet(isPresented: $isShowingSelectShop) {
                 // SelectShopView は遷移先を持つため NavigationStack で囲むのが一般的です

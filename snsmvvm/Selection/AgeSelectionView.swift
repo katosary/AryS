@@ -8,8 +8,10 @@
 import SwiftUI
 
 struct AgeSelectionView: View {
-    @State var ageSelectionViewModel: AgeSelectionViewModel
+    @State private var ageSelectionViewModel = AgeSelectionViewModel()
     @Environment(\.dismiss) private var dismiss
+    
+    var onSelected: (Int) -> Void
     
     var body: some View {
         NavigationStack {
@@ -32,6 +34,7 @@ struct AgeSelectionView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("完了") {
+                        onSelected(ageSelectionViewModel.userAge)
                         dismiss()
                     }
                 }

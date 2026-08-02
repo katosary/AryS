@@ -20,14 +20,14 @@ struct CountrySelectionView: View {
                     Section(header: Text(region)) { // ここは選択不可の見出し
                         ForEach(countrySelectionViewModel.regions[region] ?? [], id: \.self) { country in
                             Button(action: {
-                                countrySelectionViewModel.searchCountry = country
+                                onSelected(country)
                                 dismiss() // 選択したらシートを閉じる
                             }) {
                                 HStack {
                                     Text(country)
                                         .foregroundColor(.primary)
                                     Spacer()
-                                    if countrySelectionViewModel.searchCountry == country {
+                                    if countrySelectionViewModel.country == country {
                                         Image(systemName: "checkmark")
                                             .foregroundColor(.blue)
                                     }
@@ -41,7 +41,7 @@ struct CountrySelectionView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("完了") {
+                    Button("閉じる") {
                         dismiss()
                     }
                 }

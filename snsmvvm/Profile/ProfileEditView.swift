@@ -12,20 +12,25 @@ import FirebaseStorage
 
 struct ProfileEditView: View {
     @Environment(\.dismiss) private var dismiss
-    // 💡 外部からユーザーデータを受け取れるようにする
+    @EnvironmentObject var userManager: UserManager
+    
+    // 受け取った最新の User データ
+    let user: User
+    
     @State private var profileEditViewModel: ProfileEditViewModel
+    @State private var isLoading = false
     
     init(user: User) {
-        // 受け取った user を使って ViewModel を初期化
+        self.user = user
+        // 最初は渡された user で ViewModel を初期化
         _profileEditViewModel = State(initialValue: ProfileEditViewModel(user: user))
     }
     
-    let coverHeight: CGFloat = 200 // 編集時は少し低めが見やすい
+    let coverHeight: CGFloat = 200
     let profileSize: CGFloat = 100
     
     var body: some View {
         NavigationStack {
-            // 💡 GeometryReaderで画面の横幅を取得
             GeometryReader { geometry in
                 let screenWidth = geometry.size.width
                 
@@ -41,8 +46,8 @@ struct ProfileEditView: View {
                                     Image(uiImage: uiImage)
                                         .resizable()
                                         .scaledToFill()
-                                        .frame(width: screenWidth, height: coverHeight) // 💡 横幅を画面幅に固定
-                                        .clipped() // 💡 はみ出た分を物理的にカット
+                                        .frame(width: screenWidth, height: coverHeight)
+                                        .clipped()
                                 } else {
                                     Color.gray.opacity(0.3)
                                         .frame(width: screenWidth, height: coverHeight)
@@ -77,7 +82,7 @@ struct ProfileEditView: View {
                             .frame(width: profileSize, height: profileSize)
                             .clipShape(Circle())
                             .overlay(Circle().stroke(Color.white, lineWidth: 4))
-                            .offset(y: profileSize * 0.5) // 💡 突き出し量を調整
+                            .offset(y: profileSize * 0.5)
                             .overlay(
                                 PhotosPicker(selection: $profileEditViewModel.selectedProfileItem, matching: .images) {
                                     Image(systemName: "pencil.circle.fill")
@@ -89,11 +94,11 @@ struct ProfileEditView: View {
                                 alignment: .bottom
                             )
                         }
-                        .padding(.bottom, profileSize * 0.5 + 20) // 💡 下のフィールドとの余白を確保
+                        .padding(.bottom, profileSize * 0.5 + 20)
                         
                         
                         // --- 2. テキスト入力エリア ---
-                        VStack(alignment: .leading, spacing: 0) { // 💡間隔を0にして各field内のpaddingで調整
+                        VStack(alignment: .leading, spacing: 0) {
                             editField(label: "名前",
                                       text: $profileEditViewModel.userName,
                                       placeholder: "名前")
@@ -118,9 +123,10 @@ struct ProfileEditView: View {
                                 }
                             }
                             .padding(.top, 20)
-                            // シートの定義
                             .sheet(isPresented: $profileEditViewModel.isShowingAgePicker) {
-                                AgeSelectionView(ageSelectionViewModel: AgeSelectionViewModel())
+                                AgeSelectionView { selectedValue in
+                                    profileEditViewModel.userAge = selectedValue
+                                }
                             }
                             Divider()
                             
@@ -131,7 +137,6 @@ struct ProfileEditView: View {
                                     Text("出身地")
                                         .foregroundColor(.primary)
                                     Spacer()
-                                    // ViewModelの値を表示
                                     Text(profileEditViewModel.user.prefecture.isEmpty ? "選択してください" : profileEditViewModel.user.prefecture)
                                         .foregroundColor(.secondary)
                                     Image(systemName: "chevron.right")
@@ -141,12 +146,10 @@ struct ProfileEditView: View {
                             }
                             .sheet(isPresented: $profileEditViewModel.isShowingPrefecturePicker) {
                                 PrefectureSelectionView { selectedValue in
-                                    // 💡 修正：user.prefecture に代入する
                                     profileEditViewModel.user.prefecture = selectedValue
                                 }
                             }
                             Divider()
-                            
                             
                             Text("コーヒーの好み")
                                 .font(.caption)
@@ -154,24 +157,22 @@ struct ProfileEditView: View {
                                 .foregroundColor(.secondary)
                                 .padding(.top, 20)
                                 .padding(.bottom, 10)
-                                .padding(.leading, 0) // 必要に応じて調整
                             
-                            editField(label: "国名", text: $profileEditViewModel.favoriteCoffee,placeholder: "好きな国")
+                            editField(label: "国名", text: $profileEditViewModel.favoriteCoffee, placeholder: "好きな国")
                             ratingRow(label: "苦味", rating: $profileEditViewModel.probitter)
                             ratingRow(label: "酸味", rating: $profileEditViewModel.proacidity)
                             ratingRow(label: "コク", rating: $profileEditViewModel.probody)
                             ratingRow(label: "香り", rating: $profileEditViewModel.proaroma)
                             editField(label: "フレーバー", text: $profileEditViewModel.proflavor, placeholder: "好みのフレーバーがあれば教えてください")
                             Divider()
+                            
                             VStack(alignment: .leading, spacing: 25) {
-                                
                                 Text("お気に入りの道具")
                                     .font(.caption)
                                     .fontWeight(.bold)
                                     .foregroundColor(.secondary)
                                     .padding(.top, 20)
                                     .padding(.bottom, 10)
-                                    .padding(.leading, 0) // 必要に応じて調整
                                 
                                 // 1. ドリップ用品セクション
                                 VStack(alignment: .leading, spacing: 15) {
@@ -198,7 +199,7 @@ struct ProfileEditView: View {
                                     editField(label: "グラインダー", text: $profileEditViewModel.grinder, placeholder: "グラインダーを入力してください")
                                 }
                                 
-                                // 3. その他・エスプレッソセクション
+                                // 3. その他セクション
                                 VStack(alignment: .leading, spacing: 15) {
                                     Text("その他")
                                         .font(.subheadline)
@@ -213,17 +214,20 @@ struct ProfileEditView: View {
                         .padding(.top, 10)
                     }
                     .padding(.horizontal, 20)
-                    .frame(width: screenWidth) // 💡 入力エリアの幅も画面幅に固定
+                    .frame(width: screenWidth)
                 }
             }
             .navigationTitle("プロフィール編集")
-            .onAppear {
-                // すでに画像が読み込まれていなければ、URLからロードする
+            .navigationBarTitleDisplayMode(.inline)
+            .task(id: user) {
+                // 1. 渡された最新の user で入力用プロパティを再セット
+                profileEditViewModel.configure(with: user)
+                
+                // 2. 画像のロード処理
                 if profileEditViewModel.profileImage == nil {
                     profileEditViewModel.loadProfileImageFromUrl()
                 }
             }
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("キャンセル") { dismiss() }
@@ -233,11 +237,11 @@ struct ProfileEditView: View {
                         Task {
                             if let uid = Auth.auth().currentUser?.uid {
                                 do {
-                                    // 1. 画像アップロードと Firestore への保存が「完了するのを待つ」
-                                    try await profileEditViewModel.uploadProfileAndSave(uid: uid)
+                                    // 💡 保存後、更新されたUserを受け取る
+                                    let updatedUser = try await profileEditViewModel.uploadProfileAndSave(uid: uid)
                                     
-                                    // 2. 保存が完全に成功してから画面を閉じる
                                     await MainActor.run {
+                                        userManager.currentUser = updatedUser // 💡 アプリ全体のユーザー情報を最新に更新
                                         dismiss()
                                     }
                                 } catch {
@@ -252,36 +256,28 @@ struct ProfileEditView: View {
         }
     }
     
-    
-    
     @ViewBuilder
     private func editField(label: String, text: Binding<String>, placeholder: String, isMultiLine: Bool = false) -> some View {
         VStack(spacing: 0) {
             HStack(alignment: .top) {
-                // 見出しラベル
                 Text(label)
                     .font(.body)
                     .frame(width: 100, alignment: .leading)
                     .padding(.vertical, 12)
                 
-                // 入力欄
                 if isMultiLine {
-                    // 複数行の場合
                     TextField(placeholder, text: text, axis: .vertical)
                         .font(.body)
-                        .lineLimit(3...6) // 3行〜6行
+                        .lineLimit(3...6)
                         .padding(.vertical, 12)
                 } else {
-                    // 1行の場合
                     TextField(placeholder, text: text)
                         .font(.body)
-                        .lineLimit(1) // 1行固定
+                        .lineLimit(1)
                         .padding(.vertical, 12)
                 }
             }
-            
             Divider()
-                .padding(.leading, 0) // 必要に応じてラベルの末尾から線を開始させるなら調整
         }
     }
     
@@ -289,14 +285,12 @@ struct ProfileEditView: View {
     private func ratingRow(label: String, rating: Binding<Int>) -> some View {
         VStack(spacing: 0) {
             HStack(alignment: .top) {
-                // 1. 左側の見出し（ここを 100 に固定しているので、右側の開始位置が決まる）
                 Text(label)
                     .font(.body)
                     .frame(width: 100, alignment: .leading)
                     .padding(.vertical, 12)
                 
-                // 2. 右側の解答エリア（全体を一つのHStackで包む）
-                HStack(spacing: 8) { // 弱い・星・強い の間の微調整
+                HStack(spacing: 8) {
                     Text("弱い")
                         .foregroundColor(.secondary)
                     
@@ -315,13 +309,11 @@ struct ProfileEditView: View {
                         .foregroundColor(.secondary)
                 }
                 .font(.body)
-                .padding(.vertical, 12) // editFieldの文字の高さと揃える
+                .padding(.vertical, 12)
                 
-                Spacer() // 右側を空ける
+                Spacer()
             }
-            
             Divider()
         }
     }
 }
-

@@ -40,7 +40,7 @@ struct Log: Codable, Identifiable, Equatable {
     }
 }
 
-struct User: Codable, Identifiable {
+struct User: Codable, Identifiable, Equatable {
     @DocumentID var id: String? = nil
     
     // 基本データ

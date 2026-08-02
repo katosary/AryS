@@ -40,9 +40,12 @@ struct CoffeeRecordView: View {
             editField(label: "農園名", text: $coffeeRecordViewModel.farmName, placeholder: "農園名を入力")
             
             // 生産国選択
-            Button(action: { coffeeRecordViewModel.isShowingCountryPicker = true }) {
+            Button(action: {
+                coffeeRecordViewModel.isShowingCountryPicker = true
+            }) {
                 HStack {
-                    Text("生産国").foregroundColor(.primary)
+                    Text("生産国")
+                        .foregroundColor(.primary)
                     Spacer()
                     Text(coffeeRecordViewModel.countryName.isEmpty ? "選択してください" : coffeeRecordViewModel.countryName)
                         .foregroundColor(.secondary)
@@ -54,10 +57,14 @@ struct CoffeeRecordView: View {
                 }
             }
             
+            
             // 焙煎度選択
-            Button(action: { coffeeRecordViewModel.isShowingRoastPicker = true }) {
+            Button(action: {
+                coffeeRecordViewModel.isShowingRoastPicker = true
+            }) {
                 HStack {
-                    Text("焙煎度").foregroundColor(.primary)
+                    Text("焙煎度")
+                        .foregroundColor(.primary)
                     Spacer()
                     Text(coffeeRecordViewModel.roastLevel.isEmpty ? "選択してください" : coffeeRecordViewModel.roastLevel)
                         .foregroundColor(.secondary)

@@ -31,7 +31,6 @@ struct RoastSelectionView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("完了") {
-                        // 💡 完了時に親へ値を渡す
                         onSelected(roastSelectionviewModel.selectedRoast)
                         dismiss()
                     }

@@ -9,7 +9,7 @@ import SwiftUI
 
 // --- 1. メインの横スクロール画面 ---
 struct MatchingView: View {
-    var matchingViewModel = MatchingViewModel()
+    @State var matchingViewModel = MatchingViewModel()
     
     var body: some View {
         NavigationStack {

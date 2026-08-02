@@ -9,8 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var selectedSelection = 0
-    @State var profileViewModel: ProfileViewModel
-    
+ 
     var body: some View {
         ZStack(alignment: .top) {
             // 背景をシステム背景色にする
@@ -43,17 +42,4 @@ struct ContentView: View {
     }
 }
 
-// 各リストの表示用
-struct FollowersView: View {
-    var body: some View{
-        Text("ここにフォロワーの投稿が表示される")
-    }
-}
-
-
-struct RecommendView: View{
-    var body: some View{
-        Text("ここにアプリ全体でバズっている投稿が表示される")
-    }
-}
 

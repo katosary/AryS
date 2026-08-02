@@ -12,7 +12,6 @@ import FirebaseFirestore
 struct HomeView: View {
     @Environment(ProfileViewModel.self) var profileViewModel
     @State var homeViewModel = HomeViewModel()
-    @State var matchingViewModel = MatchingViewModel()
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var userManager: UserManager
     
@@ -83,12 +82,12 @@ struct HomeView: View {
                                 } else {
                                     ProgressView("読み込み中...")
                                 }
-                                ContentView(profileViewModel: profileViewModel)
+                                ContentView()//オッケー
                             }
-                        case 1: SearchView(profileViewModel: profileViewModel)
-                        case 2: TalkView()
-                        case 3: MatchingView(matchingViewModel: matchingViewModel)
-                        case 4: ProfileView()
+                        case 1: SearchView()//オッケー
+                        case 2: TalkView()//オッケー
+                        case 3: MatchingView()//オッケー
+                        case 4: ProfileView()//いまいち
                         default: EmptyView()
                         }
                     }
@@ -105,15 +104,23 @@ struct HomeView: View {
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
             }
-            // 💡 プロフィール編集シートも、ProfileMenuView内のボタンから連動して開くためここに配置
             .sheet(isPresented: .init(
                 get: { profileViewModel.isProfileEditSheet },
                 set: { profileViewModel.isProfileEditSheet = $0 }
-            )){
-                ProfileEditView(profileViewModel: self.profileViewModel)
-                    .onAppear {
-                        profileViewModel.logs = homeViewModel.logs
-                    }
+            )) {
+                // 💡 userManager が持つ最新の currentUser を渡す（nil 対策で fallback または if let）
+                if let currentUser = userManager.currentUser {
+                    ProfileEditView(user: currentUser)
+                        .onAppear {
+                            profileViewModel.logs = homeViewModel.logs
+                        }
+                } else {
+                    // 万が一 currentUser が nil の場合は既存の user を使用
+                    ProfileEditView(user: profileViewModel.user)
+                        .onAppear {
+                            profileViewModel.logs = homeViewModel.logs
+                        }
+                }
             }
             .sheet(isPresented: $isShowingSelectShop) {
                 // SelectShopView は遷移先を持つため NavigationStack で囲むのが一般的です

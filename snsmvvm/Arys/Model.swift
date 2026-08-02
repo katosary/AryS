@@ -19,24 +19,20 @@ struct Log: Codable, Identifiable, Equatable {
     var roastLevel: String
     var aromarating: Int
     var aromaComment: String
-    var bitternessrating1: Int
-    var acidityrating1: Int
-    var bodyrating1: Int
-    var bitternessrating2: Int
-    var acidityrating2: Int
-    var bodyrating2: Int
+    var bitternessrating: Int
+    var acidityrating: Int
+    var bodyrating: Int     
     var createdAt: Date
     var tagX: CGFloat
     var tagY: CGFloat
     var imageUrl: String?
-    var previewImage: UIImage?
+    var previewImage: UIImage? = nil
     
-    // 💡 Firestoreに保存しないものは CodingKeys に書かない！
+    // Firestoreに保存するキーをプロパティと一致させる
     enum CodingKeys: String, CodingKey {
         case id, userId, shopName, countryName, farmName, roastLevel
-        case aromarating, aromaComment, bitternessrating1, acidityrating1, bodyrating1
-        case bitternessrating2, acidityrating2, bodyrating2, createdAt
-        case tagX, tagY, imageUrl
+        case aromarating, aromaComment, bitternessrating, acidityrating, bodyrating
+        case createdAt, tagX, tagY, imageUrl
     }
     
     static func == (lhs: Log, rhs: Log) -> Bool {
@@ -44,15 +40,16 @@ struct Log: Codable, Identifiable, Equatable {
     }
 }
 
-struct User: Codable, Identifiable {
+struct User: Codable, Identifiable, Equatable {
     @DocumentID var id: String? = nil
     
     // 基本データ
-    var userNo: Int
+    var userNo: Int?
     var userName: String
+    var email: String?
     var selfIntroduction: String
     var userAge: Int
-    var birthPlace: String
+    var prefecture: String
     var favoriteCoffee: String
     
     // プロフィールデータ（数値系）
@@ -62,33 +59,28 @@ struct User: Codable, Identifiable {
     var proaroma: Int
     var proflavor: String
     
-    // 💡 Firebase Storage に保存した画像のURLを文字列で保持
+    // 💡 すべて 「?」 をつけるか、初期値を設定する
+    var dripper: String? = ""
+    var paperFilter: String? = ""
+    var kettle: String? = ""
+    var server: String? = ""
+    var scale: String? = ""
+    var mill: String? = ""
+    var grinder: String? = ""
+    var espressoMachine: String? = ""
+    var frenchPress: String? = ""
+    
+    // 画像URL
     var profileImageUrl: String? = nil
     var favoriteCoffeeImageUrl: String? = nil
     
     enum CodingKeys: String, CodingKey {
-        case id, userNo, userName, selfIntroduction, userAge, birthPlace, favoriteCoffee
+        case id, userNo, userName, email, selfIntroduction, userAge, prefecture, favoriteCoffee
         case probitter, proacidity, probody, proaroma, proflavor
+        case dripper, paperFilter, kettle, server, scale, mill, grinder, espressoMachine, frenchPress
         case profileImageUrl, favoriteCoffeeImageUrl
     }
 }
-
-// 💡 補足：もしコード内で一時的に UIImage を保持したい場合は、
-// User モデル自体を汚さずに、View の ViewModel 側で保持する方が設計が綺麗です。
-struct Tool: Identifiable{
-    let id: UUID = UUID()
-    var dripper: String
-    var paperFilter: String
-    var kettle: String
-    var server: String
-    var scale: String
-    var mill: String
-    var grinder: String
-    var espressoMachine: String
-    var frenchPress: String
-    var toolImage: UIImage?
-}
-
 
 struct Member: Codable {
     let id: String

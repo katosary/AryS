@@ -1,5 +1,5 @@
 //
-//  ProMenuView.swift
+//  ProfileMenuView.swift
 //  snsmvvm
 //
 //  Created by katoso on 2026/06/22.

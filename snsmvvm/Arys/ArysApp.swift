@@ -8,6 +8,8 @@
 import SwiftUI
 import FirebaseCore // 必要
 
+// 半角開ける
+
 // 1. AppDelegateを定義
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,

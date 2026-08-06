@@ -13,6 +13,8 @@ import FirebaseAuth
 
 @Observable
 class CoffeeLogViewModel {
+    var isLiked = false
+    var isSaved = false
     // MARK: - プロパティ
     var logs: [Log] = []
     private var db = Firestore.firestore()

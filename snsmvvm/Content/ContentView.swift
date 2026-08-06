@@ -16,7 +16,7 @@ struct ContentView: View {
             Color(UIColor.systemBackground).ignoresSafeArea()
             
             TabView(selection: $selectedSelection){
-                FollowersView()
+                FollowersTimeLineView()
                     .tag(0)
                 RecommendView()
                     .tag(1)

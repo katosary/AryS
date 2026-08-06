@@ -14,6 +14,7 @@ struct CoffeeLogView: View {
     let log: Log
     let author: User?
     let authorName: String
+    @State var coffeeLogViewModel: CoffeeLogViewModel
     @Environment(ProfileViewModel.self) var profileViewModel
     var isEditable: Bool
     var onDelete: () -> Void
@@ -28,31 +29,7 @@ struct CoffeeLogView: View {
     
     var body: some View {
         VStack(spacing: 16) {
-            // --- ヘッダー部分は変更なし ---
-            HStack(spacing: 12) {
-                let displayUser = isMyPost ? profileViewModel.user : author
-                if let urlString = displayUser?.profileImageUrl, !urlString.isEmpty, let url = URL(string: urlString) {
-                    AsyncImage(url: url) { image in image.resizable().scaledToFill() }
-                    placeholder: { Circle().fill(Color.gray) }
-                        .frame(width: 40, height: 40)
-                        .clipShape(Circle())
-                } else {
-                    Image(systemName: "person.circle.fill").resizable().frame(width: 40, height: 40).foregroundColor(.gray)
-                }
-                Text(authorName).font(.title2).bold()
-                Spacer()
-                Text(log.createdAt, style: .date).font(.caption).foregroundColor(.secondary)
-                if isMyPost {
-                    Menu {
-                        Button { onEdit() } label: { Label("編集", systemImage: "pencil") }
-                        Button(role: .destructive) { onDelete() } label: { Label("削除", systemImage: "trash") }
-                    } label: { Image(systemName: "ellipsis").padding(5).foregroundColor(.primary) }
-                }
-            }
-            .padding(.horizontal, 16)
-            
-            // --- ここを修正: aspectRatio で警告を回避 ---
-            ZStack(alignment: .bottomLeading) {
+            ZStack {
                 Group {
                     if let previewImage = log.previewImage {
                         Image(uiImage: previewImage)
@@ -63,9 +40,47 @@ struct CoffeeLogView: View {
                         placeholder: { ProgressView() }
                     }
                 }
-                .aspectRatio(4/3, contentMode: .fit) // 💡 警告が出ない比率指定
+                .aspectRatio(4/3, contentMode: .fit)
                 .clipped()
-                .cornerRadius(12)
+                
+                HStack(spacing: 12) {
+                    let displayUser = isMyPost ? profileViewModel.user : author
+                    if let urlString = displayUser?.profileImageUrl, !urlString.isEmpty, let url = URL(string: urlString) {
+                        AsyncImage(url: url) { image in image.resizable().scaledToFill() }
+                        placeholder: { Circle().fill(Color.gray) }
+                            .frame(width: 40, height: 40)
+                            .clipShape(Circle())
+                    } else {
+                        Image(systemName: "person.circle.fill").resizable().frame(width: 40, height: 40).foregroundColor(.gray)
+                    }
+                    Text(authorName).font(.title2).bold()
+                    Spacer()
+                    Text(log.createdAt, style: .date).font(.caption).foregroundColor(.secondary)
+                    if isMyPost {
+                        Menu {
+                            Button { onEdit()
+                            } label: {
+                                Label("編集", systemImage: "pencil")
+                            }
+                            Button(role: .destructive) { onDelete()
+                            } label: {
+                                Label("削除", systemImage: "trash")
+                            }
+                        } label: { Image(systemName: "ellipsis").padding(5).foregroundColor(.primary) }
+                    } else {
+                        Menu {
+                            Button (role: .destructive){
+                            } label: {
+                                Label("報告する", systemImage: "exclamationmark.bubble")
+                            }
+                        } label: { Image(systemName: "ellipsis").padding(5).foregroundColor(.primary) }
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundColor(.white)
+                .shadow(color: .black.opacity(0.6), radius: 2, x: 0, y: 1)
+                .padding(16)
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Shop: \(log.shopName)")
@@ -73,12 +88,40 @@ struct CoffeeLogView: View {
                     Text("Farm: \(log.farmName)")
                     Text("Roast: \(log.roastLevel)")
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundColor(.white)
+                .shadow(color: .black.opacity(0.6), radius: 2, x: 0, y: 1)
+                .padding(16)
+                .onTapGesture { if !isEditable { isShowingDetailSheet = true } }
+                
+                
+                VStack (spacing: 10){
+                    Button {
+                        coffeeLogViewModel.isLiked.toggle()
+                    } label: {
+                        Image (systemName: coffeeLogViewModel.isLiked ? "heart.fill" : "heart")
+                            .foregroundColor(coffeeLogViewModel.isLiked ? .red : .white)
+                            .font(.system(size:30))
+                    }
+                    Button {
+                        coffeeLogViewModel.isSaved.toggle()
+                    } label: {
+                        Image (systemName: coffeeLogViewModel.isSaved ? "bookmark.fill" : "bookmark")
+                            .foregroundColor(.white)
+                            .font(.system(size:30))
+                    }
+                    Button {
+                    } label: {Image (systemName: "arrowshape.turn.up.right.fill")
+                            .font(.system(size:30))
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                 .font(.system(size: 14, weight: .bold))
                 .foregroundColor(.white)
                 .shadow(color: .black.opacity(0.6), radius: 2, x: 0, y: 1)
                 .padding(16)
             }
-            .onTapGesture { if !isEditable { isShowingDetailSheet = true } }
         }
         .sheet(isPresented: $isShowingDetailSheet) {
             detailSheetView

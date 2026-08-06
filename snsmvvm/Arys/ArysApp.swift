@@ -6,9 +6,9 @@
 //
 
 import SwiftUI
-import FirebaseCore // 必要
+import FirebaseCore
 
-// 半角開ける
+
 
 // 1. AppDelegateを定義
 class AppDelegate: NSObject, UIApplicationDelegate {

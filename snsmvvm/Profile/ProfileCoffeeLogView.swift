@@ -20,7 +20,6 @@ struct ProfileCoffeeLogView: View {
             ForEach(profileCoffeeLogViewModel.logs, id: \.id) { log in
                 AsyncPostRow(
                     post: log,
-                    // 💡 この fetchUser を追加する必要があります！
                     fetchUser: { userId in
                         try await profileCoffeeLogViewModel.fetchUser(userId: userId)
                     },
@@ -29,6 +28,7 @@ struct ProfileCoffeeLogView: View {
                             log: log,
                             author: author,
                             authorName: author.userName,
+                            coffeeLogViewModel: CoffeeLogViewModel(),
                             isEditable: false,
                             onDelete: { profileCoffeeLogViewModel.deleteLog(targetPost: log) },
                             onEdit: { }
@@ -39,12 +39,15 @@ struct ProfileCoffeeLogView: View {
             }
         }
         .task {
-            // ★ ここで呼び出していますか？
-            await profileCoffeeLogViewModel.fetchUserLogs()
+            // 💡 1回限りの取得からリアルタイム監視の開始に変更
+            profileCoffeeLogViewModel.startListeningUserLogs()
+        }
+        .onDisappear {
+            // 💡 画面が消えるときにリスナーを停止
+            profileCoffeeLogViewModel.stopListening()
         }
     }
 }
-
 
 struct AsyncPostRow<Content: View>: View {
     let post: Log
@@ -73,4 +76,3 @@ struct AsyncPostRow<Content: View>: View {
         }
     }
 }
-

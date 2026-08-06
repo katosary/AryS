@@ -21,7 +21,7 @@ struct Log: Codable, Identifiable, Equatable {
     var aromaComment: String
     var bitternessrating: Int
     var acidityrating: Int
-    var bodyrating: Int     
+    var bodyrating: Int
     var createdAt: Date
     var tagX: CGFloat
     var tagY: CGFloat
@@ -75,10 +75,18 @@ struct User: Codable, Identifiable, Equatable {
     var favoriteCoffeeImageUrl: String? = nil
     
     enum CodingKeys: String, CodingKey {
-        case id, userNo, userName, email, selfIntroduction, userAge, prefecture, favoriteCoffee
+        case id
+        case userNo
+        case userName
+        case email
+        case selfIntroduction
+        case userAge
+        case prefecture
+        case favoriteCoffee
         case probitter, proacidity, probody, proaroma, proflavor
         case dripper, paperFilter, kettle, server, scale, mill, grinder, espressoMachine, frenchPress
-        case profileImageUrl, favoriteCoffeeImageUrl
+        case profileImageUrl
+        case favoriteCoffeeImageUrl
     }
 }
 

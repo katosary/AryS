@@ -73,17 +73,7 @@ struct HomeView: View {
                     
                     Group {
                         switch homeViewModel.selectedTab {
-                        case 0:
-                            // 例: ホーム画面にユーザー情報を表示する
-                            VStack {
-                                if let user = userManager.currentUser {
-                                    Text("ようこそ、\(user.userName) さん")
-                                        .padding()
-                                } else {
-                                    ProgressView("読み込み中...")
-                                }
-                                ContentView()//オッケー
-                            }
+                        case 0: ContentView()//オッケー
                         case 1: SearchView()//オッケー
                         case 2: TalkView()//オッケー
                         case 3: MatchingView()//オッケー

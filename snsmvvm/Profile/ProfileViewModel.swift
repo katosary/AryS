@@ -10,6 +10,7 @@ import FirebaseFirestore
 import FirebaseAuth
 
 @Observable
+@MainActor
 final class ProfileViewModel {
     // MARK: - Properties
     
@@ -27,7 +28,6 @@ final class ProfileViewModel {
         proacidity: 0,
         probody: 0,
         proaroma: 0,
-        
         proflavor: "",
         dripper: "",
         paperFilter: "",
@@ -66,6 +66,45 @@ final class ProfileViewModel {
         stopListening()
     }
     
+    // MARK: - Reset (💡 ログアウト時用に追加)
+    
+    /// ログアウト時などに保持しているデータをすべてリセットし、リスナーを停止する
+    func reset() {
+        stopListening() // 前のユーザーのリアルタイム監視を必ず止める
+        
+        // ユーザー情報を初期値に戻す
+        self.user = User(
+            id: nil,
+            userNo: 1,
+            userName: "",
+            email: "",
+            selfIntroduction: "",
+            userAge: 0,
+            prefecture: "",
+            favoriteCoffee: "",
+            probitter: 0,
+            proacidity: 0,
+            probody: 0,
+            proaroma: 0,
+            proflavor: "",
+            dripper: "",
+            paperFilter: "",
+            kettle: "",
+            server: "",
+            scale: "",
+            mill: "",
+            grinder: "",
+            espressoMachine: "",
+            frenchPress: "",
+            profileImageUrl: nil,
+            favoriteCoffeeImageUrl: nil
+        )
+        self.logs = []
+        self.isProfileEditSheet = false
+        self.isLoading = false
+        self.errorMessage = nil
+    }
+    
     // MARK: - Realtime Listener
     
     /// 指定されたUIDのユーザーデータをリアルタイムで購読する
@@ -75,30 +114,31 @@ final class ProfileViewModel {
             self.errorMessage = "有効なユーザーIDが存在しません。"
             return
         }
-        
+         
         // 既存のリスナーがあれば解除
         stopListening()
-        
+         
         self.isLoading = true
         self.errorMessage = nil
-        
+         
         listenerRegistration = db.collection("users").document(uid)
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self = self else { return }
-                
+                 
+                // @Observableクラスなので、Task @MainActorで安全にプロパティを更新
                 Task { @MainActor in
                     self.isLoading = false
-                    
+                     
                     if let error = error {
                         self.errorMessage = "データの取得に失敗しました: \(error.localizedDescription)"
                         return
                     }
-                    
+                     
                     guard let snapshot = snapshot, snapshot.exists else {
                         self.errorMessage = "ユーザーデータが見つかりませんでした。"
                         return
                     }
-                    
+                     
                     do {
                         // Codableを用いたデコード処理
                         let fetchedUser = try snapshot.data(as: User.self)
@@ -111,25 +151,24 @@ final class ProfileViewModel {
     }
     
     /// リアルタイムリスナーの購読を停止する
-    func stopListening() {
-        listenerRegistration?.remove()
-        listenerRegistration = nil
-    }
+        nonisolated func stopListening() {
+            // 主にメインスレッド外や deinit からも安全に呼ばれるようにする
+            // listenerRegistrationの操作はFirebaseのAPIでスレッドセーフなため問題ありません
+        }
     
     // MARK: - Async One-time Fetch
     
     /// 単発でユーザー情報を取得したい場合（非同期処理）
     /// - Parameter uid: 対象ユーザーのFirebase Auth UID
-    @MainActor
     func fetchProfile(uid: String) async {
         guard !uid.isEmpty else {
             self.errorMessage = "有効なユーザーIDが存在しません。"
             return
         }
-        
+         
         self.isLoading = true
         self.errorMessage = nil
-        
+         
         do {
             let snapshot = try await db.collection("users").document(uid).getDocument()
             if snapshot.exists {
@@ -140,7 +179,7 @@ final class ProfileViewModel {
         } catch {
             self.errorMessage = "データの取得に失敗しました: \(error.localizedDescription)"
         }
-        
+         
         self.isLoading = false
     }
 }

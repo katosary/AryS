@@ -10,6 +10,7 @@ import SwiftUI
 struct ProfileMenuView: View {
     @Environment(\.dismiss) var dismiss // 画面を閉じるための環境変数
     @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var userManager: UserManager // 💡 追加：アプリ全体で共有しているUserManagerを受け取る
     var profileViewModel: ProfileViewModel
     
     var body: some View {
@@ -49,8 +50,9 @@ struct ProfileMenuView: View {
                 }
                 Section {
                     // ログアウトボタン
-                    Button(role: .destructive) { // .destructiveで赤字にできます
-                        authManager.signOut()
+                    Button(role: .destructive) {
+                        // 💡 AuthManagerのsignOutに、userManagerとprofileViewModelを渡す
+                        authManager.signOut(userManager: userManager, profileViewModel: profileViewModel)
                         dismiss()
                     } label: {
                         Label("ログアウト", systemImage: "rectangle.portrait.and.arrow.right")
@@ -69,4 +71,3 @@ struct ProfileMenuView: View {
         }
     }
 }
-

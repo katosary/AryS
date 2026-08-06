@@ -5,7 +5,6 @@
 //  Created by katoso on 2026/06/07.
 //
 
-
 import SwiftUI
 import FirebaseAuth
 import FirebaseFirestore
@@ -61,7 +60,6 @@ class AuthManager: ObservableObject {
         }
     }
     
-    // AuthManager.swift 内の修正
     // 引数に投稿に必要なデータをすべて受け取るように変更します
     func saveLogToFirestore(
         shopName: String,
@@ -107,27 +105,33 @@ class AuthManager: ObservableObject {
             _ = try db.collection("posts").addDocument(from: newLog)
             completion(true)
         } catch {
-            print("Error saving log: \(error)") // デバッグ用にエラーを出力しておくと便利です
+            print("Error saving log: \(error)")
             completion(false)
         }
     }
     
-    func signOut() {
-        do {
-            try self.auth.signOut()
-        } catch {
-            print("ログアウトエラー: \(error.localizedDescription)")
+    // 💡 ログアウト時に各データをクリア
+        func signOut(userManager: UserManager, profileViewModel: ProfileViewModel) {
+            do {
+                try self.auth.signOut()
+                 
+                // 💡 ログアウト成功時に、各マネージャー/ViewModelのデータをリセットする
+                Task { @MainActor in
+                    userManager.currentUser = nil
+                    profileViewModel.reset() // 💡 User()の代わりに、ViewModel側のリセット関数を呼ぶ！
+                }
+                 
+            } catch {
+                print("ログアウトエラー: \(error.localizedDescription)")
+            }
         }
-    }
-    
-    // AuthManager クラスの中に追加してください
 
     private func saveUserToFirestore(uid: String, email: String, completion: @escaping (String?) -> Void) {
         let db = Firestore.firestore()
-        
+         
         // 保存するデータ（Userモデルに合わせて作成）
         let userData: [String: Any] = [
-            "userNo": 0, // 必要に応じて調整
+            "userNo": 0,
             "userName": "新規ユーザー",
             "selfIntroduction": "",
             "userAge": 0,
@@ -138,9 +142,8 @@ class AuthManager: ObservableObject {
             "probody": 0,
             "proaroma": 0,
             "proflavor": ""
-            // createdAt などが必要なら追加
         ]
-        
+         
         db.collection("users").document(uid).setData(userData) { error in
             if let error = error {
                 completion(error.localizedDescription)
@@ -150,5 +153,3 @@ class AuthManager: ObservableObject {
         }
     }
 }
-
-

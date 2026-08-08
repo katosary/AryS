@@ -11,7 +11,8 @@ import FirebaseFirestore
 import FirebaseStorage
 
 struct ProfileView: View {
-    @State var profileViewModel = ProfileViewModel()
+//    @State var profileViewModel: ProfileViewModel
+    @Environment(ProfileViewModel.self) var profileViewModel
     @EnvironmentObject var authManager: AuthManager
     @State private var profileSelection = 0
     @State private var isDetailShowing = false
@@ -116,8 +117,14 @@ struct ProfileView: View {
                             }
                         }
                     }
+                    .refreshable {
+                        await profileViewModel.loadUserData()                    }
                     .navigationTitle("プロフィール")
                     .background(Color(.systemBackground))
+                }
+                .onAppear {
+                    Task{
+                        await profileViewModel.loadUserData()                    }
                 }
                 .scaleEffect(isDetailShowing ? 0.93 : 1.0)
                 .blur(radius: isDetailShowing ? 8 : 0)
@@ -125,15 +132,5 @@ struct ProfileView: View {
             }
         }
         .animation(.spring(response: 0.45, dampingFraction: 0.82), value: isDetailShowing)
-        // 💡 画面表示時にリアルタイムリスナーを開始
-        .onAppear {
-            if let currentUid = Auth.auth().currentUser?.uid {
-                profileViewModel.listenToProfile(uid: currentUid)
-            }
-        }
-        // 💡 画面が非表示（他タブ等へ移動）になったらリスナー解除（リソース節約）
-        .onDisappear {
-            profileViewModel.stopListening()
-        }
     }
 }

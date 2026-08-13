@@ -39,7 +39,7 @@ final class ProfileViewModel {
         espressoMachine: "",
         frenchPress: "",
         profileImageUrl: nil,
-        favoriteCoffeeImageUrl: nil
+        favoriteToolImageUrl: nil
     )
     
     var isProfileEditSheet: Bool = false
@@ -97,7 +97,7 @@ final class ProfileViewModel {
             espressoMachine: "",
             frenchPress: "",
             profileImageUrl: nil,
-            favoriteCoffeeImageUrl: nil
+            favoriteToolImageUrl: nil
         )
         self.logs = []
         self.isProfileEditSheet = false

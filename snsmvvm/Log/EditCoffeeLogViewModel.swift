@@ -8,15 +8,22 @@
 import SwiftUI
 
 @Observable
-
 class EditCoffeeLogViewModel {
-    var logs: [Log] = []
-    var editingUser: String = ""
-    var editingCoffee: String = ""
-    var editingFavoCoffee: String = ""
-    var editingContent: String = ""
-    var editingRating: Int = 0
-    var isEditSheet: Bool = false
+    var shopName: String = ""
+    var farmName: String = ""
+    var countryName: String = ""
+    var roastLevel: String = ""
+    
+    var aromarating: Int = 0
+    var aromaComment: String = ""
+    
+    var bitternessrating: Int = 0
+    var acidityrating: Int = 0
+    var bodyrating: Int = 0
+    
+    // ピッカー表示用のフラグ
+    var isShowingCountryPicker: Bool = false
+    var isShowingRoastPicker: Bool = false
     
     var maxRating = 5
     var offImage: Image?
@@ -24,19 +31,23 @@ class EditCoffeeLogViewModel {
     var offColor = Color.gray
     var onColor = Color.yellow
     
-    func updateLog(targetPost: Log) {
-        if let id = logs.firstIndex(where: { $0.id == targetPost.id }) {
-            logs[id].countryName = self.editingCoffee
-            logs[id].aromarating = self.editingRating
-            clearEditingLog()
-            self.isEditSheet = false
-        }
+    // 💡 初期化時に既存のLogデータをプロパティに埋め込む
+    init(log: Log) {
+        self.shopName = log.shopName
+        self.farmName = log.farmName
+        self.countryName = log.countryName
+        self.roastLevel = log.roastLevel
+        self.aromarating = log.aromarating
+        self.aromaComment = log.aromaComment
+        self.bitternessrating = log.bitternessrating
+        self.acidityrating = log.acidityrating
+        self.bodyrating = log.bodyrating
     }
     
-    func clearEditingLog() {
-        self.editingCoffee = ""
-        self.editingContent = ""
-        self.editingRating = 0
+    func updateLog(targetPost: Log, completion: @escaping (Bool) -> Void) {
+        // TODO: Firebaseなどのバックエンドやデータソースへの更新処理をここに記述します
+        // 例として成功したと仮定してcompletionを呼ぶ形にしています
+        completion(true)
     }
     
     func image(for number: Int, rating: Int) -> Image {

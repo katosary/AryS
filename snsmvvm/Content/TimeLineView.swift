@@ -8,52 +8,85 @@
 import SwiftUI
 
 struct TimeLineView: View {
-    @State private var selectedSelection = 0
     @State private var timeLineViewModel = TimeLineViewModel()
     @Environment(ProfileViewModel.self) var profileViewModel
-    
+     
+    @State private var currentLogId: String?
+    @State private var editingLog: Log?
+    @State private var isShowingEditSheet = false
+     
     var body: some View {
-        NavigationStack{
-            ScrollView {
-                LazyVStack(spacing: 20) {
-                    ForEach(timeLineViewModel.logs) { log in
-                        AsyncPostRow(
-                            post: log,
-                            fetchUser: { userId in
-                                try await timeLineViewModel.fetchUser(userId: userId)
-                            },
-                            content: { author in
-                                let isMyPost = log.userId == profileViewModel.user.id
-                                let displayAuthor = isMyPost ? profileViewModel.user : author
-                                
-                                return CoffeeLogView(
+        NavigationStack {
+            ZStack {
+                Color(.systemBackground).ignoresSafeArea()
+                 
+                ScrollView(.vertical, showsIndicators: false) {
+                    LazyVStack(spacing: 0) {
+                        ForEach(timeLineViewModel.logs) { log in
+                            AsyncPostRow(
+                                post: log,
+                                fetchUser: { userId in
+                                    try await timeLineViewModel.fetchUser(userId: userId)
+                                }
+                            ) { author in
+                                // 💡 複雑な処理を外出ししたビューを呼ぶだけにする
+                                PostCellView(
                                     log: log,
-                                    author: displayAuthor,
-                                    authorName: displayAuthor.userName,
-                                    coffeeLogViewModel: CoffeeLogViewModel(),
-                                    isEditable: isMyPost,
-                                    onDelete: {
-                                        timeLineViewModel.deleteLog(targetPost: log)
-                                    },
+                                    author: author,
+                                    profileUser: profileViewModel.user,
+                                    onLike: { timeLineViewModel.toggleLike(for: log) },
+                                    onDelete: { timeLineViewModel.deleteLog(targetPost: log) },
                                     onEdit: {
+                                        editingLog = log
+                                        isShowingEditSheet = true
                                     }
                                 )
                             }
-                        )
-                        .id(log.id)
+                            .frame(maxWidth: .infinity)
+                            .containerRelativeFrame(.vertical) { length, _ in length }
+                            .id(log.id)
+                        }
                     }
+                    .scrollTargetLayout()
                 }
-                .padding(.vertical)
+                .scrollTargetBehavior(.paging)
+                .scrollPosition(id: $currentLogId)
+                .scrollContentBackground(.hidden)
             }
-            .refreshable {
-                await timeLineViewModel.fetchLogs()
+            .sensoryFeedback(.selection, trigger: currentLogId)
+            .sheet(isPresented: $isShowingEditSheet, onDismiss: { editingLog = nil }) {
+                if let logToEdit = editingLog {
+                    PostEditView(post: logToEdit)
+                }
             }
-            .background(Color(.systemBackground))
         }
-        .onAppear {
-            Task {
-                await timeLineViewModel.fetchLogs()
-            }
-        }
+    }
+}
+
+// 💡 複雑さを解消するための切り出し用ビュー
+private struct PostCellView: View {
+    let log: Log
+    let author: User
+    let profileUser: User
+    let onLike: () -> Void
+    let onDelete: () -> Void
+    let onEdit: () -> Void
+    
+    var body: some View {
+        let isMyPost = log.userId == profileUser.id
+        let displayAuthor = isMyPost ? profileUser : author
+         
+        CoffeeLogView(
+            log: log,
+            author: displayAuthor,
+            authorName: displayAuthor.userName,
+            onLike: onLike,
+            isEditable: isMyPost,
+            isSaved: false,
+            onSave: {},
+            onDelete: onDelete,
+            onEdit: onEdit
+        )
+        .padding(.horizontal, 16)
     }
 }

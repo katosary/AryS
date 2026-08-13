@@ -24,6 +24,9 @@ struct RootView: View {
                             await userManager.fetchCurrentUser(uid: uid)
                         }
                     }
+                    .task {
+                        await profileViewModel.loadUserData()
+                    }
             } else {
                 LoginView(authManager: authManager)
             }

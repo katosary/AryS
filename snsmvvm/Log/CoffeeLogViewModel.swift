@@ -14,7 +14,7 @@ import FirebaseAuth
 @Observable
 class CoffeeLogViewModel {
     var isLiked = false
-    var isSaved = false
+    
     // MARK: - プロパティ
     var logs: [Log] = []
     private var db = Firestore.firestore()
@@ -24,6 +24,34 @@ class CoffeeLogViewModel {
         fetchLogs()
     }
     
+    // MARK: -💡 いいねボタンが押されたときの処理
+    func toggleLike(for log: Log) {
+        guard let postId = log.id, let currentUid = Auth.auth().currentUser?.uid else { return }
+        
+        let postRef = db.collection("posts").document(postId)
+        
+        // すでにいいねしているかどうかを判定
+        var updatedLikedUserIds = log.likedUserIds
+        let isCurrentlyLiked = updatedLikedUserIds.contains(currentUid)
+        
+        if isCurrentlyLiked {
+            updatedLikedUserIds.removeAll { $0 == currentUid }
+        } else {
+            updatedLikedUserIds.append(currentUid)
+        }
+        
+        let newCount = updatedLikedUserIds.count
+        
+        // Firestoreを更新
+        postRef.updateData([
+            "likedUserIds": updatedLikedUserIds,
+            "likesCount": newCount
+        ]) { error in
+            if let error = error {
+                print("❌ いいねの更新に失敗しました: \(error)")
+            }
+        }
+    }
     // MARK: - ログの取得・監視
     func fetchLogs() {
         guard let uid = Auth.auth().currentUser?.uid else { return }

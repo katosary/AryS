@@ -16,21 +16,22 @@ struct ProfileMenuView: View {
     var body: some View {
         NavigationStack {
             List {
+                // ProfileMenuView.swift の該当セクション部分
                 Section {
                     // 1. プロフィール編集への導線
                     Button {
-                        dismiss() // メニューを閉じてからシートを開く、または直接遷移
+                        dismiss()
                         profileViewModel.isProfileEditSheet = true
                     } label: {
                         Label("プロフィールを編集", systemImage: "pencil")
                             .foregroundColor(.primary)
                     }
-                    
-                    // 2. ポストを投稿
-                    Button {
-                        dismiss()
+                     
+                    // 💡 2. ボタンから NavigationLink に変更して保存リストへ遷移
+                    NavigationLink {
+                        SavedListView()
                     } label: {
-                        Label("お知らせ", systemImage: "list.clipboard")
+                        Label("保存", systemImage: "bookmark.fill")
                             .foregroundColor(.primary)
                     }
                 }

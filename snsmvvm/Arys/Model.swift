@@ -9,7 +9,6 @@ import Foundation
 import FirebaseFirestore
 import UIKit
 
-// Log.swift
 struct Log: Codable, Identifiable, Equatable {
     @DocumentID var id: String? = nil
     var userId: String
@@ -27,12 +26,15 @@ struct Log: Codable, Identifiable, Equatable {
     var tagY: CGFloat
     var imageUrl: String?
     var previewImage: UIImage? = nil
+
+    var likesCount: Int = 0
+    var likedUserIds: [String] = []
     
-    // Firestoreに保存するキーをプロパティと一致させる
     enum CodingKeys: String, CodingKey {
         case id, userId, shopName, countryName, farmName, roastLevel
         case aromarating, aromaComment, bitternessrating, acidityrating, bodyrating
         case createdAt, tagX, tagY, imageUrl
+        case likesCount, likedUserIds
     }
     
     static func == (lhs: Log, rhs: Log) -> Bool {
@@ -72,7 +74,7 @@ struct User: Codable, Identifiable, Equatable {
     
     // 画像URL
     var profileImageUrl: String? = nil
-    var favoriteCoffeeImageUrl: String? = nil
+    var favoriteToolImageUrl: String? = nil
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -86,7 +88,7 @@ struct User: Codable, Identifiable, Equatable {
         case probitter, proacidity, probody, proaroma, proflavor
         case dripper, paperFilter, kettle, server, scale, mill, grinder, espressoMachine, frenchPress
         case profileImageUrl
-        case favoriteCoffeeImageUrl
+        case favoriteToolImageUrl
     }
 }
 

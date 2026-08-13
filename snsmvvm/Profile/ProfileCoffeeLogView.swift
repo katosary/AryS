@@ -1,5 +1,5 @@
 //
-//  ProCoffeeLogView.swift
+//  ProfileCoffeeLogView.swift
 //  snsmvvm
 //
 //  Created by katoso on 2026/06/22.
@@ -9,70 +9,41 @@ import SwiftUI
 
 struct ProfileCoffeeLogView: View {
     @State var profileCoffeeLogViewModel = ProfileCoffeeLogViewModel()
+    @Environment(ProfileViewModel.self) var profileViewModel
+    
     let totalWidth: CGFloat
     let totalHeight: CGFloat
     
-    @Binding var isDetailShowing: Bool
+    private let columns = [
+        GridItem(.flexible(), spacing: 2),
+        GridItem(.flexible(), spacing: 2),
+        GridItem(.flexible(), spacing: 2)
+    ]
     
     var body: some View {
-        VStack(spacing: 16) {
-            Text("ログ件数: \(profileCoffeeLogViewModel.logs.count)")
-            ForEach(profileCoffeeLogViewModel.logs, id: \.id) { log in
-                AsyncPostRow(
-                    post: log,
-                    fetchUser: { userId in
-                        try await profileCoffeeLogViewModel.fetchUser(userId: userId)
-                    },
-                    content: { author in
-                        CoffeeLogView(
-                            log: log,
-                            author: author,
-                            authorName: author.userName,
-                            coffeeLogViewModel: CoffeeLogViewModel(),
-                            isEditable: false,
-                            onDelete: { profileCoffeeLogViewModel.deleteLog(targetPost: log) },
-                            onEdit: { }
-                        )
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: 2) {
+                // profileCoffeeLogViewModel.logs が空でないか確認
+                ForEach(profileCoffeeLogViewModel.logs) { log in
+                    NavigationLink(destination: ProfileCoffeeLogFullscreenView(
+                        profileCoffeeLogViewModel: profileCoffeeLogViewModel,
+                        currentLogId: log.id
+                    )) {
+                        if let imageUrlString = log.imageUrl, let url = URL(string: imageUrlString) {
+                            AsyncImage(url: url) { image in
+                                image.resizable().scaledToFill()
+                            } placeholder: {
+                                Color.gray.opacity(0.2)
+                            }
+                            .frame(width: totalWidth / 3, height: totalWidth / 3)
+                            .clipped()
+                        }
                     }
-                )
-                .id(log.id)
+                }
             }
         }
         .task {
-            // 💡 1回限りの取得からリアルタイム監視の開始に変更
-            profileCoffeeLogViewModel.startListeningUserLogs()
-        }
-        .onDisappear {
-            // 💡 画面が消えるときにリスナーを停止
-            profileCoffeeLogViewModel.stopListening()
-        }
-    }
-}
-
-struct AsyncPostRow<Content: View>: View {
-    let post: Log
-    let fetchUser: (String) async throws -> User
-    let content: (User) -> Content
-    
-    @State private var author: User?
-    @State private var isFetching = false // 💡 二重取得防止
-    
-    var body: some View {
-        Group {
-            if let author = author {
-                content(author)
-            } else {
-                ProgressView().task {
-                    guard !isFetching else { return }
-                    isFetching = true
-                    do {
-                        self.author = try await fetchUser(post.userId)
-                    } catch {
-                        print("Error: \(error)")
-                    }
-                    isFetching = false
-                }
-            }
+             profileCoffeeLogViewModel.fetchLogs()
         }
     }
 }

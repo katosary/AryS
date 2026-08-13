@@ -60,6 +60,27 @@ class ProfileCoffeeLogViewModel {
         return try doc.data(as: User.self)
     }
     
+    // MARK: - ログの取得・監視
+    func fetchLogs() {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        
+        db.collection("posts")
+            .whereField("userId", isEqualTo: uid)
+            .order(by: "createdAt", descending: true)
+            .addSnapshotListener { [weak self] snapshot, error in
+                if let error = error {
+                    print("❌ データ取得エラー: \(error)")
+                    return
+                }
+                
+                guard let documents = snapshot?.documents else { return }
+                
+                self?.logs = documents.compactMap { document in
+                    try? document.data(as: Log.self)
+                }
+            }
+    }
+    
     // deleteLog メソッド（変更なし：削除するとリアルタイムリスナーが自動で検知して配列も更新されます）
     func deleteLog(targetPost: Log) {
         guard let id = targetPost.id else { return }
@@ -76,4 +97,6 @@ class ProfileCoffeeLogViewModel {
     deinit {
         stopListening()
     }
+    
+    
 }

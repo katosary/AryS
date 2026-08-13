@@ -14,20 +14,16 @@ struct ProfileEditView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var userManager: UserManager
     
-    // 受け取った最新の User データ
     let user: User
-    
     @State private var profileEditViewModel: ProfileEditViewModel
-    @State private var isLoading = false
+    @Environment(ProfileViewModel.self) var profileViewModel
+    
+    let profileSize: CGFloat = 100
     
     init(user: User) {
         self.user = user
-        // 最初は渡された user で ViewModel を初期化
         _profileEditViewModel = State(initialValue: ProfileEditViewModel(user: user))
     }
-    
-    let coverHeight: CGFloat = 200
-    let profileSize: CGFloat = 100
     
     var body: some View {
         NavigationStack {
@@ -35,218 +31,156 @@ struct ProfileEditView: View {
                 let screenWidth = geometry.size.width
                 
                 ScrollView {
-                    VStack(spacing: 0) {
+                    VStack(alignment: .leading, spacing: 20) {
                         
-                        // --- 1. 画像エリア ---
-                        ZStack(alignment: .bottom) {
-                            
-                            // A. カバー写真
-                            ZStack {
-                                if let uiImage = profileEditViewModel.favoriteCoffeeImage {
-                                    Image(uiImage: uiImage)
-                                        .resizable()
-                                        .scaledToFill()
-                                        .frame(width: screenWidth, height: coverHeight)
-                                        .clipped()
-                                } else {
-                                    Color.gray.opacity(0.3)
-                                        .frame(width: screenWidth, height: coverHeight)
+                        // --- 1. プロフィール画像エリア ---
+                        PhotosPicker(selection: $profileEditViewModel.selectedProfileItem, matching: .images) {
+                            HStack(spacing: 15) {
+                                Spacer()
+                                
+                                ZStack {
+                                    if let uiImage = profileEditViewModel.profileImage {
+                                        Image(uiImage: uiImage)
+                                            .resizable()
+                                            .scaledToFill()
+                                    } else {
+                                        Image(systemName: "person.crop.circle.fill")
+                                            .resizable()
+                                            .foregroundColor(.gray.opacity(0.6))
+                                            .background(Color.white)
+                                    }
                                 }
+                                .frame(width: profileSize, height: profileSize)
+                                .clipShape(Circle())
+                                
+                                Spacer()
                             }
-                            .overlay(
-                                PhotosPicker(selection: $profileEditViewModel.selectedCoffeeItem, matching: .images) {
-                                    Image(systemName: "camera.fill")
-                                        .font(.system(size: 20))
-                                        .padding(10)
-                                        .background(.black.opacity(0.5))
-                                        .foregroundColor(.white)
-                                        .clipShape(Circle())
-                                }
-                                    .padding(12),
-                                alignment: .topTrailing
-                            )
-                            
-                            // B. プロフィール写真
-                            ZStack {
-                                if let uiImage = profileEditViewModel.profileImage {
-                                    Image(uiImage: uiImage)
-                                        .resizable()
-                                        .scaledToFill()
-                                } else {
-                                    Image(systemName: "person.crop.circle.fill")
-                                        .resizable()
-                                        .foregroundColor(.gray.opacity(0.6))
-                                        .background(Color.white)
-                                }
-                            }
-                            .frame(width: profileSize, height: profileSize)
-                            .clipShape(Circle())
-                            .overlay(Circle().stroke(Color.white, lineWidth: 4))
-                            .offset(y: profileSize * 0.5)
-                            .overlay(
-                                PhotosPicker(selection: $profileEditViewModel.selectedProfileItem, matching: .images) {
-                                    Image(systemName: "pencil.circle.fill")
-                                        .symbolRenderingMode(.multicolor)
-                                        .font(.system(size: 32))
-                                        .background(Color.white.clipShape(Circle()))
-                                }
-                                    .offset(x: 35, y: 35),
-                                alignment: .bottom
-                            )
                         }
-                        .padding(.bottom, profileSize * 0.5 + 20)
+                        .padding(.top, 10)
                         
-                        
-                        // --- 2. テキスト入力エリア ---
+                        // --- 2. 各種編集フィールド ---
                         VStack(alignment: .leading, spacing: 0) {
-                            editField(label: "名前",
-                                      text: $profileEditViewModel.userName,
-                                      placeholder: "名前")
+                            editField(label: "名前", text: $profileEditViewModel.userName, placeholder: "名前")
                             
-                            editField(label: "自己紹介",
-                                      text: $profileEditViewModel.selfIntroduction,
-                                      placeholder: "自己紹介を入力してください",
-                                      isMultiLine: true)
+                            editField(label: "自己紹介", text: $profileEditViewModel.selfIntroduction, placeholder: "自己紹介を入力してください", isMultiLine: true)
                             
-                            Button(action: {
-                                profileEditViewModel.isShowingAgePicker = true
-                            }) {
+                            // 年齢・出身地選択
+                            Button(action: { profileEditViewModel.isShowingAgePicker = true }) {
                                 HStack {
-                                    Text("年齢")
-                                        .foregroundColor(.primary)
+                                    Text("年齢").foregroundColor(.primary)
                                     Spacer()
-                                    Text(profileEditViewModel.userAge == 0 ? "選択してください" : "\(profileEditViewModel.userAge) 歳")
-                                        .foregroundColor(.secondary)
-                                    Image(systemName: "chevron.right")
-                                        .font(.caption)
-                                        .foregroundColor(.gray)
+                                    Text(profileEditViewModel.userAge == 0 ? "選択してください" : "\(profileEditViewModel.userAge) 歳").foregroundColor(.secondary)
+                                    Image(systemName: "chevron.right").font(.caption).foregroundColor(.gray)
                                 }
                             }
-                            .padding(.top, 20)
+                            .padding(.vertical, 12)
                             .sheet(isPresented: $profileEditViewModel.isShowingAgePicker) {
-                                AgeSelectionView { selectedValue in
-                                    profileEditViewModel.userAge = selectedValue
-                                }
+                                AgeSelectionView { profileEditViewModel.userAge = $0 }
                             }
                             Divider()
                             
-                            Button(action: {
-                                profileEditViewModel.isShowingPrefecturePicker = true
-                            }) {
+                            Button(action: { profileEditViewModel.isShowingPrefecturePicker = true }) {
                                 HStack {
-                                    Text("出身地")
-                                        .foregroundColor(.primary)
+                                    Text("出身地").foregroundColor(.primary)
                                     Spacer()
-                                    Text(profileEditViewModel.user.prefecture.isEmpty ? "選択してください" : profileEditViewModel.user.prefecture)
-                                        .foregroundColor(.secondary)
-                                    Image(systemName: "chevron.right")
-                                        .font(.caption)
-                                        .foregroundColor(.gray)
+                                    Text(profileEditViewModel.user.prefecture.isEmpty ? "選択してください" : profileEditViewModel.user.prefecture).foregroundColor(.secondary)
+                                    Image(systemName: "chevron.right").font(.caption).foregroundColor(.gray)
                                 }
                             }
+                            .padding(.vertical, 12)
                             .sheet(isPresented: $profileEditViewModel.isShowingPrefecturePicker) {
-                                PrefectureSelectionView { selectedValue in
-                                    profileEditViewModel.user.prefecture = selectedValue
-                                }
+                                PrefectureSelectionView { profileEditViewModel.user.prefecture = $0 }
                             }
                             Divider()
                             
-                            Text("コーヒーの好み")
+                            // --- 3. コーヒーの好み ---
+                            Text("コーヒーの好み").font(.caption).fontWeight(.bold).foregroundColor(.secondary).padding(.top, 20).padding(.bottom, 10)
+                            editField(label: "国名", text: $profileEditViewModel.favoriteCoffee, placeholder: "好きな国")
+                            ratingRow(label: "苦味", rating: $profileEditViewModel.probitter)
+                            ratingRow(label: "酸味", rating: $profileEditViewModel.proacidity)
+                            ratingRow(label: "コク", rating: $profileEditViewModel.probody)
+                            ratingRow(label: "香り", rating: $profileEditViewModel.proaroma)
+                            editField(label: "フレーバー", text: $profileEditViewModel.proflavor, placeholder: "好みのフレーバー")
+                            Divider()
+                            
+                            // --- 4. お気に入りの道具 ---
+                            Text("お気に入りの道具")
                                 .font(.caption)
                                 .fontWeight(.bold)
                                 .foregroundColor(.secondary)
                                 .padding(.top, 20)
                                 .padding(.bottom, 10)
                             
-                            editField(label: "国名", text: $profileEditViewModel.favoriteCoffee, placeholder: "好きな国")
-                            ratingRow(label: "苦味", rating: $profileEditViewModel.probitter)
-                            ratingRow(label: "酸味", rating: $profileEditViewModel.proacidity)
-                            ratingRow(label: "コク", rating: $profileEditViewModel.probody)
-                            ratingRow(label: "香り", rating: $profileEditViewModel.proaroma)
-                            editField(label: "フレーバー", text: $profileEditViewModel.proflavor, placeholder: "好みのフレーバーがあれば教えてください")
-                            Divider()
-                            
-                            VStack(alignment: .leading, spacing: 25) {
-                                Text("お気に入りの道具")
-                                    .font(.caption)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.secondary)
-                                    .padding(.top, 20)
-                                    .padding(.bottom, 10)
-                                
-                                // 1. ドリップ用品セクション
-                                VStack(alignment: .leading, spacing: 15) {
-                                    Text("ドリップ用品")
-                                        .font(.subheadline)
-                                        .bold()
-                                        .foregroundColor(.secondary)
-                                    
-                                    editField(label: "ドリッパー", text: $profileEditViewModel.dripper, placeholder: "ドリッパーを入力してください")
-                                    editField(label: "ペーパーフィルター", text: $profileEditViewModel.paperFilter, placeholder: "ペーパーフィルターを入力してください")
-                                    editField(label: "ケトル", text: $profileEditViewModel.kettle, placeholder: "ケトルを入力してください")
-                                    editField(label: "サーバー", text: $profileEditViewModel.server, placeholder: "サーバーを入力してください")
-                                    editField(label: "スケール", text: $profileEditViewModel.scale, placeholder: "スケールを入力してください")
+                            // カバー画像（横幅いっぱい）
+                            PhotosPicker(selection: $profileEditViewModel.selectedCoffeeItem, matching: .images) {
+                                ZStack {
+                                    if let uiImage = profileEditViewModel.favoriteCoffeeImage {
+                                        Image(uiImage: uiImage)
+                                            .resizable()
+                                            .scaledToFill()
+                                    } else if let urlString = profileEditViewModel.user.favoriteToolImageUrl, let url = URL(string: urlString) {
+                                        AsyncImage(url: url) { image in
+                                            image.resizable().scaledToFill()
+                                        } placeholder: {
+                                            Color.gray.opacity(0.3)
+                                        }
+                                    } else {
+                                        Rectangle().fill(Color.gray.opacity(0.2))
+                                    }
                                 }
-                                
-                                // 2. 粉砕器具セクション
-                                VStack(alignment: .leading, spacing: 15) {
-                                    Text("粉砕器具（ミル・グラインダー）")
-                                        .font(.subheadline)
-                                        .bold()
-                                        .foregroundColor(.secondary)
-                                    
-                                    editField(label: "ミル", text: $profileEditViewModel.mill, placeholder: "ミルを入力してください")
-                                    editField(label: "グラインダー", text: $profileEditViewModel.grinder, placeholder: "グラインダーを入力してください")
-                                }
-                                
-                                // 3. その他セクション
-                                VStack(alignment: .leading, spacing: 15) {
-                                    Text("その他")
-                                        .font(.subheadline)
-                                        .bold()
-                                        .foregroundColor(.secondary)
-                                    
-                                    editField(label: "エスプレッソマシン", text: $profileEditViewModel.espressoMachine, placeholder: "エスプレッソマシンを入力してください")
-                                    editField(label: "フレンチプレス", text: $profileEditViewModel.frenchPress, placeholder: "フレンチプレスを入力してください")
-                                }
+                                .frame(width: screenWidth)
+                                .aspectRatio(4/3, contentMode: .fit)
+                                .clipped()
+                                .overlay(Text("画像をタップして変更").foregroundColor(.white).bold().shadow(radius: 2))
                             }
+                            .padding(.horizontal, -20)
+                            
+                            // 道具の詳細入力
+                            VStack(alignment: .leading, spacing: 15) {
+                                editField(label: "ドリッパー", text: $profileEditViewModel.dripper, placeholder: "ドリッパー")
+                                editField(label: "フィルター", text: $profileEditViewModel.paperFilter, placeholder: "ペーパーフィルター")
+                                editField(label: "ケトル", text: $profileEditViewModel.kettle, placeholder: "ケトル")
+                                editField(label: "サーバー", text: $profileEditViewModel.server, placeholder: "サーバー")
+                                editField(label: "スケール", text: $profileEditViewModel.scale, placeholder: "スケール")
+                                editField(label: "ミル", text: $profileEditViewModel.mill, placeholder: "ミル")
+                                editField(label: "グラインダー", text: $profileEditViewModel.grinder, placeholder: "グラインダー")
+                                editField(label: "マシン", text: $profileEditViewModel.espressoMachine, placeholder: "エスプレッソマシン")
+                                editField(label: "プレス", text: $profileEditViewModel.frenchPress, placeholder: "フレンチプレス")
+                            }
+                            .padding(.top, 20)
                         }
-                        .padding(.top, 10)
+                        .padding(.horizontal, 20)
                     }
-                    .padding(.horizontal, 20)
-                    .frame(width: screenWidth)
                 }
             }
             .navigationTitle("プロフィール編集")
             .navigationBarTitleDisplayMode(.inline)
             .task(id: user) {
-                // 1. 渡された最新の user で入力用プロパティを再セット
                 profileEditViewModel.configure(with: user)
-                
-                // 2. 画像のロード処理
-                if profileEditViewModel.profileImage == nil {
-                    profileEditViewModel.loadProfileImageFromUrl()
-                }
+                if profileEditViewModel.profileImage == nil { profileEditViewModel.loadProfileImageFromUrl() }
+                if profileEditViewModel.favoriteCoffeeImage == nil { profileEditViewModel.loadFavoriteCoffeeImageFromUrl() }
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("キャンセル") { dismiss() }
                 }
+                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("保存") {
+                        guard let uid = Auth.auth().currentUser?.uid else {
+                            print("ユーザーがログインしていません")
+                            return
+                        }
                         Task {
-                            if let uid = Auth.auth().currentUser?.uid {
-                                do {
-                                    // 💡 保存後、更新されたUserを受け取る
-                                    let updatedUser = try await profileEditViewModel.uploadProfileAndSave(uid: uid)
-                                    
-                                    await MainActor.run {
-                                        userManager.currentUser = updatedUser // 💡 アプリ全体のユーザー情報を最新に更新
-                                        dismiss()
-                                    }
-                                } catch {
-                                    print("保存に失敗しました: \(error)")
+                            do {
+                                let updatedUser = try await profileEditViewModel.uploadProfileAndSave(uid: uid)
+                                await MainActor.run {
+                                    userManager.currentUser = updatedUser
+                                    profileViewModel.user = updatedUser
+                                    dismiss()
                                 }
+                            } catch {
+                                print("保存に失敗しました: \(error)")
                             }
                         }
                     }
@@ -260,21 +194,11 @@ struct ProfileEditView: View {
     private func editField(label: String, text: Binding<String>, placeholder: String, isMultiLine: Bool = false) -> some View {
         VStack(spacing: 0) {
             HStack(alignment: .top) {
-                Text(label)
-                    .font(.body)
-                    .frame(width: 100, alignment: .leading)
-                    .padding(.vertical, 12)
-                
+                Text(label).font(.body).frame(width: 80, alignment: .leading).padding(.vertical, 12)
                 if isMultiLine {
-                    TextField(placeholder, text: text, axis: .vertical)
-                        .font(.body)
-                        .lineLimit(3...6)
-                        .padding(.vertical, 12)
+                    TextField(placeholder, text: text, axis: .vertical).lineLimit(3...6).padding(.vertical, 12)
                 } else {
-                    TextField(placeholder, text: text)
-                        .font(.body)
-                        .lineLimit(1)
-                        .padding(.vertical, 12)
+                    TextField(placeholder, text: text).padding(.vertical, 12)
                 }
             }
             Divider()
@@ -284,33 +208,15 @@ struct ProfileEditView: View {
     @ViewBuilder
     private func ratingRow(label: String, rating: Binding<Int>) -> some View {
         VStack(spacing: 0) {
-            HStack(alignment: .top) {
-                Text(label)
-                    .font(.body)
-                    .frame(width: 100, alignment: .leading)
-                    .padding(.vertical, 12)
-                
-                HStack(spacing: 8) {
-                    Text("弱い")
-                        .foregroundColor(.secondary)
-                    
-                    HStack(spacing: 4) {
-                        ForEach(1...profileEditViewModel.maxRating, id: \.self) { number in
-                            let isFilled = number <= rating.wrappedValue
-                            Image(systemName: isFilled ? "star.fill" : "star")
-                                .foregroundColor(number > rating.wrappedValue ? profileEditViewModel.offColor : profileEditViewModel.onColor)
-                                .onTapGesture {
-                                    rating.wrappedValue = number
-                                }
-                        }
+            HStack {
+                Text(label).font(.body).frame(width: 80, alignment: .leading).padding(.vertical, 12)
+                HStack(spacing: 4) {
+                    ForEach(1...profileEditViewModel.maxRating, id: \.self) { number in
+                        Image(systemName: number <= rating.wrappedValue ? "star.fill" : "star")
+                            .foregroundColor(number > rating.wrappedValue ? .gray.opacity(0.3) : .yellow)
+                            .onTapGesture { rating.wrappedValue = number }
                     }
-                    
-                    Text("強い")
-                        .foregroundColor(.secondary)
                 }
-                .font(.body)
-                .padding(.vertical, 12)
-                
                 Spacer()
             }
             Divider()

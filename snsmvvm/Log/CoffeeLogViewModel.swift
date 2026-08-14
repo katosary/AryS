@@ -5,14 +5,19 @@ import FirebaseFirestore
 @Observable
 class CoffeeLogViewModel {
     var log: Log
-    var bookmarkManager: BookmarkManager? // オプショナル
+    var author: User? // 追加: 投稿の著者情報を持たせる
+    var bookmarkManager: BookmarkManager?
     var shouldNavigateToProfile: Bool = false
     var onEdit: () -> Void
     
+    // 追加: 遷移先で表示すべきユーザー（自分の投稿なら profileViewModel、他人なら author）
+    var targetUserForProfile: User?
+    
     private let db = Firestore.firestore()
     
-    init(log: Log, bookmarkManager: BookmarkManager? = nil, onEdit: @escaping () -> Void = {}) {
+    init(log: Log, author: User? = nil, bookmarkManager: BookmarkManager? = nil, onEdit: @escaping () -> Void = {}) {
         self.log = log
+        self.author = author
         self.bookmarkManager = bookmarkManager
         self.onEdit = onEdit
     }
@@ -84,12 +89,13 @@ class CoffeeLogViewModel {
     }
     
     func toggleSave(bookmarkManager: BookmarkManager) {
-            guard let logId = log.id else { return }
-            bookmarkManager.toggleSave(for: logId)
-        }
+        guard let logId = log.id else { return }
+        bookmarkManager.toggleSave(for: logId)
+    }
     
     /// プロフィール押下時
-    func onTapProfile() {
+    func onTapProfile(currentProfileUser: User? = nil) {
+        targetUserForProfile = isMyPost ? currentProfileUser : author
         shouldNavigateToProfile = true
     }
     

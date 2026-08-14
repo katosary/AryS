@@ -1,5 +1,3 @@
-
-
 //
 //  CoffeeLogDetailView.swift
 //  snsmvvm
@@ -53,9 +51,6 @@ struct CoffeeLogDetailView: View {
                                 Text("Farm: \(log.farmName)")
                                 Text("Roast: \(log.roastLevel)")
                                 
-                                // Bitterness, Acidity, Body, Aroma などの表示
-                                // （元のコードのままでOK）
-                                
                                 if !log.aromaComment.isEmpty {
                                     VStack(alignment: .leading, spacing: 6) {
                                         Text("香りの種類:").font(.subheadline).bold().foregroundColor(.secondary)
@@ -69,7 +64,7 @@ struct CoffeeLogDetailView: View {
                                 // プロフィール部分
                                 HStack {
                                     Button {
-                                        coffeeLogViewModel.onTapProfile()
+                                        coffeeLogViewModel.onTapProfile(currentProfileUser: profileViewModel.user)
                                     } label: {
                                         HStack {
                                             let displayUser = coffeeLogViewModel.isMyPost ? profileViewModel.user : author
@@ -98,6 +93,15 @@ struct CoffeeLogDetailView: View {
             .presentationDetents([.fraction(1.0)])
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(20)
+            // 💡 修正：シート内の NavigationStack 直下に配置
+            .navigationDestination(
+                isPresented: Binding(
+                    get: { coffeeLogViewModel.shouldNavigateToProfile },
+                    set: { coffeeLogViewModel.shouldNavigateToProfile = $0 }
+                )
+            ) {
+                OtherUserProfileView(user: coffeeLogViewModel.targetUserForProfile)
+            }
         }
     }
 }

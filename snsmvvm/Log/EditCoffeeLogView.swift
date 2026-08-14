@@ -10,17 +10,17 @@ import FirebaseAuth
 
 struct PostEditView: View {
     @State private var editCoffeeLogViewModel: EditCoffeeLogViewModel
-    let post: Log
+    @Binding var post: Log
     @Environment(\.dismiss) private var dismiss
     
     @State private var currentStep = 1 // カメラがないためStep 1からスタート
     @State private var maxUnlockedStep = 4 // 編集時は全ステップを解放状態にする
     
     // イニシャライザでLogを受け取りViewModelを初期化
-    init(post: Log) {
-        self.post = post
-        _editCoffeeLogViewModel = State(initialValue: EditCoffeeLogViewModel(log: post))
-    }
+    init(post: Binding<Log>) {
+            self._post = post
+            self._editCoffeeLogViewModel = State(initialValue: EditCoffeeLogViewModel(log: post.wrappedValue))
+        }
     
     var body: some View {
         NavigationStack {
@@ -161,62 +161,84 @@ struct PostEditView: View {
     }
     
     @ViewBuilder
-    private var step4View: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                HStack {
-                    stepHeader(title: "Step 4: 編集内容の確認", isComplete: false)
+        private var step4View: some View {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    HStack {
+                        stepHeader(title: "Step 4: 編集内容の確認", isComplete: false)
 
-                    Button {
-                        editCoffeeLogViewModel.updateLog(targetPost: post) { success in
-                            if success { dismiss() }
+                        Button {
+                            // 1. 新しいログオブジェクトを作成（更新された値をすべて反映）
+                            var updatedPost = post
+                            updatedPost.shopName = editCoffeeLogViewModel.shopName.isEmpty ? "店舗名未入力" : editCoffeeLogViewModel.shopName
+                            updatedPost.countryName = editCoffeeLogViewModel.countryName.isEmpty ? "生産国未入力" : editCoffeeLogViewModel.countryName
+                            updatedPost.farmName = editCoffeeLogViewModel.farmName
+                            updatedPost.roastLevel = editCoffeeLogViewModel.roastLevel
+                            updatedPost.aromarating = editCoffeeLogViewModel.aromarating
+                            updatedPost.aromaComment = editCoffeeLogViewModel.aromaComment
+                            updatedPost.bitternessrating = editCoffeeLogViewModel.bitternessrating
+                            updatedPost.acidityrating = editCoffeeLogViewModel.acidityrating
+                            updatedPost.bodyrating = editCoffeeLogViewModel.bodyrating
+
+                            // 2. バインディングへ「オブジェクトごと」代入（これで確実に更新が親に伝わる）
+                            post = updatedPost
+
+                            // 3. 画面を閉じる
+                            dismiss()
+
+                            // 4. 裏側でFirebaseの更新
+                            editCoffeeLogViewModel.updateLog(targetPost: post) { success in
+                                if !success {
+                                    print("⚠️ サーバーへの保存に失敗")
+                                }
+                            }
+                        } label: {
+                            Text("保存する")
+                                .bold()
+                                .padding()
+                                .background(Color.blue)
+                                .foregroundColor(.white)
+                                .cornerRadius(10)
                         }
-                    } label: {
-                        Text("保存する")
-                            .bold()
-                            .padding()
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
+                        .padding(.top, 10)
                     }
-                    .padding(.top, 10)
+                    
+                    // プレビュー表示部分
+                    CoffeeLogView(
+                        log: Log(
+                            id: post.id,
+                            userId: post.userId,
+                            shopName: editCoffeeLogViewModel.shopName.isEmpty ? "店舗名未入力" : editCoffeeLogViewModel.shopName,
+                            countryName: editCoffeeLogViewModel.countryName.isEmpty ? "生産国未入力" : editCoffeeLogViewModel.countryName,
+                            farmName: editCoffeeLogViewModel.farmName,
+                            roastLevel: editCoffeeLogViewModel.roastLevel,
+                            aromarating: editCoffeeLogViewModel.aromarating,
+                            aromaComment: editCoffeeLogViewModel.aromaComment,
+                            bitternessrating: editCoffeeLogViewModel.bitternessrating,
+                            acidityrating: editCoffeeLogViewModel.acidityrating,
+                            bodyrating: editCoffeeLogViewModel.bodyrating,
+                            createdAt: post.createdAt,
+                            tagX: post.tagX,
+                            tagY: post.tagY,
+                            imageUrl: post.imageUrl,
+                            previewImage: post.previewImage
+                        ),
+                        author: nil,
+                        authorName: "あなた",
+                        isEditable: false
+                    )
+                    .cornerRadius(16)
+                    .shadow(radius: 4)
                 }
-                
-                CoffeeLogView(
-                    log: Log(
-                        id: post.id,
-                        userId: post.userId,
-                        shopName: editCoffeeLogViewModel.shopName.isEmpty ? "店舗名未入力" : editCoffeeLogViewModel.shopName,
-                        countryName: editCoffeeLogViewModel.countryName.isEmpty ? "生産国未入力" : editCoffeeLogViewModel.countryName,
-                        farmName: editCoffeeLogViewModel.farmName,
-                        roastLevel: editCoffeeLogViewModel.roastLevel,
-                        aromarating: editCoffeeLogViewModel.aromarating,
-                        aromaComment: editCoffeeLogViewModel.aromaComment,
-                        bitternessrating: editCoffeeLogViewModel.bitternessrating,
-                        acidityrating: editCoffeeLogViewModel.acidityrating,
-                        bodyrating: editCoffeeLogViewModel.bodyrating,
-                        createdAt: post.createdAt,
-                        tagX: post.tagX,
-                        tagY: post.tagY,
-                        imageUrl: post.imageUrl,
-                        previewImage: post.previewImage
-                    ),
-                    author: nil,
-                    authorName: "あなた",
-                    isEditable: false,
-                )
-                .cornerRadius(16)
-                .shadow(radius: 4)
+                .padding(24)
             }
-            .padding(24)
         }
-    }
     
     // MARK: - 各ステップの完了判定ロジック
     private func isStep1Complete() -> Bool {
         return !editCoffeeLogViewModel.shopName.isEmpty &&
-               !editCoffeeLogViewModel.countryName.isEmpty &&
-               !editCoffeeLogViewModel.roastLevel.isEmpty
+        !editCoffeeLogViewModel.countryName.isEmpty &&
+        !editCoffeeLogViewModel.roastLevel.isEmpty
     }
     
     private func isStep2Complete() -> Bool {
@@ -225,8 +247,8 @@ struct PostEditView: View {
     
     private func isStep3Complete() -> Bool {
         return editCoffeeLogViewModel.bitternessrating > 0 ||
-               editCoffeeLogViewModel.acidityrating > 0 ||
-               editCoffeeLogViewModel.bodyrating > 0
+        editCoffeeLogViewModel.acidityrating > 0 ||
+        editCoffeeLogViewModel.bodyrating > 0
     }
     
     // MARK: - UI パーツ

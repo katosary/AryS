@@ -15,30 +15,43 @@ struct CoffeeLogView: View {
     let authorName: String
     let isEditable: Bool
     
+    var onTapMenu: (() -> Void)?
+    var onTapLike: (() -> Void)?
+    var onTapBookmark: (() -> Void)?
+    var onTapProfile: (() -> Void)?
+    
     @Environment(BookmarkManager.self) private var bookmarkManager
     @Environment(ProfileViewModel.self) var profileViewModel
     
-    // View 側で ViewModel を @State で保持する
     @State private var coffeeLogViewModel: CoffeeLogViewModel
     @State private var isShowingDetailSheet = false
     @State private var isShowingEditSheet = false
     
-    init(log: Log, author: User?, authorName: String, isEditable: Bool = false) {
+    init(
+        log: Log,
+        author: User?,
+        authorName: String,
+        isEditable: Bool = false,
+        onTapMenu: (() -> Void)? = nil,
+        onTapLike: (() -> Void)? = nil,
+        onTapBookmark: (() -> Void)? = nil,
+        onTapProfile: (() -> Void)? = nil
+    ) {
         self.log = log
         self.author = author
         self.authorName = authorName
         self.isEditable = isEditable
+        self.onTapMenu = onTapMenu
+        self.onTapLike = onTapLike
+        self.onTapBookmark = onTapBookmark
+        self.onTapProfile = onTapProfile
         
-        // author も渡せるように初期化
-        // 💡 onEdit が押されたときに isShowingEditSheet を true にする処理を渡す
         let vm = CoffeeLogViewModel(log: log, author: author)
-                _coffeeLogViewModel = State(initialValue: vm)
+        _coffeeLogViewModel = State(initialValue: vm)
     }
     
     var body: some View {
-        // body が描画されるタイミングで、必要に応じて bookmarkManager を同期する
         let _ = coffeeLogViewModel.bookmarkManager = bookmarkManager
-        // 画面幅（左右のパディング16px×2を引いた幅）を基準に高さを一定にする
         let screenWidth = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.screen.bounds.width ?? 393
         let cardWidth = screenWidth - 32
         let cardHeight = cardWidth * (16 / 9)
@@ -127,16 +140,22 @@ struct CoffeeLogView: View {
                     // --- 3. 右上のメニューボタン ---
                     HStack(spacing: 12) {
                         Text(log.createdAt, style: .date).font(.caption).foregroundColor(.secondary)
-                        if coffeeLogViewModel.isMyPost {
-                            Menu {
-                                // 💡 onEdit クロージャを挟まず、直接 isShowingEditSheet を true にする
-                                Button { isShowingEditSheet = true } label: { Label("編集", systemImage: "pencil") }
-                                Button(role: .destructive) { coffeeLogViewModel.deletePost() } label: { Label("削除", systemImage: "trash") }
-                            } label: { Image(systemName: "ellipsis").padding(5).foregroundColor(.primary) }
+                        
+                        if let customMenuAction = onTapMenu {
+                            Button(action: customMenuAction) {
+                                Image(systemName: "ellipsis").padding(5).foregroundColor(.primary)
+                            }
                         } else {
-                            Menu {
-                                Button(role: .destructive) { } label: { Label("報告する", systemImage: "exclamationmark.bubble") }
-                            } label: { Image(systemName: "ellipsis").padding(5).foregroundColor(.primary) }
+                            if coffeeLogViewModel.isMyPost {
+                                Menu {
+                                    Button { isShowingEditSheet = true } label: { Label("編集", systemImage: "pencil") }
+                                    Button(role: .destructive) { coffeeLogViewModel.deletePost() } label: { Label("削除", systemImage: "trash") }
+                                } label: { Image(systemName: "ellipsis").padding(5).foregroundColor(.primary) }
+                            } else {
+                                Menu {
+                                    Button(role: .destructive) { } label: { Label("報告する", systemImage: "exclamationmark.bubble") }
+                                } label: { Image(systemName: "ellipsis").padding(5).foregroundColor(.primary) }
+                            }
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
@@ -149,7 +168,11 @@ struct CoffeeLogView: View {
                     VStack(spacing: 15) {
                         VStack(spacing: 4) {
                             Button {
-                                coffeeLogViewModel.toggleLike()
+                                if let customLike = onTapLike {
+                                    customLike()
+                                } else {
+                                    coffeeLogViewModel.toggleLike()
+                                }
                             } label: {
                                 Image(systemName: coffeeLogViewModel.isLikedByMe ? "heart.fill" : "heart")
                                     .font(.system(size: 28))
@@ -162,21 +185,23 @@ struct CoffeeLogView: View {
                         }
                         
                         Button {
-                            coffeeLogViewModel.toggleSave(bookmarkManager: bookmarkManager)
+                            if let customBookmark = onTapBookmark {
+                                customBookmark()
+                            } else {
+                                coffeeLogViewModel.toggleSave(bookmarkManager: bookmarkManager)
+                            }
                         } label: {
                             Image(systemName: bookmarkManager.isSaved(log.id) ? "bookmark.fill" : "bookmark")
                                 .font(.system(size: 28))
                                 .foregroundColor(bookmarkManager.isSaved(log.id) ? .yellow : .white)
                         }
                         
-//                        Button {
-//                        } label: {
-//                            Image(systemName: "arrowshape.turn.up.right.fill")
-//                                .font(.system(size: 28))
-//                        }
-                        
                         Button {
-                            coffeeLogViewModel.onTapProfile(currentProfileUser: profileViewModel.user)
+                            if let customProfile = onTapProfile {
+                                customProfile()
+                            } else {
+                                coffeeLogViewModel.onTapProfile(currentProfileUser: profileViewModel.user)
+                            }
                         } label: {
                             HStack {
                                 let displayUser = coffeeLogViewModel.isMyPost ? profileViewModel.user : author
@@ -219,9 +244,8 @@ struct CoffeeLogView: View {
                 coffeeLogViewModel: coffeeLogViewModel
             )
         }
-        // 💡 編集ボタンが押されたときに PostEditView をシートで開く処理を追加
         .sheet(isPresented: $isShowingEditSheet) {
-            PostEditView(post: log)
+            PostEditView(post: .constant(log)) // 💡 一時的な定数Binding、または適切なバインディングに変更
         }
     }
 }

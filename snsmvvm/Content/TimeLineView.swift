@@ -10,16 +10,16 @@ import SwiftUI
 struct TimeLineView: View {
     @State private var timeLineViewModel = TimeLineViewModel()
     @Environment(ProfileViewModel.self) var profileViewModel
-     
+    
     @State private var currentLogId: String?
     @State private var editingLog: Log?
     @State private var isShowingEditSheet = false
-     
+    
     var body: some View {
         NavigationStack {
             ZStack {
                 Color(.systemBackground).ignoresSafeArea()
-                 
+                
                 ScrollView(.vertical, showsIndicators: false) {
                     LazyVStack(spacing: 0) {
                         ForEach(timeLineViewModel.logs) { log in
@@ -54,9 +54,11 @@ struct TimeLineView: View {
                 .scrollContentBackground(.hidden)
             }
             .sensoryFeedback(.selection, trigger: currentLogId)
-            .sheet(isPresented: $isShowingEditSheet, onDismiss: { editingLog = nil }) {
-                if let logToEdit = editingLog {
-                    PostEditView(post: logToEdit)
+            .sheet(item: $editingLog) { logToEdit in
+                // 💡 $editingLog は Binding<Log?> なので、
+                // Binding(Unwrapping:) やカスタムBindingを使って Binding<Log> に変換して渡します
+                if let bindingLog = Binding($editingLog) {
+                    PostEditView(post: bindingLog)
                 }
             }
         }
@@ -75,7 +77,7 @@ private struct PostCellView: View {
     var body: some View {
         let isMyPost = log.userId == profileUser.id
         let displayAuthor = isMyPost ? profileUser : author
-         
+        
         CoffeeLogView(
             log: log,
             author: displayAuthor,

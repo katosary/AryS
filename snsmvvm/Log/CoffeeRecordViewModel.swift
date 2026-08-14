@@ -70,7 +70,7 @@ class CoffeeRecordViewModel {
             return
         }
         
-        // 画像の切り抜き処理 (containerSizeはアプリの仕様に合わせて調整してください)
+        // 画像の切り抜き処理
         guard let cropped = cropImage(image: image, scale: scale, offset: offset, containerSize: CGSize(width: 300, height: 400)),
               let data = cropped.jpegData(compressionQuality: 0.7) else {
             completion(false); return
@@ -98,7 +98,7 @@ class CoffeeRecordViewModel {
             roastLevel: roastLevel,
             aromarating: aromarating,
             aromaComment: aromaComment,
-            bitternessrating: bitternessrating, // 統合されたプロパティ
+            bitternessrating: bitternessrating,
             acidityrating: acidityrating,
             bodyrating: bodyrating,
             createdAt: Date(),
@@ -116,6 +116,11 @@ class CoffeeRecordViewModel {
         }
     }
     
+    // 外部からフォームをリセットできるように公開
+    func resetForm() {
+        clearFormFields()
+    }
+    
     private func clearFormFields() {
         shopName = ""; countryName = ""; farmName = ""; roastLevel = ""
         aromarating = 0; aromaComment = ""; bitternessrating = 0
@@ -123,7 +128,7 @@ class CoffeeRecordViewModel {
         selectedItems = []; scale = 1.0; offset = .zero
     }
     
-    // 画像切り抜きロジックはそのまま保持
+    // 画像切り抜きロジック
     private func cropImage(image: UIImage, scale: CGFloat, offset: CGSize, containerSize: CGSize) -> UIImage? {
         let renderer = UIGraphicsImageRenderer(size: containerSize)
         return renderer.image { _ in

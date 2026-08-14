@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import FirebaseFirestore
 
 @Observable
 class EditCoffeeLogViewModel {
@@ -45,10 +46,39 @@ class EditCoffeeLogViewModel {
     }
     
     func updateLog(targetPost: Log, completion: @escaping (Bool) -> Void) {
-        // TODO: Firebaseなどのバックエンドやデータソースへの更新処理をここに記述します
-        // 例として成功したと仮定してcompletionを呼ぶ形にしています
-        completion(true)
-    }
+            guard let postId = targetPost.id else {
+                print("エラー: 投稿のIDが見つかりません")
+                completion(false)
+                return
+            }
+            
+            let db = Firestore.firestore()
+            
+            let updatedData: [String: Any] = [
+                "shopName": shopName,
+                "farmName": farmName,
+                "countryName": countryName,
+                "roastLevel": roastLevel,
+                "aromarating": aromarating,
+                "aromaComment": aromaComment,
+                "bitternessrating": bitternessrating,
+                "acidityrating": acidityrating,
+                "bodyrating": bodyrating
+            ]
+            
+            // 💡 "logs" をアプリの実際の投稿コレクション名（例: "posts"）に変更する
+            db.collection("posts").document(postId).updateData(updatedData) { error in
+                DispatchQueue.main.async {
+                    if let error = error {
+                        print("投稿の更新に失敗しました: \(error.localizedDescription)")
+                        completion(false)
+                    } else {
+                        print("投稿の更新に成功しました")
+                        completion(true)
+                    }
+                }
+            }
+        }
     
     func image(for number: Int, rating: Int) -> Image {
         if number > rating {

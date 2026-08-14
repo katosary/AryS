@@ -25,7 +25,8 @@ struct CoffeeLogDetailView: View {
                 let cardHeight = cardWidth * (16 / 9)
                 
                 ScrollView {
-                    VStack(spacing: 0) {
+                    // 💡 スクロールビューの中身全体を左寄せにする
+                    VStack(alignment: .leading, spacing: 0) {
                         // --- 1. 画像エリア ---
                         Group {
                             if let previewImage = log.previewImage {
@@ -41,51 +42,92 @@ struct CoffeeLogDetailView: View {
                         .clipped()
                         
                         // --- 2. 下部：詳細エリア ---
-                        VStack(alignment: .leading, spacing: 18) {
+                        VStack(alignment: .leading, spacing: 20) {
                             Text("Coffee Review")
                                 .font(.title2).bold()
-                                .padding(.top, 20)
+                                .padding(.top, 4)
                             
-                            VStack(alignment: .leading, spacing: 18) {
+                            VStack(alignment: .leading, spacing: 14) {
                                 Text("Country: \(log.countryName)")
+                                    .font(.body)
                                 Text("Farm: \(log.farmName)")
+                                    .font(.body)
                                 Text("Roast: \(log.roastLevel)")
+                                    .font(.body)
+                                Text("Shop: \(log.shopName)")
+                                    .font(.body)
                                 
                                 if !log.aromaComment.isEmpty {
                                     VStack(alignment: .leading, spacing: 6) {
                                         Text("香りの種類:").font(.subheadline).bold().foregroundColor(.secondary)
                                         Text(log.aromaComment).font(.body)
                                     }
-                                    .padding(.top, 8)
-                                }
-                                
-                                Text("Shop: \(log.shopName)")
-                                
-                                // プロフィール部分
-                                HStack {
-                                    Button {
-                                        coffeeLogViewModel.onTapProfile(currentProfileUser: profileViewModel.user)
-                                    } label: {
-                                        HStack {
-                                            let displayUser = coffeeLogViewModel.isMyPost ? profileViewModel.user : author
-                                            if let urlString = displayUser?.profileImageUrl, !urlString.isEmpty, let url = URL(string: urlString) {
-                                                AsyncImage(url: url) { image in image.resizable().scaledToFill() }
-                                                placeholder: { Circle().fill(Color.gray) }
-                                                    .frame(width: 40, height: 40)
-                                                    .clipShape(Circle())
-                                            } else {
-                                                Image(systemName: "person.circle.fill").resizable().frame(width: 40, height: 40).foregroundColor(.gray)
-                                            }
-                                        }
-                                    }
-                                    
-                                    let displayUser = coffeeLogViewModel.isMyPost ? profileViewModel.user : author
-                                    Text(displayUser?.userName ?? authorName)
-                                        .font(.system(size: 14, weight: .bold))
-                                        .foregroundColor(.primary)
+                                    .padding(.top, 4)
                                 }
                             }
+                            
+                            Divider()
+                                .padding(.vertical, 4)
+                            
+                            // --- 3. RatingView (CollorRatingView) の追加 ---
+                            VStack(alignment: .leading, spacing: 16) {
+                                Text("Flavor Ratings")
+                                    .font(.headline)
+                                    .bold()
+                                
+                                // Bitterness
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Bitterness").font(.subheadline).bold()
+                                    CollorRatingView(rating: Double(log.bitternessrating), maxRating: 5)
+                                }
+                                
+                                // Acidity
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Acidity").font(.subheadline).bold()
+                                    CollorRatingView(rating: Double(log.acidityrating), maxRating: 5)
+                                }
+                                
+                                // Body
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Body").font(.subheadline).bold()
+                                    CollorRatingView(rating: Double(log.bodyrating), maxRating: 5)
+                                }
+                                
+                                // Aroma
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Aroma").font(.subheadline).bold()
+                                    CollorRatingView(rating: Double(log.aromarating), maxRating: 5)
+                                }
+                            }
+                            
+                            Divider()
+                                .padding(.vertical, 4)
+                            
+                            // --- 4. プロフィール部分 ---
+                            HStack(spacing: 12) {
+                                Button {
+                                    coffeeLogViewModel.onTapProfile(currentProfileUser: profileViewModel.user)
+                                } label: {
+                                    HStack {
+                                        let displayUser = coffeeLogViewModel.isMyPost ? profileViewModel.user : author
+                                        if let urlString = displayUser?.profileImageUrl, !urlString.isEmpty, let url = URL(string: urlString) {
+                                            AsyncImage(url: url) { image in image.resizable().scaledToFill() }
+                                            placeholder: { Circle().fill(Color.gray) }
+                                                .frame(width: 40, height: 40)
+                                                .clipShape(Circle())
+                                        } else {
+                                            Image(systemName: "person.circle.fill").resizable().frame(width: 40, height: 40).foregroundColor(.gray)
+                                        }
+                                    }
+                                }
+                                
+                                let displayUser = coffeeLogViewModel.isMyPost ? profileViewModel.user : author
+                                Text(displayUser?.userName ?? authorName)
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(.primary)
+                            }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading) // 👈 詳細エリア全体を左寄せに固定
                         .padding(24)
                     }
                 }
@@ -93,7 +135,6 @@ struct CoffeeLogDetailView: View {
             .presentationDetents([.fraction(1.0)])
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(20)
-            // 💡 修正：シート内の NavigationStack 直下に配置
             .navigationDestination(
                 isPresented: Binding(
                     get: { coffeeLogViewModel.shouldNavigateToProfile },

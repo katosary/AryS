@@ -12,50 +12,48 @@ struct CollorRatingView: View {
     let maxRating: Int
     
     var body: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 12) {
+            // 左側のラベル
             Text("◀ 弱い")
                 .font(.caption)
                 .bold()
                 .foregroundColor(.secondary)
+                .frame(width: 45, alignment: .leading)
             
-            Spacer()
-            
-            // --- 小数対応の星描画エリア ---
+            // 星描画エリア
             ZStack(alignment: .leading) {
-                // 下地：グレーの星（5つ）
+                // 下地：グレーの星
                 HStack(spacing: 4) {
                     ForEach(0..<maxRating, id: \.self) { _ in
                         Image(systemName: "star.fill")
-                            .font(.system(size: 24))
+                            .font(.system(size: 20))
                             .foregroundColor(Color(.systemGray4))
                     }
                 }
                 
-                // 上書き：オレンジの星（5つ）を、ratingの数値分だけマスクして表示
+                // 上書き：オレンジの星
                 HStack(spacing: 4) {
                     ForEach(0..<maxRating, id: \.self) { _ in
                         Image(systemName: "star.fill")
-                            .font(.system(size: 24))
+                            .font(.system(size: 20))
                             .foregroundColor(.orange)
                     }
                 }
                 .mask(
                     GeometryReader { geometry in
                         Rectangle()
-                        // rating が 2.5 なら、2.5 / 5.0 = 50% の横幅だけオレンジにする
                             .frame(width: geometry.size.width * CGFloat(rating / Double(maxRating)))
                     }
                 )
             }
             
-            Spacer()
-            
+            // 右側のラベル
             Text("強い ▶")
                 .font(.caption)
                 .bold()
                 .foregroundColor(.secondary)
+                .frame(width: 45, alignment: .trailing)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
-

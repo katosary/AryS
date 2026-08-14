@@ -58,11 +58,12 @@ struct ProfileCoffeeLogFullscreenView: View {
         }
         .navigationTitle("アプリ名")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $isShowingEditSheet, onDismiss: {
-            editingLog = nil
-        }) {
-            if let logToEdit = editingLog {
-                PostEditView(post: logToEdit)
+        .sheet(isPresented: $isShowingEditSheet, onDismiss: { editingLog = nil }) {
+            if let editingLog {
+                PostEditView(post: Binding(
+                    get: { editingLog },
+                    set: { self.editingLog = $0 }
+                ))
             }
         }
     }

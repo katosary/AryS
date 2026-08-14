@@ -16,6 +16,9 @@ struct CoffeeRecordView: View {
     @State private var maxUnlockedStep = 0
     @State private var shouldCapture = false
     
+    // キーボードを閉じるためのフォーカス状態
+    @FocusState private var isFocused: Bool
+    
     var onDismiss: (() -> Void)?
     var onCompleted: (() -> Void)?
     
@@ -28,7 +31,7 @@ struct CoffeeRecordView: View {
             farmName: coffeeRecordViewModel.farmName,
             roastLevel: coffeeRecordViewModel.roastLevel,
             aromarating: coffeeRecordViewModel.aromarating,
-            aromaComment: coffeeRecordViewModel.aromaComment,
+            aromaComment: "", // コメント削除に伴い空文字に固定
             bitternessrating: coffeeRecordViewModel.bitternessrating,
             acidityrating: coffeeRecordViewModel.acidityrating,
             bodyrating: coffeeRecordViewModel.bodyrating,
@@ -42,39 +45,49 @@ struct CoffeeRecordView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                TabView(selection: $currentStep) {
-                    cameraStepView()
-                        .tag(0)
-                    
-                    basicInfoStepView()
-                        .tag(1)
-                        .disabled(maxUnlockedStep < 1)
-                    
-                    aromaStepView()
-                        .tag(2)
-                        .disabled(maxUnlockedStep < 2)
-                    
-                    tasteStepView()
-                        .tag(3)
-                        .disabled(maxUnlockedStep < 3)
-                    
-                    previewStepView()
-                        .tag(4)
-                        .disabled(maxUnlockedStep < 4)
+            ZStack(alignment: .topLeading) {
+                VStack(spacing: 0) {
+                    TabView(selection: $currentStep) {
+                        cameraStepView()
+                            .tag(0)
+                        
+                        basicInfoStepView()
+                            .tag(1)
+                            .disabled(maxUnlockedStep < 1)
+                        
+                        aromaStepView()
+                            .tag(2)
+                            .disabled(maxUnlockedStep < 2)
+                        
+                        tasteStepView()
+                            .tag(3)
+                            .disabled(maxUnlockedStep < 3)
+                        
+                        previewStepView()
+                            .tag(4)
+                            .disabled(maxUnlockedStep < 4)
+                    }
+                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                 }
-                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                .background(Color(.systemGroupedBackground))
+                
+                Button(action: handleDismiss) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(currentStep == 0 ? .white : .primary)
+                        .padding(10)
+                        .background(currentStep == 0 ? Color.black.opacity(0.5) : Color(.systemGray5))
+                        .clipShape(Circle())
+                }
+                .padding(.leading, 16)
+                .padding(.top, 16)
             }
-            .background(Color(.systemGroupedBackground))
             .navigationTitle("新規投稿")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button(action: handleDismiss) {
-                        Image(systemName: "xmark")
-                            .foregroundColor(.primary)
-                    }
-                }
+            .toolbar(.hidden, for: .navigationBar)
+            // 画面のどこかをタップしたときや、ステップが切り替わるときにキーボードを隠す
+            .onChange(of: currentStep) {
+                isFocused = false
             }
         }
     }
@@ -129,17 +142,6 @@ struct CoffeeRecordView: View {
                 
                 Spacer()
             }
-            
-            Button(action: handleDismiss) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(.white)
-                    .padding(10)
-                    .background(Color.black.opacity(0.5))
-                    .clipShape(Circle())
-            }
-            .padding(.leading, 16)
-            .padding(.top, 16)
         }
     }
     
@@ -160,6 +162,7 @@ struct CoffeeRecordView: View {
                     editField(label: "農園名", text: $coffeeRecordViewModel.farmName, placeholder: "農園名を入力")
                     
                     Button(action: {
+                        isFocused = false
                         coffeeRecordViewModel.isShowingCountryPicker = true
                     }) {
                         HStack {
@@ -179,6 +182,7 @@ struct CoffeeRecordView: View {
                     Divider()
                     
                     Button(action: {
+                        isFocused = false
                         coffeeRecordViewModel.isShowingRoastPicker = true
                     }) {
                         HStack {
@@ -197,10 +201,14 @@ struct CoffeeRecordView: View {
                     }
                 }
                 .padding(24)
+                .padding(.top, 40)
                 
                 Spacer(minLength: 0)
             }
             .frame(maxWidth: .infinity, minHeight: 500)
+        }
+        .onTapGesture {
+            isFocused = false
         }
     }
     
@@ -221,20 +229,22 @@ struct CoffeeRecordView: View {
                                 .font(.system(size: 26))
                                 .foregroundColor(number > coffeeRecordViewModel.aromarating ? coffeeRecordViewModel.offColor : coffeeRecordViewModel.onColor)
                                 .onTapGesture {
+                                    isFocused = false
                                     coffeeRecordViewModel.aromarating = number
                                     checkAndProgress(to: 3, condition: isStep2Complete())
                                 }
                         }
                     }
-                    
-                    TextField("どんな香りでしたか？", text: $coffeeRecordViewModel.aromaComment)
-                        .textFieldStyle(.roundedBorder)
                 }
                 .padding(24)
+                .padding(.top, 40)
                 
                 Spacer(minLength: 0)
             }
             .frame(maxWidth: .infinity, minHeight: 500)
+        }
+        .onTapGesture {
+            isFocused = false
         }
     }
     
@@ -254,10 +264,14 @@ struct CoffeeRecordView: View {
                     }
                 }
                 .padding(24)
+                .padding(.top, 40)
                 
                 Spacer(minLength: 0)
             }
             .frame(maxWidth: .infinity, minHeight: 500)
+        }
+        .onTapGesture {
+            isFocused = false
         }
     }
     
@@ -269,9 +283,11 @@ struct CoffeeRecordView: View {
                     stepHeader(title: "Step 4: 投稿の確認", isComplete: false)
                     
                     Button {
+                        isFocused = false
                         if let currentUser = Auth.auth().currentUser {
                             coffeeRecordViewModel.uploadAndSaveLog(currentUser: currentUser) { success in
                                 if success {
+                                    resetStateAndForm()
                                     if let onCompleted = onCompleted {
                                         onCompleted()
                                     } else {
@@ -291,27 +307,44 @@ struct CoffeeRecordView: View {
                     .padding(.top, 10)
                 }
                 
+                // 確認画面用の CoffeeLogView
                 CoffeeLogView(
                     log: previewLog,
                     author: nil,
                     authorName: "あなた",
                     isEditable: false,
+                    onTapMenu: {},      // 👈 見た目はそのままにメニュー操作を無効化
+                    onTapLike: {},      // 👈 見た目はそのままにいいね操作を無効化
+                    onTapBookmark: {},  // 👈 見た目はそのままに保存操作を無効化
+                    onTapProfile: {}    // 👈 見た目はそのままにプロフィール遷移を無効化
                 )
                 .cornerRadius(16)
                 .shadow(radius: 4)
             }
             .padding(24)
+            .padding(.top, 40)
+        }
+        .onTapGesture {
+            isFocused = false
         }
     }
     
     // MARK: - Helper Methods
     
     private func handleDismiss() {
+        isFocused = false
+        resetStateAndForm()
         if let onDismiss = onDismiss {
             onDismiss()
         } else {
             dismiss()
         }
+    }
+    
+    private func resetStateAndForm() {
+        coffeeRecordViewModel.resetForm()
+        currentStep = 0
+        maxUnlockedStep = 0
     }
     
     private func isStep1Complete() -> Bool {
@@ -325,8 +358,8 @@ struct CoffeeRecordView: View {
     }
     
     private func isStep3Complete() -> Bool {
-        return coffeeRecordViewModel.bitternessrating > 0 ||
-        coffeeRecordViewModel.acidityrating > 0 ||
+        return coffeeRecordViewModel.bitternessrating > 0 &&
+        coffeeRecordViewModel.acidityrating > 0 &&
         coffeeRecordViewModel.bodyrating > 0
     }
     
@@ -369,6 +402,7 @@ struct CoffeeRecordView: View {
                     .font(.system(size: 26))
                     .foregroundColor(number > rating.wrappedValue ? coffeeRecordViewModel.offColor : coffeeRecordViewModel.onColor)
                     .onTapGesture {
+                        isFocused = false
                         rating.wrappedValue = number
                         checkAndProgress(to: stepIndex, condition: isStep3Complete())
                     }
@@ -382,6 +416,11 @@ struct CoffeeRecordView: View {
             HStack {
                 Text(label).frame(width: 80, alignment: .leading)
                 TextField(placeholder, text: text)
+                    .focused($isFocused) // フォーカス状態を紐付け
+                    .submitLabel(.done)  // キーボードの改行ボタンを「完了」に変更
+                    .onSubmit {
+                        isFocused = false // 「完了」を押したときにキーボードをしまう
+                    }
             }
             .padding(.vertical, 4)
             Divider()

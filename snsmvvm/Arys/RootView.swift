@@ -13,8 +13,8 @@ struct RootView: View {
     @StateObject private var userManager = UserManager()
     @State private var profileViewModel = ProfileViewModel()
     
-    // BookmarkManagerはApp側から .environmentObject で流し込まれるため、
-    // ここでは新規作成（@StateObject）せず、そのままアプリ全体の環境から伝搬されます。
+    // 💡 ログイン中のみ存在する（ログアウトで破棄・リセットされる）ように配置
+    @State private var bookmarkManager = BookmarkManager()
     
     var body: some View {
         Group {
@@ -28,6 +28,10 @@ struct RootView: View {
                     .task {
                         await profileViewModel.loadUserData()
                     }
+                    // 💡 ログインしたタイミングでそのユーザー用の監視を確実にスタート
+                    .task(id: Auth.auth().currentUser?.uid) {
+                        bookmarkManager.startListening()
+                    }
             } else {
                 LoginView(authManager: authManager)
             }
@@ -35,5 +39,6 @@ struct RootView: View {
         .environmentObject(authManager)
         .environmentObject(userManager)
         .environment(profileViewModel)
+        .environment(bookmarkManager)
     }
 }

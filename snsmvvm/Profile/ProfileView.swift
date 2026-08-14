@@ -242,7 +242,7 @@ struct ProfileDetailContentView: View {
                 VStack(spacing: 4) {
                     Image(systemName: "chevron.compact.down")
                         .font(.title2)
-                    Text("下へスワイプして投稿を見る")
+                    Text("スワイプして投稿を見る")
                         .font(.caption)
                 }
                 .foregroundColor(.secondary)

@@ -80,12 +80,7 @@ private struct PostCellView: View {
             log: log,
             author: displayAuthor,
             authorName: displayAuthor.userName,
-            onLike: onLike,
-            isEditable: isMyPost,
-            isSaved: false,
-            onSave: {},
-            onDelete: onDelete,
-            onEdit: onEdit
+            isEditable: isMyPost
         )
         .padding(.horizontal, 16)
     }

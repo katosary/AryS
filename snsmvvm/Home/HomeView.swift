@@ -64,11 +64,9 @@ struct HomeView: View {
         }
         .accentColor(.white)
         .preferredColorScheme(.dark)
-        .sheet(isPresented: $isMenuPresented) {
+        .fullScreenCover(isPresented: $isMenuPresented) {
             ProfileMenuView(profileViewModel: profileViewModel)
                 .environmentObject(authManager)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: .init(
             get: { profileViewModel.isProfileEditSheet },

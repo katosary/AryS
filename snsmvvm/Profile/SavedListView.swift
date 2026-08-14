@@ -9,10 +9,10 @@
 import SwiftUI
 
 struct SavedListView: View {
-    @State private var viewModel = SavedPostsViewModel()
+    @Environment(BookmarkManager.self) var bookmarkManager
+    @State private var savedListViewModel = SavedListViewModel()
     @Environment(ProfileViewModel.self) var profileViewModel
     
-    // 3列グリッドのレイアウト設定
     private let columns = [
         GridItem(.flexible(), spacing: 1),
         GridItem(.flexible(), spacing: 1),
@@ -22,12 +22,12 @@ struct SavedListView: View {
     var body: some View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 1) {
-                ForEach(viewModel.savedLogs) { log in
-                    // プロフィール画面と同様に、タップで詳細（フルスクリーン）へ遷移するNavigationLink
-                    NavigationLink {
-                        // 💡 既に作成済みのフルスクリーン詳細ビューを流用
-                        ProfileCoffeeLogFullscreenView(profileCoffeeLogViewModel: ProfileCoffeeLogViewModel()) // あるいは専用のViewModelを渡す
-                    } label: {
+                // SavedListView.swift の ForEach 部分を修正
+                ForEach(savedListViewModel.savedLogs) { log in
+                    NavigationLink(destination: SavedCoffeeLogFullscreenView(
+                        savedListViewModel: savedListViewModel,
+                        currentLogId: log.id
+                    )) {
                         if let imageUrl = log.imageUrl, let url = URL(string: imageUrl) {
                             AsyncImage(url: url) { image in
                                 image
@@ -50,5 +50,13 @@ struct SavedListView: View {
         }
         .navigationTitle("保存済みの投稿")
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            // 画面が開いたときに初回フェッチ
+            savedListViewModel.fetchSavedPosts(with: bookmarkManager.savedLogIds)
+        }
+        .onChange(of: bookmarkManager.savedLogIds) { _, newIds in
+            // 保存状態（追加・削除）が変化した瞬間に再フェッチしてリストを更新
+            savedListViewModel.fetchSavedPosts(with: newIds)
+        }
     }
 }

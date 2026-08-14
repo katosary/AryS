@@ -1,88 +1,108 @@
-//
-//  CoffeeLogViewModel.swift
-//  snsmvvm
-//
-//  Created by katoso on 2026/02/28.
-//
-
-
-import Observation
 import SwiftUI
-import FirebaseFirestore
 import FirebaseAuth
+import FirebaseFirestore
 
 @Observable
 class CoffeeLogViewModel {
-    var isLiked = false
+    var log: Log
+    var bookmarkManager: BookmarkManager? // オプショナル
+    var shouldNavigateToProfile: Bool = false
+    var onEdit: () -> Void
     
-    // MARK: - プロパティ
-    var logs: [Log] = []
-    private var db = Firestore.firestore()
+    private let db = Firestore.firestore()
     
-    // MARK: - 初期化
-    init() {
-        fetchLogs()
+    init(log: Log, bookmarkManager: BookmarkManager? = nil, onEdit: @escaping () -> Void = {}) {
+        self.log = log
+        self.bookmarkManager = bookmarkManager
+        self.onEdit = onEdit
     }
     
-    // MARK: -💡 いいねボタンが押されたときの処理
-    func toggleLike(for log: Log) {
-        guard let postId = log.id, let currentUid = Auth.auth().currentUser?.uid else { return }
+    private var currentUid: String? {
+        Auth.auth().currentUser?.uid
+    }
+    
+    var isMyPost: Bool {
+        guard let currentUid else { return false }
+        return log.userId == currentUid
+    }
+    
+    var isLikedByMe: Bool {
+        guard let currentUid else { return false }
+        return log.likedUserIds.contains(currentUid)
+    }
+    
+    // MARK: - Firebase アクションメソッド
+    
+    /// いいねの切り替え
+    func toggleLike() {
+        guard let currentUid, let logId = log.id else { return }
         
-        let postRef = db.collection("posts").document(postId)
+        // 楽観的UI更新（すぐに画面側の見た目を反映させる）
+        let previousState = isLikedByMe
+        let previousCount = log.likesCount
         
-        // すでにいいねしているかどうかを判定
-        var updatedLikedUserIds = log.likedUserIds
-        let isCurrentlyLiked = updatedLikedUserIds.contains(currentUid)
-        
-        if isCurrentlyLiked {
-            updatedLikedUserIds.removeAll { $0 == currentUid }
+        if previousState {
+            log.likedUserIds.removeAll { $0 == currentUid }
+            log.likesCount = max(0, log.likesCount - 1)
         } else {
-            updatedLikedUserIds.append(currentUid)
+            log.likedUserIds.append(currentUid)
+            log.likesCount += 1
         }
         
-        let newCount = updatedLikedUserIds.count
+        // Firestoreの更新
+        let postRef = db.collection("posts").document(logId)
         
-        // Firestoreを更新
-        postRef.updateData([
-            "likedUserIds": updatedLikedUserIds,
-            "likesCount": newCount
-        ]) { error in
-            if let error = error {
-                print("❌ いいねの更新に失敗しました: \(error)")
+        Task {
+            do {
+                if previousState {
+                    // いいね解除
+                    try await postRef.updateData([
+                        "likedUserIds": FieldValue.arrayRemove([currentUid]),
+                        "likesCount": FieldValue.increment(Int64(-1))
+                    ])
+                } else {
+                    // いいね追加
+                    try await postRef.updateData([
+                        "likedUserIds": FieldValue.arrayUnion([currentUid]),
+                        "likesCount": FieldValue.increment(Int64(1))
+                    ])
+                }
+            } catch {
+                // エラー時は状態をロールバック
+                DispatchQueue.main.async {
+                    if previousState {
+                        self.log.likedUserIds.append(currentUid)
+                        self.log.likesCount = previousCount
+                    } else {
+                        self.log.likedUserIds.removeAll { $0 == currentUid }
+                        self.log.likesCount = previousCount
+                    }
+                }
+                print("Failed to toggle like: \(error.localizedDescription)")
             }
         }
-    }
-    // MARK: - ログの取得・監視
-    func fetchLogs() {
-        guard let uid = Auth.auth().currentUser?.uid else { return }
-        
-        db.collection("posts")
-            .whereField("userId", isEqualTo: uid)
-            .order(by: "createdAt", descending: true)
-            .addSnapshotListener { [weak self] snapshot, error in
-                if let error = error {
-                    print("❌ データ取得エラー: \(error)")
-                    return
-                }
-                
-                guard let documents = snapshot?.documents else { return }
-                
-                self?.logs = documents.compactMap { document in
-                    try? document.data(as: Log.self)
-                }
-            }
     }
     
-    // MARK: - ログの削除
-    func deleteLog(targetPost: Log) {
-        guard let id = targetPost.id else { return }
+    func toggleSave(bookmarkManager: BookmarkManager) {
+            guard let logId = log.id else { return }
+            bookmarkManager.toggleSave(for: logId)
+        }
+    
+    /// プロフィール押下時
+    func onTapProfile() {
+        shouldNavigateToProfile = true
+    }
+    
+    /// 削除処理
+    func deletePost() {
+        guard let logId = log.id else { return }
         
-        // Firestoreから削除
-        db.collection("posts").document(id).delete { error in
-            if let error = error {
-                print("❌ 削除失敗: \(error)")
-            } else {
-                print("✅ 削除成功")
+        Task {
+            do {
+                try await db.collection("posts").document(logId).delete()
+                print("投稿を削除しました: \(logId)")
+            } catch {
+                print("Failed to delete post: \(error.localizedDescription)")
             }
         }
     }

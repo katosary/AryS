@@ -23,10 +23,12 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 @main
 struct ArysApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    @State private var bookmarkManager = BookmarkManager()
     
     var body: some Scene {
         WindowGroup {
             RootView()
+                .environment(bookmarkManager) // ← environmentObject から environment に変更
         }
     }
 }

@@ -11,32 +11,45 @@ import FirebaseFirestore
 import FirebaseAuth
 
 @Observable
-class SavedPostsViewModel {
+class SavedListViewModel {
     var savedLogs: [Log] = []
-    private var db = Firestore.firestore()
-    
+    private let db = Firestore.firestore()
+         
     init() {
-        fetchSavedLogs()
+        // 初期化時
     }
-    
-    func fetchSavedLogs() {
-        guard let currentUid = Auth.auth().currentUser?.uid else { return }
-        
-        db.collection("posts")
-            .whereField("savedUserIds", arrayContains: currentUid)
-            .order(by: "createdAt", descending: true)
-            .addSnapshotListener { [weak self] snapshot, error in
-                if let error = error {
-                    print("❌ 保存済み投稿の取得エラー: \(error)")
-                    return
-                }
-                guard let documents = snapshot?.documents else { return }
-                self?.savedLogs = documents.compactMap { try? $0.data(as: Log.self) }
-            }
-    }
-    
+         
+    // 💡 ここにユーザー取得用のメソッドを追加する
     func fetchUser(userId: String) async throws -> User {
-        let snapshot = try await db.collection("users").document(userId).getDocument()
-        return try snapshot.data(as: User.self)
+        let doc = try await db.collection("users").document(userId).getDocument()
+        return try doc.data(as: User.self)
+    }
+
+    func fetchSavedPosts(with logIds: Set<String>) {
+        // (既存のコードそのまま)
+        guard !logIds.isEmpty else {
+            DispatchQueue.main.async {
+                self.savedLogs = []
+            }
+            return
+        }
+             
+        Task {
+            var fetchedLogs: [Log] = []
+            for id in logIds {
+                do {
+                    let doc = try await db.collection("posts").document(id).getDocument()
+                    if let log = try? doc.data(as: Log.self) {
+                        fetchedLogs.append(log)
+                    }
+                } catch {
+                    print("Failed to fetch post \(id): \(error.localizedDescription)")
+                }
+            }
+                 
+            DispatchQueue.main.async {
+                self.savedLogs = fetchedLogs
+            }
+        }
     }
 }

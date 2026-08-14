@@ -40,29 +40,50 @@ class TimeLineViewModel {
             }
     }
      
-    // MARK: - Toggle Like
-    func toggleLike(for log: Log) {
-        guard let postId = log.id, let currentUid = Auth.auth().currentUser?.uid else { return }
-        let postRef = db.collection("posts").document(postId)
-         
-        var updatedLikedUserIds = log.likedUserIds
-        if updatedLikedUserIds.contains(currentUid) {
-            updatedLikedUserIds.removeAll { $0 == currentUid }
-        } else {
-            updatedLikedUserIds.append(currentUid)
-        }
-         
-        let newCount = updatedLikedUserIds.count
-         
-        postRef.updateData([
-            "likedUserIds": updatedLikedUserIds,
-            "likesCount": newCount
-        ]) { error in
-            if let error = error {
-                print("❌ いいねの更新に失敗しました: \(error)")
+    // MARK: - Toggle Like (楽観的UI更新を適用)
+        func toggleLike(for log: Log) {
+            guard let postId = log.id, let currentUid = Auth.auth().currentUser?.uid else { return }
+            
+            // 1. 配列の中から該当のログを探して、即座にローカルの配列（UI）を更新する
+            guard let index = logs.firstIndex(where: { $0.id == postId }) else { return }
+            
+            let isCurrentlyLiked = logs[index].likedUserIds.contains(currentUid)
+            
+            // バックアップ（失敗時のロールバック用）
+            let previousLikedUserIds = logs[index].likedUserIds
+            let previousLikesCount = logs[index].likesCount // プロパティ名が likesCount または likeCount に合わせて調整してください
+            
+            // ローカルの状態を即時反転
+            if isCurrentlyLiked {
+                logs[index].likedUserIds.removeAll { $0 == currentUid }
+                logs[index].likesCount = max(0, logs[index].likesCount - 1)
+            } else {
+                logs[index].likedUserIds.append(currentUid)
+                logs[index].likesCount += 1
+            }
+            
+            let updatedLikedUserIds = logs[index].likedUserIds
+            let newCount = logs[index].likesCount
+            
+            let postRef = db.collection("posts").document(postId)
+            
+            // 2. バックグラウンドでFirestoreへ非同期送信
+            postRef.updateData([
+                "likedUserIds": updatedLikedUserIds,
+                "likesCount": newCount
+            ]) { [weak self] error in
+                if let error = error {
+                    print("❌ いいねの更新に失敗しました: \(error)")
+                    
+                    // 3. 失敗した場合はメインスレッドで元の状態に戻す（ロールバック）
+                    Task { @MainActor [weak self] in
+                        guard let self = self, let currentIndex = self.logs.firstIndex(where: { $0.id == postId }) else { return }
+                        self.logs[currentIndex].likedUserIds = previousLikedUserIds
+                        self.logs[currentIndex].likesCount = previousLikesCount
+                    }
+                }
             }
         }
-    }
      
     // MARK: - Delete Log
     func deleteLog(targetPost: Log) {

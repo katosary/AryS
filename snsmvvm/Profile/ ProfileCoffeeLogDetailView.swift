@@ -84,14 +84,7 @@ private struct ProfilePostCellView: View {
             log: log,
             author: displayAuthor,
             authorName: displayAuthor.userName,
-            onLike: {
-                // 必要に応じていいね処理
-            },
-            isEditable: isMyPost,
-            isSaved: false,
-            onSave: {},
-            onDelete: onDelete,
-            onEdit: onEdit
+            isEditable: isMyPost
         )
         .padding(.horizontal, 16)
     }

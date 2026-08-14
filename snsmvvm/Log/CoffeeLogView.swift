@@ -21,6 +21,7 @@ struct CoffeeLogView: View {
     // View 側で ViewModel を @State で保持する
     @State private var coffeeLogViewModel: CoffeeLogViewModel
     @State private var isShowingDetailSheet = false
+    @State private var isShowingEditSheet = false
     
     init(log: Log, author: User?, authorName: String, isEditable: Bool = false) {
         self.log = log
@@ -29,7 +30,9 @@ struct CoffeeLogView: View {
         self.isEditable = isEditable
         
         // author も渡せるように初期化
-        _coffeeLogViewModel = State(initialValue: CoffeeLogViewModel(log: log, author: author))
+        // 💡 onEdit が押されたときに isShowingEditSheet を true にする処理を渡す
+        let vm = CoffeeLogViewModel(log: log, author: author)
+                _coffeeLogViewModel = State(initialValue: vm)
     }
     
     var body: some View {
@@ -43,7 +46,7 @@ struct CoffeeLogView: View {
         ZStack {
             VStack(spacing: 0) {
                 ZStack {
-                    // --- 背景画像エリア ---
+                    // --- 1. 背景画像エリア ---
                     Group {
                         if let previewImage = log.previewImage {
                             Image(uiImage: previewImage)
@@ -60,27 +63,7 @@ struct CoffeeLogView: View {
                     .frame(width: cardWidth, height: cardHeight)
                     .clipped()
                     
-                    // --- 右上のメニューボタン ---
-                    HStack(spacing: 12) {
-                        Text(log.createdAt, style: .date).font(.caption).foregroundColor(.secondary)
-                        if coffeeLogViewModel.isMyPost {
-                            Menu {
-                                Button { coffeeLogViewModel.onEdit() } label: { Label("編集", systemImage: "pencil") }
-                                Button(role: .destructive) { coffeeLogViewModel.deletePost() } label: { Label("削除", systemImage: "trash") }
-                            } label: { Image(systemName: "ellipsis").padding(5).foregroundColor(.primary) }
-                        } else {
-                            Menu {
-                                Button(role: .destructive) { } label: { Label("報告する", systemImage: "exclamationmark.bubble") }
-                            } label: { Image(systemName: "ellipsis").padding(5).foregroundColor(.primary) }
-                        }
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(.white)
-                    .shadow(color: .black.opacity(0.6), radius: 2, x: 0, y: 1)
-                    .padding(16)
-                    
-                    // --- 中央のコーヒー情報 ---
+                    // --- 2. 左下のコーヒー情報 ---
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
                             let displayUser = coffeeLogViewModel.isMyPost ? profileViewModel.user : author
@@ -124,17 +107,46 @@ struct CoffeeLogView: View {
                                 EmptyhRatingView(rating: rating)
                             }
                         }
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.compact.down")
+                                .font(.title2)
+                            Text("View More...")
+                                .font(.caption)
+                        }
+                        .onTapGesture {
+                            isShowingDetailSheet = true
+                        }
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                    .frame(maxWidth: cardWidth * 0.65, alignment: .leading)
                     .font(.system(size: 14, weight: .bold))
                     .foregroundColor(.white)
                     .shadow(color: .black.opacity(0.6), radius: 2, x: 0, y: 1)
                     .padding(16)
-                    .onTapGesture { if !isEditable { isShowingDetailSheet = true } }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
                     
-                    // --- 右下のアクションボタン ---
+                    // --- 3. 右上のメニューボタン ---
+                    HStack(spacing: 12) {
+                        Text(log.createdAt, style: .date).font(.caption).foregroundColor(.secondary)
+                        if coffeeLogViewModel.isMyPost {
+                            Menu {
+                                // 💡 onEdit クロージャを挟まず、直接 isShowingEditSheet を true にする
+                                Button { isShowingEditSheet = true } label: { Label("編集", systemImage: "pencil") }
+                                Button(role: .destructive) { coffeeLogViewModel.deletePost() } label: { Label("削除", systemImage: "trash") }
+                            } label: { Image(systemName: "ellipsis").padding(5).foregroundColor(.primary) }
+                        } else {
+                            Menu {
+                                Button(role: .destructive) { } label: { Label("報告する", systemImage: "exclamationmark.bubble") }
+                            } label: { Image(systemName: "ellipsis").padding(5).foregroundColor(.primary) }
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white)
+                    .shadow(color: .black.opacity(0.6), radius: 2, x: 0, y: 1)
+                    .padding(16)
+                    
+                    // --- 4. 右下のアクションボタン ---
                     VStack(spacing: 15) {
-                        // いいねボタンとカウント
                         VStack(spacing: 4) {
                             Button {
                                 coffeeLogViewModel.toggleLike()
@@ -157,14 +169,12 @@ struct CoffeeLogView: View {
                                 .foregroundColor(bookmarkManager.isSaved(log.id) ? .yellow : .white)
                         }
                         
-                        // --- ③ シェアボタン ---
-                        Button {
-                        } label: {
-                            Image(systemName: "arrowshape.turn.up.right.fill")
-                                .font(.system(size: 28))
-                        }
+//                        Button {
+//                        } label: {
+//                            Image(systemName: "arrowshape.turn.up.right.fill")
+//                                .font(.system(size: 28))
+//                        }
                         
-                        // --- ④ プロフィール画像 ---
                         Button {
                             coffeeLogViewModel.onTapProfile(currentProfileUser: profileViewModel.user)
                         } label: {
@@ -193,7 +203,6 @@ struct CoffeeLogView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        // 💡 修正：LazyVStack や ScrollView の中ではなく、ビューのルートレベルに配置
         .navigationDestination(
             isPresented: Binding(
                 get: { coffeeLogViewModel.shouldNavigateToProfile },
@@ -209,6 +218,10 @@ struct CoffeeLogView: View {
                 authorName: authorName,
                 coffeeLogViewModel: coffeeLogViewModel
             )
+        }
+        // 💡 編集ボタンが押されたときに PostEditView をシートで開く処理を追加
+        .sheet(isPresented: $isShowingEditSheet) {
+            PostEditView(post: log)
         }
     }
 }

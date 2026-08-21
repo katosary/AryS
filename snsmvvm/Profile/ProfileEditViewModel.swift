@@ -26,7 +26,10 @@ class ProfileEditViewModel {
     var proacidity: Int = 0
     var probody: Int = 0
     var proaroma: Int = 0
-    var proflavor: String = ""
+    var proflavorList: [String] = [] // 💡 フレーバーのタグ選択用配列に変更
+    
+    // 👇 フレーバーの選択肢（お好みに合わせて自由に変更・追加してください）
+    let flavorOptions = ["チョコレート", "キャラメル", "ナッツ", "ベリー", "シトラス", "フローラル", "バニラ", "ハーブ", "スパイス", "黒糖"]
     
     // 道具
     var dripper: String = ""
@@ -53,7 +56,6 @@ class ProfileEditViewModel {
     var profileImageUrl: String? = nil
     var favoriteToolImageUrl: String? = nil
     
-    // ピッチャーの表示フラグ
     var isShowingAgePicker: Bool = false
     var isShowingPrefecturePicker: Bool = false
     
@@ -63,13 +65,11 @@ class ProfileEditViewModel {
     
     private let db = Firestore.firestore()
     
-    // 既存のUserデータを受け取って初期化
     init(user: User) {
         self.user = user
         configure(with: user)
     }
     
-    // デフォルトイニシャライザ
     init() {
         self.user = User(
             id: "", userName: "", email: "", selfIntroduction: "",
@@ -81,7 +81,6 @@ class ProfileEditViewModel {
         )
     }
     
-    /// 💡 シート表示時などに最新の User 情報で各プロパティを再セットする処理
     @MainActor
     func configure(with user: User) {
         self.user = user
@@ -94,7 +93,13 @@ class ProfileEditViewModel {
         self.proacidity = user.proacidity
         self.probody = user.probody
         self.proaroma = user.proaroma
-        self.proflavor = user.proflavor
+        
+        // 💡 Firestore側でカンマ区切り（例: "チョコレート,ナッツ"）で保存されていると仮定して配列に変換
+        if !user.proflavor.isEmpty {
+            self.proflavorList = user.proflavor.components(separatedBy: ",")
+        } else {
+            self.proflavorList = []
+        }
         
         self.dripper = user.dripper ?? ""
         self.paperFilter = user.paperFilter ?? ""
@@ -110,7 +115,6 @@ class ProfileEditViewModel {
         self.favoriteToolImageUrl = user.favoriteToolImageUrl
     }
     
-    // 写真選択時のロード処理
     private func loadImage(from item: PhotosPickerItem?, isProfile: Bool) async {
         guard let item = item else { return }
         guard let data = try? await item.loadTransferable(type: Data.self) else { return }
@@ -125,117 +129,103 @@ class ProfileEditViewModel {
         }
     }
     
-    // 既存のプロフィール画像をURLから読み込む処理
     @MainActor
     func loadProfileImageFromUrl() {
         guard let urlString = user.profileImageUrl, let url = URL(string: urlString) else { return }
-        
         Task {
             do {
                 let (data, _) = try await URLSession.shared.data(from: url)
-                if let uiImage = UIImage(data: data) {
-                    self.profileImage = uiImage
-                }
+                if let uiImage = UIImage(data: data) { self.profileImage = uiImage }
             } catch {
                 print("画像の読み込みに失敗しました: \(error)")
             }
         }
     }
     
-    // 既存のカバー画像をURLから読み込む処理
-        @MainActor
-        func loadFavoriteCoffeeImageFromUrl() {
-            guard let urlString = user.favoriteToolImageUrl, let url = URL(string: urlString) else { return }
-             
-            Task {
-                do {
-                    let (data, _) = try await URLSession.shared.data(from: url)
-                    if let uiImage = UIImage(data: data) {
-                        self.favoriteCoffeeImage = uiImage
-                    }
-                } catch {
-                    print("カバー画像の読み込みに失敗しました: \(error)")
-                }
+    @MainActor
+    func loadFavoriteCoffeeImageFromUrl() {
+        guard let urlString = user.favoriteToolImageUrl, let url = URL(string: urlString) else { return }
+        Task {
+            do {
+                let (data, _) = try await URLSession.shared.data(from: url)
+                if let uiImage = UIImage(data: data) { self.favoriteCoffeeImage = uiImage }
+            } catch {
+                print("カバー画像の読み込みに失敗しました: \(error)")
             }
         }
+    }
     
     @MainActor
-        func uploadProfileAndSave(uid: String) async throws -> User {
-            // 1. プロフィール画像のアップロード処理
-            var imageUrl: String? = self.user.profileImageUrl
-            if let image = profileImage, let data = image.jpegData(compressionQuality: 0.5) {
-                let storageRef = Storage.storage().reference().child("profile_images/\(uid).jpg")
-                _ = try await storageRef.putDataAsync(data)
-                let rawUrlString = try await storageRef.downloadURL().absoluteString
-                let timestamp = Int(Date().timeIntervalSince1970)
-                imageUrl = "\(rawUrlString)?v=\(timestamp)"
-            }
-
-            // 💡 1-2. カバー画像（お気に入りの道具・背景画像）のアップロード処理を追加
-            var toolImageUrl: String? = self.user.favoriteToolImageUrl
-            if let image = favoriteCoffeeImage, let data = image.jpegData(compressionQuality: 0.5) {
-                let storageRef = Storage.storage().reference().child("favorite_tool_images/\(uid).jpg")
-                _ = try await storageRef.putDataAsync(data)
-                let rawUrlString = try await storageRef.downloadURL().absoluteString
-                let timestamp = Int(Date().timeIntervalSince1970)
-                toolImageUrl = "\(rawUrlString)?v=\(timestamp)"
-            }
-
-            // 2. ViewModel内のプロパティから最新の入力内容を同期
-            self.user.userName = userName
-            self.user.selfIntroduction = selfIntroduction
-            self.user.userAge = userAge
-            self.user.favoriteCoffee = favoriteCoffee
-            self.user.probitter = probitter
-            self.user.proacidity = proacidity
-            self.user.probody = probody
-            self.user.proaroma = proaroma
-            self.user.proflavor = proflavor
-            self.user.dripper = dripper
-            self.user.paperFilter = paperFilter
-            self.user.kettle = kettle
-            self.user.server = server
-            self.user.scale = scale
-            self.user.mill = mill
-            self.user.grinder = grinder
-            self.user.espressoMachine = espressoMachine
-            self.user.frenchPress = frenchPress
-            
-            if let url = imageUrl {
-                self.user.profileImageUrl = url
-            }
-            // 💡 カバー画像のURLを同期
-            if let url = toolImageUrl {
-                self.user.favoriteToolImageUrl = url
-            }
-
-            // 3. Firestoreに更新データを送る（favoriteToolImageUrl も追加）
-            let updateData: [String: Any] = [
-                "userName": self.user.userName,
-                "selfIntroduction": self.user.selfIntroduction,
-                "userAge": self.user.userAge,
-                "prefecture": self.user.prefecture,
-                "favoriteCoffee": self.user.favoriteCoffee,
-                "probitter": self.user.probitter,
-                "proacidity": self.user.proacidity,
-                "probody": self.user.probody,
-                "proaroma": self.user.proaroma,
-                "proflavor": self.user.proflavor,
-                "dripper": self.user.dripper ?? "",
-                "paperFilter": self.user.paperFilter ?? "",
-                "kettle": self.user.kettle ?? "",
-                "server": self.user.server ?? "",
-                "scale": self.user.scale ?? "",
-                "mill": self.user.mill ?? "",
-                "grinder": self.user.grinder ?? "",
-                "espressoMachine": self.user.espressoMachine ?? "",
-                "frenchPress": self.user.frenchPress ?? "",
-                "profileImageUrl": self.user.profileImageUrl ?? "",
-                "favoriteToolImageUrl": self.user.favoriteToolImageUrl ?? "" // 💡 追加
-            ]
-
-            try await db.collection("users").document(uid).setData(updateData, merge: true)
-             
-            return self.user
+    func uploadProfileAndSave(uid: String) async throws -> User {
+        var imageUrl: String? = self.user.profileImageUrl
+        if let image = profileImage, let data = image.jpegData(compressionQuality: 0.5) {
+            let storageRef = Storage.storage().reference().child("profile_images/\(uid).jpg")
+            _ = try await storageRef.putDataAsync(data)
+            let rawUrlString = try await storageRef.downloadURL().absoluteString
+            let timestamp = Int(Date().timeIntervalSince1970)
+            imageUrl = "\(rawUrlString)?v=\(timestamp)"
         }
+
+        var toolImageUrl: String? = self.user.favoriteToolImageUrl
+        if let image = favoriteCoffeeImage, let data = image.jpegData(compressionQuality: 0.5) {
+            let storageRef = Storage.storage().reference().child("favorite_tool_images/\(uid).jpg")
+            _ = try await storageRef.putDataAsync(data)
+            let rawUrlString = try await storageRef.downloadURL().absoluteString
+            let timestamp = Int(Date().timeIntervalSince1970)
+            toolImageUrl = "\(rawUrlString)?v=\(timestamp)"
+        }
+
+        // 💡 選択されたフレーバー配列をカンマ区切りの文字列に結合して保存
+        let joinedFlavor = self.proflavorList.joined(separator: ",")
+
+        self.user.userName = userName
+        self.user.selfIntroduction = selfIntroduction
+        self.user.userAge = userAge
+        self.user.favoriteCoffee = favoriteCoffee
+        self.user.probitter = probitter
+        self.user.proacidity = proacidity
+        self.user.probody = probody
+        self.user.proaroma = proaroma
+        self.user.proflavor = joinedFlavor
+        
+        self.user.dripper = dripper
+        self.user.paperFilter = paperFilter
+        self.user.kettle = kettle
+        self.user.server = server
+        self.user.scale = scale
+        self.user.mill = mill
+        self.user.grinder = grinder
+        self.user.espressoMachine = espressoMachine
+        self.user.frenchPress = frenchPress
+        
+        if let url = imageUrl { self.user.profileImageUrl = url }
+        if let url = toolImageUrl { self.user.favoriteToolImageUrl = url }
+
+        let updateData: [String: Any] = [
+            "userName": self.user.userName,
+            "selfIntroduction": self.user.selfIntroduction,
+            "userAge": self.user.userAge,
+            "prefecture": self.user.prefecture,
+            "favoriteCoffee": self.user.favoriteCoffee,
+            "probitter": self.user.probitter,
+            "proacidity": self.user.proacidity,
+            "probody": self.user.probody,
+            "proaroma": self.user.proaroma,
+            "proflavor": self.user.proflavor, // 💡 文字列として保存
+            "dripper": self.user.dripper ?? "",
+            "paperFilter": self.user.paperFilter ?? "",
+            "kettle": self.user.kettle ?? "",
+            "server": self.user.server ?? "",
+            "scale": self.user.scale ?? "",
+            "mill": self.user.mill ?? "",
+            "grinder": self.user.grinder ?? "",
+            "espressoMachine": self.user.espressoMachine ?? "",
+            "frenchPress": self.user.frenchPress ?? "",
+            "profileImageUrl": self.user.profileImageUrl ?? "",
+            "favoriteToolImageUrl": self.user.favoriteToolImageUrl ?? ""
+        ]
+
+        try await db.collection("users").document(uid).setData(updateData, merge: true)
+        return self.user
+    }
 }

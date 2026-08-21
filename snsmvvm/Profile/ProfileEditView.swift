@@ -37,7 +37,6 @@ struct ProfileEditView: View {
                         PhotosPicker(selection: $profileEditViewModel.selectedProfileItem, matching: .images) {
                             HStack(spacing: 15) {
                                 Spacer()
-                                
                                 ZStack {
                                     if let uiImage = profileEditViewModel.profileImage {
                                         Image(uiImage: uiImage)
@@ -52,7 +51,6 @@ struct ProfileEditView: View {
                                 }
                                 .frame(width: profileSize, height: profileSize)
                                 .clipShape(Circle())
-                                
                                 Spacer()
                             }
                         }
@@ -64,7 +62,7 @@ struct ProfileEditView: View {
                             
                             editField(label: "自己紹介", text: $profileEditViewModel.selfIntroduction, placeholder: "自己紹介を入力してください", isMultiLine: true)
                             
-                            // 年齢・出身地選択
+                            // 年齢選択
                             Button(action: { profileEditViewModel.isShowingAgePicker = true }) {
                                 HStack {
                                     Text("年齢").foregroundColor(.primary)
@@ -79,6 +77,7 @@ struct ProfileEditView: View {
                             }
                             Divider()
                             
+                            // 出身地選択
                             Button(action: { profileEditViewModel.isShowingPrefecturePicker = true }) {
                                 HStack {
                                     Text("出身地").foregroundColor(.primary)
@@ -100,7 +99,34 @@ struct ProfileEditView: View {
                             ratingRow(label: "酸味", rating: $profileEditViewModel.proacidity)
                             ratingRow(label: "コク", rating: $profileEditViewModel.probody)
                             ratingRow(label: "香り", rating: $profileEditViewModel.proaroma)
-                            editField(label: "フレーバー", text: $profileEditViewModel.proflavor, placeholder: "好みのフレーバー")
+                            
+                            // 💡 フレーバー選択UI（タグ形式）
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("フレーバー").font(.body).padding(.top, 12)
+                                
+                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 90))], spacing: 10) {
+                                    ForEach(profileEditViewModel.flavorOptions, id: \.self) { flavor in
+                                        let isSelected = profileEditViewModel.proflavorList.contains(flavor)
+                                        Text(flavor)
+                                            .font(.system(size: 13, weight: .medium))
+                                            .padding(.vertical, 8)
+                                            .padding(.horizontal, 12)
+                                            .background(isSelected ? Color.blue : Color(.systemGray6))
+                                            .foregroundColor(isSelected ? .white : .primary)
+                                            .cornerRadius(16)
+                                            .onTapGesture {
+                                                withAnimation {
+                                                    if isSelected {
+                                                        profileEditViewModel.proflavorList.removeAll { $0 == flavor }
+                                                    } else {
+                                                        profileEditViewModel.proflavorList.append(flavor)
+                                                    }
+                                                }
+                                            }
+                                    }
+                                }
+                                .padding(.bottom, 12)
+                            }
                             Divider()
                             
                             // --- 4. お気に入りの道具 ---
@@ -161,10 +187,6 @@ struct ProfileEditView: View {
                 if profileEditViewModel.favoriteCoffeeImage == nil { profileEditViewModel.loadFavoriteCoffeeImageFromUrl() }
             }
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("キャンセル") { dismiss() }
-                }
-                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("保存") {
                         guard let uid = Auth.auth().currentUser?.uid else {
@@ -212,9 +234,18 @@ struct ProfileEditView: View {
                 Text(label).font(.body).frame(width: 80, alignment: .leading).padding(.vertical, 12)
                 HStack(spacing: 4) {
                     ForEach(1...profileEditViewModel.maxRating, id: \.self) { number in
-                        Image(systemName: number <= rating.wrappedValue ? "star.fill" : "star")
-                            .foregroundColor(number > rating.wrappedValue ? .gray.opacity(0.3) : .yellow)
-                            .onTapGesture { rating.wrappedValue = number }
+                        let isSelected = number <= rating.wrappedValue
+                        
+                        // 💡 星のシステムイメージからコーヒー豆のカスタム画像に変更
+                        Image(isSelected ? "coffeeBeanFill" : "coffeeBean")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 24, height: 24)
+                            .foregroundColor(isSelected ? .yellow : .gray.opacity(0.3)) // 必要に応じて色を調整
+                            .contentShape(Rectangle()) // タップ判定を広げる
+                            .onTapGesture {
+                                rating.wrappedValue = number
+                            }
                     }
                 }
                 Spacer()

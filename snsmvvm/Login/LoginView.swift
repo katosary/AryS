@@ -16,15 +16,12 @@ struct LoginView: View {
     @State private var errorMessage = ""
     @State private var isLoading = false
     
-    // false: ログイン画面, true: 新規登録画面
-    @State private var isSignUpMode = false
-    
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
                     // --- タイトル ---
-                    Text(isSignUpMode ? "新規会員登録" : "ログイン")
+                    Text("ログイン")
                         .font(.title2)
                         .bold()
                         .padding(.top, 20)
@@ -32,28 +29,7 @@ struct LoginView: View {
                     // --- 外枠のカード ---
                     VStack(spacing: 0) {
                         
-                        // 1. ソーシャルログインセクション
-                        VStack(spacing: 16) {
-                            HStack(spacing: 32) {
-                                SocialLoginButton(imageName: "g.circle.fill", title: "Google", color: .red) {
-                                    // TODO: Googleログイン処理
-                                }
-                                
-                                SocialLoginButton(imageName: "xmark.circle.fill", title: "X", color: .primary) {
-                                    // TODO: Xログイン処理
-                                }
-                                
-                                SocialLoginButton(imageName: "apple.logo", title: "Apple", color: .primary) {
-                                    // TODO: Appleログイン処理
-                                }
-                            }
-                            .padding(.vertical, 24)
-                        }
-                        .disabled(isLoading)
-                        
-                        Divider()
-                        
-                        // 2. メアド・パスワード入力セクション
+                        // メアド・パスワード入力セクション
                         VStack(alignment: .leading, spacing: 20) {
                             
                             // メールアドレス
@@ -77,26 +53,10 @@ struct LoginView: View {
                                     .bold()
                                     .foregroundColor(.primary)
                                 
-                                SecureField("", text: $password)
+                                // 💡 第一引数にプレースホルダーの文字列を追加します
+                                SecureField("半角英字と数字を含めた8文字以上", text: $password)
                                     .textFieldStyle(RoundedBorderTextFieldStyle())
                                     .disabled(isLoading)
-                            }
-                            
-                            // ログイン時のみ：パスワードを忘れた方 / ログインでお困りの方
-                            if !isSignUpMode {
-                                HStack(spacing: 4) {
-                                    Button("パスワードを忘れた方") {
-                                        // TODO: パスワード再設定処理
-                                    }
-                                    Text("/")
-                                    Button("ログインでお困りの方") {
-                                        // TODO: ヘルプ処理
-                                    }
-                                }
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .frame(maxWidth: .infinity, alignment: .center)
-                                .padding(.vertical, 2)
                             }
                             
                             // エラーメッセージ表示
@@ -108,29 +68,16 @@ struct LoginView: View {
                                     .frame(maxWidth: .infinity)
                             }
                             
-                            // 実行ボタン
+                            // 実行ボタン（ログイン処理）
                             Button {
                                 isLoading = true
                                 errorMessage = ""
                                 
-                                if isSignUpMode {
-                                    Auth.auth().createUser(withEmail: email, password: password) { result, error in
-                                        DispatchQueue.main.async {
-                                            isLoading = false
-                                            if let error = error {
-                                                self.errorMessage = error.localizedDescription
-                                            } else {
-                                                print("新規登録成功")
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    authManager.registerAndLogin(email: email, password: password) { error in
-                                        DispatchQueue.main.async {
-                                            isLoading = false
-                                            if let error = error {
-                                                self.errorMessage = error
-                                            }
+                                authManager.signIn(email: email, password: password) { error in
+                                    DispatchQueue.main.async {
+                                        isLoading = false
+                                        if let error = error {
+                                            self.errorMessage = error
                                         }
                                     }
                                 }
@@ -140,7 +87,7 @@ struct LoginView: View {
                                         ProgressView()
                                             .tint(.primary)
                                     } else {
-                                        Text(isSignUpMode ? "新規登録する" : "ログイン")
+                                        Text("ログイン")
                                             .font(.headline)
                                     }
                                 }
@@ -157,14 +104,11 @@ struct LoginView: View {
                         
                         Divider()
                         
-                        // 3. 下部のアカウント切り替え導線
-                        Button {
-                            withAnimation {
-                                isSignUpMode.toggle()
-                                errorMessage = ""
-                            }
+                        // 3. 下部のアカウント切り替え導線（NavigationLinkで完全に別のビューへ遷移）
+                        NavigationLink {
+                            SignUpView(authManager: authManager)
                         } label: {
-                            Text(isSignUpMode ? "すでにアカウントをお持ちの方はこちら（ログイン）" : "会員登録はこちら")
+                            Text("会員登録はこちら")
                                 .font(.subheadline)
                                 .underline()
                                 .foregroundColor(.secondary)
@@ -207,7 +151,7 @@ struct SocialLoginButton: View {
                         .font(.system(size: 24))
                         .foregroundColor(color)
                 }
-                
+               
                 Text(title)
                     .font(.caption)
                     .foregroundColor(.primary)

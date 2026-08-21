@@ -14,18 +14,16 @@ class AuthManager: ObservableObject {
     @Published var isLoggedIn: Bool = false
     private var handle: AuthStateDidChangeListenerHandle?
     
-    // 💡 ゲッターを作る: アクセスする瞬間に Auth.auth() を呼び出す
+    // ゲッター: アクセスする瞬間に Auth.auth() を呼び出す
     private var auth: Auth {
         return Auth.auth()
     }
     
     init() {
-        // 💡 init 内では Auth.auth() を直接呼ばず、セットアップ関数を呼ぶ
         setupAuthListener()
     }
     
     private func setupAuthListener() {
-        // 💡 self.auth を経由してアクセスする
         handle = self.auth.addStateDidChangeListener { [weak self] _, user in
             DispatchQueue.main.async {
                 self?.isLoggedIn = (user != nil)
@@ -39,28 +37,92 @@ class AuthManager: ObservableObject {
         }
     }
     
-    func registerAndLogin(email: String, password: String, completion: @escaping (String?) -> Void) {
-        // 💡 すべて Auth.auth() を self.auth に置き換える
-        self.auth.createUser(withEmail: email, password: password) { [weak self] authResult, error in
-            if let error = error as NSError?, error.code == AuthErrorCode.emailAlreadyInUse.rawValue {
-                // 登録済みならログインへ
-                self?.signIn(email: email, password: password, completion: completion)
-            } else if let error = error {
-                completion(error.localizedDescription)
-            } else if let user = authResult?.user {
-                // Firestoreへの保存処理
-                self?.saveUserToFirestore(uid: user.uid, email: email, completion: completion)
+    // MARK: - ログイン処理（未登録のメールアドレスやパスワード違いをハンドリング）
+    func signIn(email: String, password: String, completion: @escaping (String?) -> Void) {
+        self.auth.signIn(withEmail: email, password: password) { _, error in
+            if let error = error as NSError? {
+                // 未登録のメールアドレス、または認証情報の不一致エラーを判定
+                if error.code == AuthErrorCode.userNotFound.rawValue || error.code == AuthErrorCode.invalidCredential.rawValue {
+                    completion("登録されていないメールアドレス、またはパスワードが間違っています。")
+                } else {
+                    completion(error.localizedDescription)
+                }
+            } else {
+                completion(nil) // 成功
             }
         }
     }
     
-    private func signIn(email: String, password: String, completion: @escaping (String?) -> Void) {
-        self.auth.signIn(withEmail: email, password: password) { _, error in
-            completion(error?.localizedDescription)
+    // MARK: - 新規登録処理（氏名・住所・電話番号などを一緒にFirestoreへ保存）
+    func signUp(
+        email: String,
+        password: String,
+        name: String,
+        address: String,
+        phone: String,
+        completion: @escaping (String?) -> Void
+    ) {
+        self.auth.createUser(withEmail: email, password: password) { [weak self] authResult, error in
+            if let error = error {
+                completion(error.localizedDescription)
+                return
+            }
+            
+            guard let user = authResult?.user else {
+                completion("ユーザーの作成に失敗しました。")
+                return
+            }
+            
+            // Firestoreへの詳細情報付きユーザー保存処理
+            self?.saveUserToFirestore(
+                uid: user.uid,
+                email: email,
+                name: name,
+                address: address,
+                phone: phone,
+                completion: completion
+            )
         }
     }
     
-    // 引数に投稿に必要なデータをすべて受け取るように変更します
+    // MARK: - Firestoreへのユーザーデータ保存
+    private func saveUserToFirestore(
+        uid: String,
+        email: String,
+        name: String,
+        address: String,
+        phone: String,
+        completion: @escaping (String?) -> Void
+    ) {
+        let db = Firestore.firestore()
+        
+        let userData: [String: Any] = [
+            "userNo": 0,
+            "userName": name,
+            "userAddress": address,
+            "userPhone": phone,
+            "email": email,
+            "selfIntroduction": "",
+            "userAge": 0,
+            "prefecture": "",
+            "favoriteCoffee": "",
+            "probitter": 0,
+            "proacidity": 0,
+            "probody": 0,
+            "proaroma": 0,
+            "proflavor": ""
+        ]
+        
+        db.collection("users").document(uid).setData(userData) { error in
+            if let error = error {
+                completion(error.localizedDescription)
+            } else {
+                completion(nil) // 成功
+            }
+        }
+    }
+    
+    // MARK: - 投稿ログの保存処理
     func saveLogToFirestore(
         shopName: String,
         countryName: String,
@@ -83,7 +145,6 @@ class AuthManager: ObservableObject {
 
         let db = Firestore.firestore()
 
-        // 💡 統合されたプロパティに合わせて初期化
         let newLog = Log(
             userId: uid,
             shopName: shopName,
@@ -110,46 +171,18 @@ class AuthManager: ObservableObject {
         }
     }
     
-    // 💡 ログアウト時に各データをクリア
-        func signOut(userManager: UserManager, profileViewModel: ProfileViewModel) {
-            do {
-                try self.auth.signOut()
-                 
-                // 💡 ログアウト成功時に、各マネージャー/ViewModelのデータをリセットする
-                Task { @MainActor in
-                    userManager.currentUser = nil
-                    profileViewModel.reset() // 💡 User()の代わりに、ViewModel側のリセット関数を呼ぶ！
-                }
-                 
-            } catch {
-                print("ログアウトエラー: \(error.localizedDescription)")
+    // MARK: - ログアウト処理
+    func signOut(userManager: UserManager, profileViewModel: ProfileViewModel) {
+        do {
+            try self.auth.signOut()
+            
+            Task { @MainActor in
+                userManager.currentUser = nil
+                profileViewModel.reset()
             }
-        }
-
-    private func saveUserToFirestore(uid: String, email: String, completion: @escaping (String?) -> Void) {
-        let db = Firestore.firestore()
-         
-        // 保存するデータ（Userモデルに合わせて作成）
-        let userData: [String: Any] = [
-            "userNo": 0,
-            "userName": "新規ユーザー",
-            "selfIntroduction": "",
-            "userAge": 0,
-            "prefecture": "",
-            "favoriteCoffee": "",
-            "probitter": 0,
-            "proacidity": 0,
-            "probody": 0,
-            "proaroma": 0,
-            "proflavor": ""
-        ]
-         
-        db.collection("users").document(uid).setData(userData) { error in
-            if let error = error {
-                completion(error.localizedDescription)
-            } else {
-                completion(nil) // 成功
-            }
+            
+        } catch {
+            print("ログアウトエラー: \(error.localizedDescription)")
         }
     }
 }

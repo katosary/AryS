@@ -106,7 +106,7 @@ final class ProfileViewModel {
     }
     
 //    // MARK: - Realtime Listener
-//    
+//
 //    /// 指定されたUIDのユーザーデータをリアルタイムで購読する
 //    /// - Parameter uid: 対象ユーザーのFirebase Auth UID
 //    func listenToProfile(uid: String) {
@@ -114,31 +114,31 @@ final class ProfileViewModel {
 //            self.errorMessage = "有効なユーザーIDが存在しません。"
 //            return
 //        }
-//         
+//
 //        // 既存のリスナーがあれば解除
 //        stopListening()
-//         
+//
 //        self.isLoading = true
 //        self.errorMessage = nil
-//         
+//
 //        listenerRegistration = db.collection("users").document(uid)
 //            .addSnapshotListener { [weak self] snapshot, error in
 //                guard let self = self else { return }
-//                 
+//
 //                // @Observableクラスなので、Task @MainActorで安全にプロパティを更新
 //                Task { @MainActor in
 //                    self.isLoading = false
-//                     
+//
 //                    if let error = error {
 //                        self.errorMessage = "データの取得に失敗しました: \(error.localizedDescription)"
 //                        return
 //                    }
-//                     
+//
 //                    guard let snapshot = snapshot, snapshot.exists else {
 //                        self.errorMessage = "ユーザーデータが見つかりませんでした。"
 //                        return
 //                    }
-//                     
+//
 //                    do {
 //                        // Codableを用いたデコード処理
 //                        let fetchedUser = try snapshot.data(as: User.self)
@@ -149,13 +149,13 @@ final class ProfileViewModel {
 //                }
 //            }
 //    }
-//    
+//
 //    /// リアルタイムリスナーの購読を停止する
 //        nonisolated func stopListening() {
 //            // 主にメインスレッド外や deinit からも安全に呼ばれるようにする
 //            // listenerRegistrationの操作はFirebaseのAPIでスレッドセーフなため問題ありません
 //        }
-//    
+//
     // MARK: - Async One-time Fetch
     
     /// 単発でユーザー情報を取得したい場合（非同期処理）
@@ -190,8 +190,42 @@ final class ProfileViewModel {
             self.errorMessage = "ログインしていません。"
             return
         }
-        
+         
         // 既存の fetchProfile を呼び出す
         await fetchProfile(uid: currentUid)
+    }
+    
+    // MARK: - ブロック機能
+    func blockUser(targetUserId: String) async {
+        guard let currentUid = Auth.auth().currentUser?.uid else { return }
+        
+        do {
+            let currentUserRef = db.collection("users").document(currentUid)
+            try await currentUserRef.updateData([
+                "blockedUserIds": FieldValue.arrayUnion([targetUserId])
+            ])
+            print("ユーザーをブロックしました: \(targetUserId)")
+        } catch {
+            print("ブロックの保存に失敗しました: \(error.localizedDescription)")
+        }
+    }
+    
+    // MARK: - 通報機能
+    func reportUser(targetUserId: String, reason: String) async {
+        guard let currentUid = Auth.auth().currentUser?.uid else { return }
+        
+        let reportData: [String: Any] = [
+            "reporterId": currentUid,
+        "targetUserId": targetUserId,
+            "reason": reason.isEmpty ? "理由なし" : reason,
+            "createdAt": Timestamp()
+        ]
+        
+        do {
+            try await db.collection("reports").addDocument(data: reportData)
+            print("ユーザーを通報しました: \(targetUserId)")
+        } catch {
+            print("通報の送信に失敗しました: \(error.localizedDescription)")
+        }
     }
 }

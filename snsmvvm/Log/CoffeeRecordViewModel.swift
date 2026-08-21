@@ -20,12 +20,15 @@ class CoffeeRecordViewModel {
     var countryName: String = ""
     var roastLevel: String = ""
     
-    // 評価（一口二口を統合）
+    // 評価（5段階評価）
     var aromarating: Int = 0
     var aromaComment: String = ""
     var bitternessrating: Int = 0
     var acidityrating: Int = 0
     var bodyrating: Int = 0
+    
+    // 香りのタグ選択用プロパティ
+    var selectedAromas: [String] = []
     
     // 写真関連
     var selectedItems: [PhotosPickerItem] = [] {
@@ -69,16 +72,16 @@ class CoffeeRecordViewModel {
             saveLogToFirestore(imageUrl: nil, completion: completion)
             return
         }
-        
+         
         // 画像の切り抜き処理
         guard let cropped = cropImage(image: image, scale: scale, offset: offset, containerSize: CGSize(width: 300, height: 400)),
               let data = cropped.jpegData(compressionQuality: 0.7) else {
             completion(false); return
         }
-        
+         
         let filename = NSUUID().uuidString + ".jpg"
         let ref = Storage.storage().reference().child("post_images").child(filename)
-        
+         
         ref.putData(data, metadata: nil) { _, error in
             if error != nil { completion(false); return }
             ref.downloadURL { url, _ in
@@ -86,10 +89,14 @@ class CoffeeRecordViewModel {
             }
         }
     }
-    
+      
     private func saveLogToFirestore(imageUrl: String?, completion: @escaping (Bool) -> Void) {
-        guard let uid = Auth.auth().currentUser?.uid else { completion(false); return }
-        
+        guard let uid = Auth.auth().currentUser?.uid else {
+            print("エラー: ログインユーザーのUIDが取得できません")
+            completion(false);
+            return
+        }
+         
         let newLog = Log(
             userId: uid,
             shopName: shopName,
@@ -101,33 +108,37 @@ class CoffeeRecordViewModel {
             bitternessrating: bitternessrating,
             acidityrating: acidityrating,
             bodyrating: bodyrating,
+            aromaTags: selectedAromas, // 💡 ここで選択された香りのタグを渡す
             createdAt: Date(),
             tagX: 0,
             tagY: 0,
             imageUrl: imageUrl
         )
-        
+         
         do {
             _ = try db.collection("posts").addDocument(from: newLog)
             clearFormFields()
+            print("Firestoreへの保存に成功しました！")
             completion(true)
         } catch {
+            print("Firestoreへの保存に失敗しました: \(error.localizedDescription)")
             completion(false)
         }
     }
-    
+      
     // 外部からフォームをリセットできるように公開
     func resetForm() {
         clearFormFields()
     }
-    
+      
     private func clearFormFields() {
         shopName = ""; countryName = ""; farmName = ""; roastLevel = ""
         aromarating = 0; aromaComment = ""; bitternessrating = 0
         acidityrating = 0; bodyrating = 0; logImages = []
+        selectedAromas = [] // リセット時にタグ選択もクリア
         selectedItems = []; scale = 1.0; offset = .zero
     }
-    
+      
     // 画像切り抜きロジック
     private func cropImage(image: UIImage, scale: CGFloat, offset: CGSize, containerSize: CGSize) -> UIImage? {
         let renderer = UIGraphicsImageRenderer(size: containerSize)

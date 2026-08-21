@@ -21,6 +21,7 @@ struct Log: Codable, Identifiable, Equatable {
     var bitternessrating: Int
     var acidityrating: Int
     var bodyrating: Int
+    var aromaTags: [String]? = [] // 💡 オプショナルに変更
     var createdAt: Date
     var tagX: CGFloat
     var tagY: CGFloat
@@ -33,6 +34,7 @@ struct Log: Codable, Identifiable, Equatable {
     enum CodingKeys: String, CodingKey {
         case id, userId, shopName, countryName, farmName, roastLevel
         case aromarating, aromaComment, bitternessrating, acidityrating, bodyrating
+        case aromaTags
         case createdAt, tagX, tagY, imageUrl
         case likesCount, likedUserIds
     }
@@ -60,8 +62,8 @@ struct User: Codable, Identifiable, Equatable {
     var probody: Int
     var proaroma: Int
     var proflavor: String
+    var proaromas: [String]? = [] // 💡 オプショナルに変更
     
-    // 💡 すべて 「?」 をつけるか、初期値を設定する
     var dripper: String? = ""
     var paperFilter: String? = ""
     var kettle: String? = ""
@@ -85,7 +87,7 @@ struct User: Codable, Identifiable, Equatable {
         case userAge
         case prefecture
         case favoriteCoffee
-        case probitter, proacidity, probody, proaroma, proflavor
+        case probitter, proacidity, probody, proaroma, proflavor, proaromas
         case dripper, paperFilter, kettle, server, scale, mill, grinder, espressoMachine, frenchPress
         case profileImageUrl
         case favoriteToolImageUrl
@@ -96,5 +98,4 @@ struct Member: Codable {
     let id: String
     let email: String
     let createdAt: Date
-    // 必要に応じて displayName, iconURL などを追加
 }

@@ -5,12 +5,11 @@ import FirebaseFirestore
 @Observable
 class CoffeeLogViewModel {
     var log: Log
-    var author: User? // 追加: 投稿の著者情報を持たせる
+    var author: User?
     var bookmarkManager: BookmarkManager?
     var shouldNavigateToProfile: Bool = false
     var onEdit: () -> Void
     
-    // 追加: 遷移先で表示すべきユーザー（自分の投稿なら profileViewModel、他人なら author）
     var targetUserForProfile: User?
     
     private let db = Firestore.firestore()
@@ -36,13 +35,9 @@ class CoffeeLogViewModel {
         return log.likedUserIds.contains(currentUid)
     }
     
-    // MARK: - Firebase アクションメソッド
-    
-    /// いいねの切り替え
     func toggleLike() {
         guard let currentUid, let logId = log.id else { return }
         
-        // 楽観的UI更新（すぐに画面側の見た目を反映させる）
         let previousState = isLikedByMe
         let previousCount = log.likesCount
         
@@ -54,26 +49,22 @@ class CoffeeLogViewModel {
             log.likesCount += 1
         }
         
-        // Firestoreの更新
         let postRef = db.collection("posts").document(logId)
         
         Task {
             do {
                 if previousState {
-                    // いいね解除
                     try await postRef.updateData([
                         "likedUserIds": FieldValue.arrayRemove([currentUid]),
                         "likesCount": FieldValue.increment(Int64(-1))
                     ])
                 } else {
-                    // いいね追加
                     try await postRef.updateData([
                         "likedUserIds": FieldValue.arrayUnion([currentUid]),
                         "likesCount": FieldValue.increment(Int64(1))
                     ])
                 }
             } catch {
-                // エラー時は状態をロールバック
                 DispatchQueue.main.async {
                     if previousState {
                         self.log.likedUserIds.append(currentUid)
@@ -93,13 +84,11 @@ class CoffeeLogViewModel {
         bookmarkManager.toggleSave(for: logId)
     }
     
-    /// プロフィール押下時
     func onTapProfile(currentProfileUser: User? = nil) {
         targetUserForProfile = isMyPost ? currentProfileUser : author
         shouldNavigateToProfile = true
     }
     
-    /// 削除処理
     func deletePost() {
         guard let logId = log.id else { return }
         
@@ -113,3 +102,4 @@ class CoffeeLogViewModel {
         }
     }
 }
+

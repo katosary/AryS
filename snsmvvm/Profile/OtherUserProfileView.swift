@@ -6,6 +6,8 @@
 //
 
 import SwiftUI
+import FirebaseFirestore
+import FirebaseAuth
 
 // MARK: - OtherUserProfileView (指定された User オブジェクトを受け取る版)
 struct OtherUserProfileView: View {
@@ -14,6 +16,12 @@ struct OtherUserProfileView: View {
     @State private var viewModel = OtherProfileViewModel()
     @State private var isDetailShowing = false
     @State private var scrollPosition: Int? = 0
+    
+    // ブロック・通報用の状態
+    @State private var showingBlockAlert = false
+    @State private var showingReportAlert = false
+    @State private var reportReason = ""
+    @Environment(\.dismiss) private var dismiss
     
     let profileSize: CGFloat = 80
     
@@ -28,7 +36,7 @@ struct OtherUserProfileView: View {
                 // 全体を上下ページングするための親 ScrollView
                 ScrollView(.vertical) {
                     VStack(spacing: 0) {
-                        // 1ページ目：プロフィール詳細とツール情報（内側の ScrollView は廃止済み）
+                        // 1ページ目：プロフィール詳細とツール情報
                         OtherProfileDetailContentView(
                             user: viewModel.user,
                             totalWidth: totalWidth,
@@ -56,11 +64,60 @@ struct OtherUserProfileView: View {
                 }
                 .navigationTitle(viewModel.user.userName.isEmpty ? (user?.userName ?? "プロフィール") : viewModel.user.userName)
                 .navigationBarTitleDisplayMode(.inline)
+                // MARK: - 右上にブロック・通報メニューを追加
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Menu {
+                            Button(role: .destructive) {
+                                showingBlockAlert = true
+                            } label: {
+                                Label("このユーザーをブロックする", systemImage: "hand.raised")
+                            }
+                            
+                            Button(role: .destructive) {
+                                showingReportAlert = true
+                            } label: {
+                                Label("このユーザーを通報する", systemImage: "flag")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                                .font(.body)
+                        }
+                    }
+                }
+                // ブロック確認アラート
+                .alert("ユーザーのブロック", isPresented: $showingBlockAlert) {
+                    Button("ブロックする", role: .destructive) {
+                        Task {
+                            if let targetId = user?.id {
+                                await viewModel.blockUser(targetUserId: targetId)
+                                dismiss() // ブロックしたら前の画面に戻る
+                            }
+                        }
+                    }
+                    Button("キャンセル", role: .cancel) {}
+                } message: {
+                    Text("このユーザーをブロックすると、お互いの投稿が表示されなくなります。")
+                }
+                // 通報入力アラート
+                .alert("ユーザーの通報", isPresented: $showingReportAlert) {
+                    TextField("通報の理由（例：不適切な発言など）", text: $reportReason)
+                    Button("送信", role: .destructive) {
+                        Task {
+                            if let targetId = user?.id {
+                                await viewModel.reportUser(targetUserId: targetId, reason: reportReason)
+                                reportReason = ""
+                            }
+                        }
+                    }
+                    Button("キャンセル", role: .cancel) {}
+                } message: {
+                    Text("運営チームが内容を確認し、適切に対処いたします。")
+                }
                 .background(Color(.systemBackground))
                 .onAppear {
                     if let initialUser = user {
                         viewModel.user = initialUser
-                        // id が存在する場合に確実に loadUserData を呼ぶ
                         if let userId = initialUser.id, !userId.isEmpty {
                             Task {
                                 await viewModel.loadUserData(userId: userId)
@@ -87,7 +144,6 @@ struct OtherProfileDetailContentView: View {
     let profileSize: CGFloat
     
     var body: some View {
-        // 親の ScrollView で全体をスクロールさせるため、ここは VStack のみにする
         VStack(alignment: .leading, spacing: 0) {
             
             // 1. カバー画像 + 道具の情報オーバーレイ
@@ -263,7 +319,7 @@ struct OtherProfileDetailContentView: View {
                 .font(.subheadline)
                 .frame(width: 45, alignment: .leading)
             
-            EmptyhRatingView(rating: Double(rating))
+            EmptyRatingView(rating: Double(rating))
         }
         .padding(.trailing, 5)
     }
@@ -308,13 +364,12 @@ struct OtherProfileCoffeeLogGridView: View {
 // MARK: - 他人用のフルスクリーン縦スクロール投稿ビュー
 struct OtherProfileCoffeeLogFullscreenView: View {
     @Bindable var viewModel: OtherProfileViewModel
-    @State var currentLogId: String? // 選択されたログのID
+    @State var currentLogId: String?
     
     var body: some View {
         ZStack {
             Color(.systemBackground).ignoresSafeArea()
             
-            // 💡 修正: .scrollPosition(id: $currentLogId) を正しく機能させる
             ScrollView(.vertical, showsIndicators: false) {
                 LazyVStack(spacing: 0) {
                     ForEach(viewModel.logs) { log in
@@ -336,13 +391,13 @@ struct OtherProfileCoffeeLogFullscreenView: View {
                         .containerRelativeFrame(.vertical) { length, _ in
                             length
                         }
-                        .id(log.id) // 各要素に一意の ID を付与
+                        .id(log.id)
                     }
                 }
                 .scrollTargetLayout()
             }
             .scrollTargetBehavior(.paging)
-            .scrollPosition(id: $currentLogId) // 選択されたIDの位置に連動・スクロール
+            .scrollPosition(id: $currentLogId)
             .scrollContentBackground(.hidden)
         }
         .navigationTitle(viewModel.user.userName)

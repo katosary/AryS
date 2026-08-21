@@ -23,14 +23,13 @@ struct ProfileView: View {
         GeometryReader { outerGeometry in
             let totalWidth = outerGeometry.size.width
             let totalHeight = outerGeometry.size.height
-            
+             
             ZStack {
                 Color(.systemBackground).ignoresSafeArea()
                 NavigationStack {
                     // 縦方向のスクロールにページング動作を適用
                     ScrollView(.vertical) {
                         VStack(spacing: 0) {
-                            // 修正後（高さをそのまま totalHeight にする、あるいは .frame(width: totalWidth) のみにする）
                             ProfileDetailContentView(
                                 totalWidth: totalWidth,
                                 totalHeight: totalHeight,
@@ -221,7 +220,7 @@ struct ProfileDetailContentView: View {
                     }
                     .padding(.top, 4)
                     
-                    // --- 3. フレーバー ---
+                    // --- 3. フレーバー（タグ形式） ---
                     HStack(alignment: .top) {
                         Text("フレーバー")
                             .font(.subheadline)
@@ -229,10 +228,36 @@ struct ProfileDetailContentView: View {
                             .foregroundColor(.secondary)
                             .frame(width: 80, alignment: .leading)
                         
-                        Text(profileViewModel.user.proflavor.isEmpty ? "未登録" : profileViewModel.user.proflavor)
-                            .font(.subheadline)
-                            .foregroundColor(.primary)
-                            .bold()
+                        let flavorString = profileViewModel.user.proflavor
+                        if flavorString.isEmpty {
+                            Text("未登録")
+                                .font(.subheadline)
+                                .foregroundColor(.primary)
+                                .bold()
+                        } else {
+                            // カンマ区切りの文字列を想定して配列に分割（前後の空白も削除）
+                            let flavorTags = flavorString.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+                            
+                            if flavorTags.isEmpty {
+                                Text("未登録")
+                                    .font(.subheadline)
+                                    .foregroundColor(.primary)
+                                    .bold()
+                            } else {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 6) {
+                                        ForEach(flavorTags, id: \.self) { tag in
+                                            Text("#\(tag)")
+                                                .font(.system(size: 12, weight: .semibold))
+                                                .padding(.horizontal, 10)
+                                                .padding(.vertical, 5)
+                                                .background(Color.secondary.opacity(0.2))
+                                                .cornerRadius(8)
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 .padding(.horizontal, 16)
@@ -260,7 +285,7 @@ struct ProfileDetailContentView: View {
                 .font(.subheadline)
                 .frame(width: 45, alignment: .leading)
             
-            EmptyhRatingView(rating: Double(rating))
+            EmptyRatingView(rating: Double(rating))
         }
         .padding(.trailing, 5)
     }
@@ -272,4 +297,3 @@ struct ProfileDetailContentView: View {
         .environment(profileViewModel)
         .environmentObject(AuthManager())
 }
-

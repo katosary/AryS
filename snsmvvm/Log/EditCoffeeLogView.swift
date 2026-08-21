@@ -18,9 +18,9 @@ struct PostEditView: View {
     
     // イニシャライザでLogを受け取りViewModelを初期化
     init(post: Binding<Log>) {
-            self._post = post
-            self._editCoffeeLogViewModel = State(initialValue: EditCoffeeLogViewModel(log: post.wrappedValue))
-        }
+        self._post = post
+        self._editCoffeeLogViewModel = State(initialValue: EditCoffeeLogViewModel(log: post.wrappedValue))
+    }
     
     var body: some View {
         NavigationStack {
@@ -113,18 +113,8 @@ struct PostEditView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     stepHeader(title: "Step 2: 香りの評価", isComplete: isStep2Complete())
                     
-                    HStack {
-                        Text("強さ").frame(width: 50, alignment: .leading)
-                        Spacer()
-                        ForEach(1...editCoffeeLogViewModel.maxRating, id: \.self) { number in
-                            editCoffeeLogViewModel.image(for: number, rating: editCoffeeLogViewModel.aromarating)
-                                .font(.system(size: 26))
-                                .foregroundColor(number > editCoffeeLogViewModel.aromarating ? editCoffeeLogViewModel.offColor : editCoffeeLogViewModel.onColor)
-                                .onTapGesture {
-                                    editCoffeeLogViewModel.aromarating = number
-                                }
-                        }
-                    }
+                    // 👈 ここで ratingRow を利用する
+                    ratingRow(label: "強さ", rating: $editCoffeeLogViewModel.aromarating)
                     
                     TextField("どんな香りでしたか？", text: $editCoffeeLogViewModel.aromaComment)
                         .textFieldStyle(.roundedBorder)
@@ -161,78 +151,78 @@ struct PostEditView: View {
     }
     
     @ViewBuilder
-        private var step4View: some View {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    HStack {
-                        stepHeader(title: "Step 4: 編集内容の確認", isComplete: false)
-
-                        Button {
-                            // 1. 新しいログオブジェクトを作成（更新された値をすべて反映）
-                            var updatedPost = post
-                            updatedPost.shopName = editCoffeeLogViewModel.shopName.isEmpty ? "店舗名未入力" : editCoffeeLogViewModel.shopName
-                            updatedPost.countryName = editCoffeeLogViewModel.countryName.isEmpty ? "生産国未入力" : editCoffeeLogViewModel.countryName
-                            updatedPost.farmName = editCoffeeLogViewModel.farmName
-                            updatedPost.roastLevel = editCoffeeLogViewModel.roastLevel
-                            updatedPost.aromarating = editCoffeeLogViewModel.aromarating
-                            updatedPost.aromaComment = editCoffeeLogViewModel.aromaComment
-                            updatedPost.bitternessrating = editCoffeeLogViewModel.bitternessrating
-                            updatedPost.acidityrating = editCoffeeLogViewModel.acidityrating
-                            updatedPost.bodyrating = editCoffeeLogViewModel.bodyrating
-
-                            // 2. バインディングへ「オブジェクトごと」代入（これで確実に更新が親に伝わる）
-                            post = updatedPost
-
-                            // 3. 画面を閉じる
-                            dismiss()
-
-                            // 4. 裏側でFirebaseの更新
-                            editCoffeeLogViewModel.updateLog(targetPost: post) { success in
-                                if !success {
-                                    print("⚠️ サーバーへの保存に失敗")
-                                }
-                            }
-                        } label: {
-                            Text("保存する")
-                                .bold()
-                                .padding()
-                                .background(Color.blue)
-                                .foregroundColor(.white)
-                                .cornerRadius(10)
-                        }
-                        .padding(.top, 10)
-                    }
+    private var step4View: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                HStack {
+                    stepHeader(title: "Step 4: 編集内容の確認", isComplete: false)
                     
-                    // プレビュー表示部分
-                    CoffeeLogView(
-                        log: Log(
-                            id: post.id,
-                            userId: post.userId,
-                            shopName: editCoffeeLogViewModel.shopName.isEmpty ? "店舗名未入力" : editCoffeeLogViewModel.shopName,
-                            countryName: editCoffeeLogViewModel.countryName.isEmpty ? "生産国未入力" : editCoffeeLogViewModel.countryName,
-                            farmName: editCoffeeLogViewModel.farmName,
-                            roastLevel: editCoffeeLogViewModel.roastLevel,
-                            aromarating: editCoffeeLogViewModel.aromarating,
-                            aromaComment: editCoffeeLogViewModel.aromaComment,
-                            bitternessrating: editCoffeeLogViewModel.bitternessrating,
-                            acidityrating: editCoffeeLogViewModel.acidityrating,
-                            bodyrating: editCoffeeLogViewModel.bodyrating,
-                            createdAt: post.createdAt,
-                            tagX: post.tagX,
-                            tagY: post.tagY,
-                            imageUrl: post.imageUrl,
-                            previewImage: post.previewImage
-                        ),
-                        author: nil,
-                        authorName: "あなた",
-                        isEditable: false
-                    )
-                    .cornerRadius(16)
-                    .shadow(radius: 4)
+                    Button {
+                        // 1. 新しいログオブジェクトを作成（更新された値をすべて反映）
+                        var updatedPost = post
+                        updatedPost.shopName = editCoffeeLogViewModel.shopName.isEmpty ? "店舗名未入力" : editCoffeeLogViewModel.shopName
+                        updatedPost.countryName = editCoffeeLogViewModel.countryName.isEmpty ? "生産国未入力" : editCoffeeLogViewModel.countryName
+                        updatedPost.farmName = editCoffeeLogViewModel.farmName
+                        updatedPost.roastLevel = editCoffeeLogViewModel.roastLevel
+                        updatedPost.aromarating = editCoffeeLogViewModel.aromarating
+                        updatedPost.aromaComment = editCoffeeLogViewModel.aromaComment
+                        updatedPost.bitternessrating = editCoffeeLogViewModel.bitternessrating
+                        updatedPost.acidityrating = editCoffeeLogViewModel.acidityrating
+                        updatedPost.bodyrating = editCoffeeLogViewModel.bodyrating
+                        
+                        // 2. バインディングへ「オブジェクトごと」代入（これで確実に更新が親に伝わる）
+                        post = updatedPost
+                        
+                        // 3. 画面を閉じる
+                        dismiss()
+                        
+                        // 4. 裏側でFirebaseの更新
+                        editCoffeeLogViewModel.updateLog(targetPost: post) { success in
+                            if !success {
+                                print("⚠️ サーバーへの保存に失敗")
+                            }
+                        }
+                    } label: {
+                        Text("保存する")
+                            .bold()
+                            .padding()
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
+                    .padding(.top, 10)
                 }
-                .padding(24)
+                
+                // プレビュー表示部分
+                CoffeeLogView(
+                    log: Log(
+                        id: post.id,
+                        userId: post.userId,
+                        shopName: editCoffeeLogViewModel.shopName.isEmpty ? "店舗名未入力" : editCoffeeLogViewModel.shopName,
+                        countryName: editCoffeeLogViewModel.countryName.isEmpty ? "生産国未入力" : editCoffeeLogViewModel.countryName,
+                        farmName: editCoffeeLogViewModel.farmName,
+                        roastLevel: editCoffeeLogViewModel.roastLevel,
+                        aromarating: editCoffeeLogViewModel.aromarating,
+                        aromaComment: editCoffeeLogViewModel.aromaComment,
+                        bitternessrating: editCoffeeLogViewModel.bitternessrating,
+                        acidityrating: editCoffeeLogViewModel.acidityrating,
+                        bodyrating: editCoffeeLogViewModel.bodyrating,
+                        createdAt: post.createdAt,
+                        tagX: post.tagX,
+                        tagY: post.tagY,
+                        imageUrl: post.imageUrl,
+                        previewImage: post.previewImage
+                    ),
+                    author: nil,
+                    authorName: "あなた",
+                    isEditable: false
+                )
+                .cornerRadius(16)
+                .shadow(radius: 4)
             }
+            .padding(24)
         }
+    }
     
     // MARK: - 各ステップの完了判定ロジック
     private func isStep1Complete() -> Bool {
@@ -272,9 +262,15 @@ struct PostEditView: View {
             Text(label).frame(width: 50, alignment: .leading)
             Spacer()
             ForEach(1...editCoffeeLogViewModel.maxRating, id: \.self) { number in
-                editCoffeeLogViewModel.image(for: number, rating: rating.wrappedValue)
-                    .font(.system(size: 26))
-                    .foregroundColor(number > rating.wrappedValue ? editCoffeeLogViewModel.offColor : editCoffeeLogViewModel.onColor)
+                let isSelected = number <= rating.wrappedValue
+                
+                // 👈 星からコーヒー豆画像に変更
+                Image(isSelected ? "coffeeBeanFill" : "coffeeBean")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 26, height: 26) // 👈 星のフォントサイズ(26)と同じ大きさに調整
+                    .foregroundColor(isSelected ? editCoffeeLogViewModel.onColor : editCoffeeLogViewModel.offColor)
+                    .contentShape(Rectangle()) // 👈 タップ判定を確実に拾うため追加
                     .onTapGesture {
                         rating.wrappedValue = number
                     }

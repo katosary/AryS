@@ -5,11 +5,11 @@
 //  Created by katoso on 2026/08/14.
 //
 
-
 import Foundation
 import Observation
 import SwiftUI
 import FirebaseFirestore
+import FirebaseAuth
 
 @Observable
 @MainActor
@@ -48,59 +48,89 @@ final class OtherProfileViewModel {
     private let db = Firestore.firestore()
     
     /// 指定されたUIDのユーザープロフィールと投稿ログを同時に取得する
-        func loadUserData(userId: String) async {
-            guard !userId.isEmpty else {
-                self.errorMessage = "有効なユーザーIDではありません。"
-                return
+    func loadUserData(userId: String) async {
+        guard !userId.isEmpty else {
+            self.errorMessage = "有効なユーザーIDではありません。"
+            return
+        }
+        
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            let userSnapshot = try await db.collection("users").document(userId).getDocument()
+            if userSnapshot.exists {
+                self.user = try userSnapshot.data(as: User.self)
+            } else {
+                self.errorMessage = "ユーザーデータが見つかりませんでした。"
             }
-             
-            isLoading = true
-            errorMessage = nil
-             
+            
+            let logSnapshot = try await db.collection("posts")
+                .whereField("userId", isEqualTo: userId)
+                .getDocuments()
+            
+            self.logs = logSnapshot.documents.compactMap { document in
+                try? document.data(as: Log.self)
+            }
+            
+        } catch {
+            self.errorMessage = "データの取得に失敗しました: \(error.localizedDescription)"
+        }
+        
+        isLoading = false
+    }
+    
+    /// 投稿削除用
+    func deleteLog(targetPost: Log) {
+        guard let logId = targetPost.id else { return }
+        Task {
             do {
-                // 1. ユーザー情報の取得
-                let userSnapshot = try await db.collection("users").document(userId).getDocument()
-                if userSnapshot.exists {
-                    self.user = try userSnapshot.data(as: User.self)
-                } else {
-                    self.errorMessage = "ユーザーデータが見つかりませんでした。"
-                }
-                 
-                // 2. そのユーザーの投稿ログの取得（コレクション名を "logs" から "posts" に修正）
-                let logSnapshot = try await db.collection("posts")
-                    .whereField("userId", isEqualTo: userId)
-                    .getDocuments()
-                 
-                self.logs = logSnapshot.documents.compactMap { document in
-                    try? document.data(as: Log.self)
-                }
-                // 必要に応じて日付順にソートする場合
-                // self.logs.sort(by: { $0.createdAt > $1.createdAt })
-                 
+                try await db.collection("posts").document(logId).delete()
+                logs.removeAll { $0.id == logId }
             } catch {
-                self.errorMessage = "データの取得に失敗しました: \(error.localizedDescription)"
-            }
-             
-            isLoading = false
-        }
-         
-        /// 投稿削除用（必要に応じて）
-        func deleteLog(targetPost: Log) {
-            guard let logId = targetPost.id else { return }
-            Task {
-                do {
-                    // こちらも削除対象のコレクション名を "logs" から "posts" に修正
-                    try await db.collection("posts").document(logId).delete()
-                    logs.removeAll { $0.id == logId }
-                } catch {
-                    print("Failed to delete log: \(error)")
-                }
+                print("Failed to delete log: \(error)")
             }
         }
+    }
     
     /// 投稿内の他ユーザー情報取得用
     func fetchUser(userId: String) async throws -> User {
         let snapshot = try await db.collection("users").document(userId).getDocument()
         return try snapshot.data(as: User.self)
+    }
+    
+    // MARK: - ブロック機能の追加
+    func blockUser(targetUserId: String) async {
+        guard let currentUserId = Auth.auth().currentUser?.uid else { return }
+        
+        do {
+            // 自分のドキュメントに blockedUserIds 配列として追加 (ArrayUnionを使用)
+            let currentUserRef = db.collection("users").document(currentUserId)
+            try await currentUserRef.updateData([
+                "blockedUserIds": FieldValue.arrayUnion([targetUserId])
+            ])
+            print("ユーザーをブロックしました: \(targetUserId)")
+        } catch {
+            print("ブロックの保存に失敗しました: \(error.localizedDescription)")
+        }
+    }
+    
+    // MARK: - 通報機能の追加
+    func reportUser(targetUserId: String, reason: String) async {
+        guard let currentUserId = Auth.auth().currentUser?.uid else { return }
+        
+        let reportData: [String: Any] = [
+            "reporterId": currentUserId,
+            "targetUserId": targetUserId,
+            "reason": reason.isEmpty ? "理由なし" : reason,
+            "createdAt": Timestamp()
+        ]
+        
+        do {
+            try await db.collection("reports").addDocument(data: reportData)
+            print("ユーザーを通報しました: \(targetUserId)")
+        } catch {
+            print("通報の送信に失敗しました: \(error.localizedDescription)")
+        }
     }
 }

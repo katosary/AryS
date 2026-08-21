@@ -56,14 +56,6 @@ struct CoffeeLogDetailView: View {
                                     .font(.body)
                                 Text("Shop: \(log.shopName)")
                                     .font(.body)
-                                
-                                if !log.aromaComment.isEmpty {
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        Text("香りの種類:").font(.subheadline).bold().foregroundColor(.secondary)
-                                        Text(log.aromaComment).font(.body)
-                                    }
-                                    .padding(.top, 4)
-                                }
                             }
                             
                             Divider()
@@ -97,6 +89,34 @@ struct CoffeeLogDetailView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Aroma").font(.subheadline).bold()
                                     CollorRatingView(rating: Double(log.aromarating), maxRating: 5)
+                                }
+                                
+                                // 💡 香りのタグ（aromaTags）の表示エリア
+                                if let tags = log.aromaTags, !tags.isEmpty {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Text("Aroma Tags:").font(.subheadline).bold().foregroundColor(.secondary)
+                                        ScrollView(.horizontal, showsIndicators: false) {
+                                            HStack(spacing: 6) {
+                                                ForEach(tags, id: \.self) { tag in
+                                                    Text("#\(tag)")
+                                                        .font(.system(size: 12, weight: .semibold))
+                                                        .padding(.horizontal, 10)
+                                                        .padding(.vertical, 5)
+                                                        .background(Color.secondary.opacity(0.2))
+                                                        .cornerRadius(8)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    .padding(.top, 4)
+                                }
+                                
+                                if !log.aromaComment.isEmpty {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Text("香りのコメント:").font(.subheadline).bold().foregroundColor(.secondary)
+                                        Text(log.aromaComment).font(.body)
+                                    }
+                                    .padding(.top, 4)
                                 }
                             }
                             

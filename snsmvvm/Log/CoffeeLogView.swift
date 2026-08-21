@@ -27,6 +27,11 @@ struct CoffeeLogView: View {
     @State private var isShowingDetailSheet = false
     @State private var isShowingEditSheet = false
     
+    // ブロック・通報用の状態
+    @State private var showingBlockAlert = false
+    @State private var showingReportAlert = false
+    @State private var reportReason = ""
+    
     init(
         log: Log,
         author: User?,
@@ -90,7 +95,7 @@ struct CoffeeLogView: View {
                             let rating = Double(log.bitternessrating)
                             HStack(alignment: .firstTextBaseline, spacing: 8) {
                                 Text("Bitterness").font(.subheadline).bold()
-                                EmptyhRatingView(rating: rating)
+                                EmptyRatingView(rating: rating)
                             }
                         }
                         
@@ -99,7 +104,7 @@ struct CoffeeLogView: View {
                             let rating = Double(log.acidityrating)
                             HStack(alignment: .firstTextBaseline, spacing: 8) {
                                 Text("Acidity").font(.subheadline).bold()
-                                EmptyhRatingView(rating: rating)
+                                EmptyRatingView(rating: rating)
                             }
                         }
                         
@@ -108,7 +113,7 @@ struct CoffeeLogView: View {
                             let rating = Double(log.bodyrating)
                             HStack(alignment: .firstTextBaseline, spacing: 8) {
                                 Text("Body").font(.subheadline).bold()
-                                EmptyhRatingView(rating: rating)
+                                EmptyRatingView(rating: rating)
                             }
                         }
                         
@@ -117,7 +122,7 @@ struct CoffeeLogView: View {
                             let rating = Double(log.aromarating)
                             HStack(alignment: .firstTextBaseline, spacing: 8) {
                                 Text("Aroma").font(.subheadline).bold()
-                                EmptyhRatingView(rating: rating)
+                                EmptyRatingView(rating: rating)
                             }
                         }
                         HStack(spacing: 4) {
@@ -153,7 +158,17 @@ struct CoffeeLogView: View {
                                 } label: { Image(systemName: "ellipsis").padding(5).foregroundColor(.primary) }
                             } else {
                                 Menu {
-                                    Button(role: .destructive) { } label: { Label("報告する", systemImage: "exclamationmark.bubble") }
+                                    Button(role: .destructive) {
+                                        showingBlockAlert = true
+                                    } label: {
+                                        Label("このユーザーをブロックする", systemImage: "hand.raised")
+                                    }
+                                    
+                                    Button(role: .destructive) {
+                                        showingReportAlert = true
+                                    } label: {
+                                        Label("この投稿を報告する", systemImage: "exclamationmark.bubble")
+                                    }
                                 } label: { Image(systemName: "ellipsis").padding(5).foregroundColor(.primary) }
                             }
                         }
@@ -245,7 +260,32 @@ struct CoffeeLogView: View {
             )
         }
         .sheet(isPresented: $isShowingEditSheet) {
-            PostEditView(post: .constant(log)) // 💡 一時的な定数Binding、または適切なバインディングに変更
+            PostEditView(post: .constant(log))
+        }
+        // ブロック確認アラート
+        .alert("ユーザーのブロック", isPresented: $showingBlockAlert) {
+            Button("ブロックする", role: .destructive) {
+                Task {
+                    await profileViewModel.blockUser(targetUserId: log.userId)
+                }
+            }
+            Button("キャンセル", role: .cancel) {}
+        } message: {
+            Text("このユーザーをブロックすると、お互いの投稿が表示されなくなります。")
+        }
+        // 通報入力アラート
+        .alert("投稿の報告", isPresented: $showingReportAlert) {
+            TextField("報告の理由（例：不適切な内容など）", text: $reportReason)
+            Button("送信", role: .destructive) {
+                Task {
+                    await profileViewModel.reportUser(targetUserId: log.userId, reason: reportReason)
+                    reportReason = ""
+                }
+            }
+            Button("キャンセル", role: .cancel) {}
+        } message: {
+            Text("運営チームが内容を確認し、適切に対処いたします。")
         }
     }
 }
+

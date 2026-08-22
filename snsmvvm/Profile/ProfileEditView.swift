@@ -55,6 +55,14 @@ struct ProfileEditView: View {
                             }
                         }
                         .padding(.top, 10)
+                        // ▼ ここを追加（トリミング用シートの呼び出し）
+                        .sheet(isPresented: $profileEditViewModel.isShowingImageCropView) {
+                            if let inputImage = profileEditViewModel.tempSelectedUIImage {
+                                ImageCropView(inputImage: inputImage) { croppedImage in
+                                    profileEditViewModel.profileImage = croppedImage
+                                }
+                            }
+                        }
                         
                         // --- 2. 各種編集フィールド ---
                         VStack(alignment: .leading, spacing: 0) {

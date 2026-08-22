@@ -19,9 +19,6 @@ struct CoffeeRecordView: View {
     // キーボードを閉じるためのフォーカス状態
     @FocusState private var isFocused: Bool
     
-    // 👇 香りの選択肢（Amazonプライム風のタグ選択用）
-    let aromaOptions = ["フルーティー", "ナッツ", "チョコレート", "フローラル", "スパイシー", "キャラメル", "ベリー", "シトラス", "ハーブ", "バニラ"]
-    
     var onDismiss: (() -> Void)?
     var onCompleted: (() -> Void)?
     
@@ -34,7 +31,7 @@ struct CoffeeRecordView: View {
             farmName: coffeeRecordViewModel.farmName,
             roastLevel: coffeeRecordViewModel.roastLevel,
             aromarating: coffeeRecordViewModel.aromarating,
-            aromaComment: "",
+            aromaComment: coffeeRecordViewModel.memo, // 💡 memo を反映
             bitternessrating: coffeeRecordViewModel.bitternessrating,
             acidityrating: coffeeRecordViewModel.acidityrating,
             bodyrating: coffeeRecordViewModel.bodyrating,
@@ -58,17 +55,15 @@ struct CoffeeRecordView: View {
                             .tag(1)
                             .disabled(maxUnlockedStep < 1)
                         
-                        aromaStepView()
+                        // 💡 統合: 香りと味わいをまとめた評価ステップ
+                        tasteStepView()
                             .tag(2)
                             .disabled(maxUnlockedStep < 2)
                         
-                        tasteStepView()
+                        // 💡 変更: プレビューのタグを 3 に変更
+                        previewStepView()
                             .tag(3)
                             .disabled(maxUnlockedStep < 3)
-                        
-                        previewStepView()
-                            .tag(4)
-                            .disabled(maxUnlockedStep < 4)
                     }
                     .tabViewStyle(.page(indexDisplayMode: .never))
                 }
@@ -214,95 +209,108 @@ struct CoffeeRecordView: View {
     }
     
     @ViewBuilder
-        private func aromaStepView() -> some View {
-            ScrollView {
-                VStack {
-                    Spacer(minLength: 0)
+    private func tasteStepView() -> some View {
+        ScrollView {
+            VStack {
+                Spacer(minLength: 0)
+                
+                VStack(alignment: .leading, spacing: 16) {
+                    stepHeader(title: "Step 2: 味わいの評価", isComplete: isStep2Complete())
                     
-                    VStack(alignment: .leading, spacing: 20) {
-                        stepHeader(title: "Step 2: 香りの評価", isComplete: isStep2Complete())
+                    // --- 香りの評価 ---
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("フレーバーの評価").font(.subheadline).bold()
+                        ratingRow(label: "強さ", rating: $coffeeRecordViewModel.aromarating, stepIndex: 2) {}
                         
-                        // 👇 stepIndexを 2 に修正
-                        ratingRow(label: "強さ", rating: $coffeeRecordViewModel.aromarating, stepIndex: 2) {
-                            checkAndProgress(to: 3, condition: isStep2Complete())
-                        }
+                        Text("特徴を選択").font(.caption).foregroundColor(.secondary)
                         
-                        Divider().padding(.vertical, 5)
-                        
-                        Text("特徴を選択").font(.subheadline).bold()
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 12) {
-                            ForEach(aromaOptions, id: \.self) { aroma in
+                        // フレーバーの選択肢（縦並べ）
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(coffeeRecordViewModel.flavorOptions, id: \.self) { aroma in
                                 let isSelected = coffeeRecordViewModel.selectedAromas.contains(aroma)
-                                Text(aroma)
-                                    .font(.system(size: 14, weight: .medium))
-                                    .padding(.vertical, 10)
-                                    .padding(.horizontal, 14)
-                                    .background(isSelected ? Color.blue : Color(.systemGray6))
-                                    .foregroundColor(isSelected ? .white : .primary)
-                                    .cornerRadius(20)
-                                    .onTapGesture {
-                                        withAnimation {
-                                            if isSelected {
-                                                coffeeRecordViewModel.selectedAromas.removeAll { $0 == aroma }
-                                            } else {
-                                                coffeeRecordViewModel.selectedAromas.append(aroma)
-                                            }
-                                            checkAndProgress(to: 3, condition: isStep2Complete())
+                                Button(action: {
+                                    withAnimation {
+                                        if isSelected {
+                                            coffeeRecordViewModel.selectedAromas.removeAll { $0 == aroma }
+                                        } else {
+                                            coffeeRecordViewModel.selectedAromas.append(aroma)
                                         }
                                     }
+                                }) {
+                                    HStack {
+                                        Text(aroma)
+                                            .font(.system(size: 14, weight: .medium))
+                                            .foregroundColor(isSelected ? .white : .primary)
+                                        Spacer()
+                                        if isSelected {
+                                            Image(systemName: "checkmark")
+                                                .font(.system(size: 14, weight: .bold))
+                                                .foregroundColor(.white)
+                                        }
+                                    }
+                                    .padding(.vertical, 12)
+                                    .padding(.horizontal, 16)
+                                    .background(isSelected ? Color.blue : Color(.systemGray6))
+                                    .cornerRadius(12)
+                                }
                             }
                         }
                     }
-                    .padding(24)
                     
-                    Spacer(minLength: 0)
-                }
-                .frame(maxWidth: .infinity, minHeight: 500)
-            }
-            .onTapGesture {
-                isFocused = false
-            }
-        }
-        
-        @ViewBuilder
-        private func tasteStepView() -> some View {
-            ScrollView {
-                VStack {
-                    Spacer(minLength: 0)
+                    Divider()
                     
-                    VStack(alignment: .leading, spacing: 20) {
-                        stepHeader(title: "Step 3: 味わいの評価", isComplete: isStep3Complete())
+                    // --- 味わいの評価 ---
+                    VStack(alignment: .leading, spacing: 16) {
                         
-                        VStack(spacing: 16) {
-                            // 👇 stepIndexを 4（プレビュー）にし、完了条件を isStep3Complete に
-                            ratingRow(label: "苦味", rating: $coffeeRecordViewModel.bitternessrating, stepIndex: 4) {
-                                checkAndProgress(to: 4, condition: isStep3Complete())
-                            }
-                            ratingRow(label: "酸味", rating: $coffeeRecordViewModel.acidityrating, stepIndex: 4) {
-                                checkAndProgress(to: 4, condition: isStep3Complete())
-                            }
-                            ratingRow(label: "コク", rating: $coffeeRecordViewModel.bodyrating, stepIndex: 4) {
-                                checkAndProgress(to: 4, condition: isStep3Complete())
-                            }
-                        }
+                        ratingRow(label: "苦味", rating: $coffeeRecordViewModel.bitternessrating, stepIndex: 3) {}
+                        ratingRow(label: "酸味", rating: $coffeeRecordViewModel.acidityrating, stepIndex: 3) {}
+                        ratingRow(label: "コク", rating: $coffeeRecordViewModel.bodyrating, stepIndex: 3) {}
                     }
-                    .padding(24)
                     
-                    Spacer(minLength: 0)
+                    Divider()
+                    
+                    // --- 一言メモ（コクの下に実装・TextEditorベース） ---
+                    VStack(alignment: .leading, spacing: 8) {
+                        memoField(
+                            label: "一言メモ",
+                            text: $coffeeRecordViewModel.memo,
+                            placeholder: "例）１口目のインパクトがすごい！\n冷めると酸味が強くなる！\n次はアイスも！etc"
+                        )
+                    }
+                    
+                    // --- 確認画面へ進むボタン ---
+                    Button(action: {
+                        isFocused = false
+                        checkAndProgress(to: 3, condition: isStep2Complete())
+                    }) {
+                        Text("確認画面へ進む")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(isStep2Complete() ? Color.blue : Color.gray.opacity(0.3))
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                    }
+                    .disabled(!isStep2Complete())
+                    .padding(.top, 8)
                 }
-                .frame(maxWidth: .infinity, minHeight: 500)
+                .padding(24)
+                
+                Spacer(minLength: 0)
             }
-            .onTapGesture {
-                isFocused = false
-            }
+            .frame(maxWidth: .infinity, minHeight: 500)
         }
+        .onTapGesture {
+            isFocused = false
+        }
+    }
     
     @ViewBuilder
     private func previewStepView() -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 HStack {
-                    stepHeader(title: "Step 4: 投稿の確認", isComplete: false)
+                    stepHeader(title: "Step 3: 投稿の確認", isComplete: false)
                     
                     Button {
                         isFocused = false
@@ -373,13 +381,11 @@ struct CoffeeRecordView: View {
         !coffeeRecordViewModel.roastLevel.isEmpty
     }
     
+    // 💡 統合に伴う完了条件（香りの強さ、または苦味・酸味・コクのいずれかが入力されているなど、お好みに合わせて調整してください）
     private func isStep2Complete() -> Bool {
-        return coffeeRecordViewModel.aromarating > 0
-    }
-    
-    private func isStep3Complete() -> Bool {
-        return coffeeRecordViewModel.bitternessrating > 0 &&
-        coffeeRecordViewModel.acidityrating > 0 &&
+        return coffeeRecordViewModel.aromarating > 0 ||
+        coffeeRecordViewModel.bitternessrating > 0 ||
+        coffeeRecordViewModel.acidityrating > 0 ||
         coffeeRecordViewModel.bodyrating > 0
     }
     
@@ -388,10 +394,8 @@ struct CoffeeRecordView: View {
             if maxUnlockedStep < nextStep {
                 maxUnlockedStep = nextStep
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                withAnimation {
-                    currentStep = nextStep
-                }
+            withAnimation {
+                currentStep = nextStep
             }
         }
     }
@@ -413,24 +417,59 @@ struct CoffeeRecordView: View {
     }
     
     @ViewBuilder
-        private func ratingRow(label: String, rating: Binding<Int>, stepIndex: Int, onChanged: @escaping () -> Void) -> some View {
-            HStack {
-                Text(label).frame(width: 50, alignment: .leading)
-                Spacer()
-                ForEach(1...coffeeRecordViewModel.maxRating, id: \.self) { number in
-                    let isSelected = number <= rating.wrappedValue
+    private func ratingRow(label: String, rating: Binding<Int>, stepIndex: Int, onChanged: @escaping () -> Void) -> some View {
+        HStack {
+            Text(label).frame(width: 50, alignment: .leading).font(.subheadline)
+            Spacer()
+            ForEach(1...coffeeRecordViewModel.maxRating, id: \.self) { number in
+                let isSelected = number <= rating.wrappedValue
+                
+                Image(isSelected ? "coffeeBeanFill" : "coffeeBean")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 26, height: 26)
+                    .foregroundColor(isSelected ? coffeeRecordViewModel.onColor : coffeeRecordViewModel.offColor)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        isFocused = false
+                        rating.wrappedValue = number
+                        onChanged()
+                    }
+            }
+        }
+    }
+    
+    @ViewBuilder
+        private func memoField(label: String, text: Binding<String>, placeholder: String) -> some View {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(label)
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(.secondary)
+                    .padding(.top, 10)
+                
+                ZStack(alignment: .topLeading) {
+                    // 1. まず背景と角丸をZStackのベースに適用する
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(.systemGray6))
+                        .frame(height: 100)
                     
-                    Image(isSelected ? "coffeeBeanFill" : "coffeeBean")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 26, height: 26)
-                        .foregroundColor(isSelected ? coffeeRecordViewModel.onColor : coffeeRecordViewModel.offColor)
-                        .contentShape(Rectangle()) // タップ判定を広げる
-                        .onTapGesture {
-                            isFocused = false
-                            rating.wrappedValue = number
-                            onChanged() // 渡された処理を実行
-                        }
+                    // 2. TextEditor をその上に配置（背景は完全に隠す）
+                    TextEditor(text: text)
+                        .frame(height: 100)
+                        .padding(4)
+                        .scrollContentBackground(.hidden)
+                        .background(Color.clear) // 透明にしておく
+                    
+                    // 3. プレースホルダーを一番上に重ねる（文字が入力されたら非表示にする）
+                    if text.wrappedValue.isEmpty {
+                        Text(placeholder)
+                            .font(.body)
+                            .foregroundColor(Color(.placeholderText))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 12) // TextEditor内部の余白に合わせる
+                            .allowsHitTesting(false) // タップが後ろのTextEditorに抜けるようにする
+                    }
                 }
             }
         }

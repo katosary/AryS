@@ -13,8 +13,9 @@ struct PostEditView: View {
     @Binding var post: Log
     @Environment(\.dismiss) private var dismiss
     
-    @State private var currentStep = 1 // カメラがないためStep 1からスタート
-    @State private var maxUnlockedStep = 4 // 編集時は全ステップを解放状態にする
+    @State private var currentStep = 1
+    @State private var maxUnlockedStep = 3
+    @State private var isFocused: Bool = false
     
     // イニシャライザでLogを受け取りViewModelを初期化
     init(post: Binding<Log>) {
@@ -27,9 +28,8 @@ struct PostEditView: View {
             VStack(spacing: 0) {
                 TabView(selection: $currentStep) {
                     step1View.tag(1)
-                    step2View.tag(2)
-                    step3View.tag(3)
-                    step4View.tag(4)
+                    aromaAndTasteStepView.tag(2)
+                    step4View.tag(3)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
@@ -102,81 +102,114 @@ struct PostEditView: View {
             }
             .frame(maxWidth: .infinity, minHeight: 500)
         }
-    }
-    
-    @ViewBuilder
-    private var step2View: some View {
-        ScrollView {
-            VStack {
-                Spacer(minLength: 0)
-                
-                VStack(alignment: .leading, spacing: 16) {
-                    stepHeader(title: "Step 2: 香りの評価", isComplete: isStep2Complete())
-                    
-                    // 👈 ここで ratingRow を利用する
-                    ratingRow(label: "強さ", rating: $editCoffeeLogViewModel.aromarating)
-                    
-                    TextField("どんな香りでしたか？", text: $editCoffeeLogViewModel.aromaComment)
-                        .textFieldStyle(.roundedBorder)
-                }
-                .padding(24)
-                
-                Spacer(minLength: 0)
-            }
-            .frame(maxWidth: .infinity, minHeight: 500)
+        .onTapGesture {
+            isFocused = false
         }
     }
     
     @ViewBuilder
-    private var step3View: some View {
-        ScrollView {
-            VStack {
-                Spacer(minLength: 0)
-                
-                VStack(alignment: .leading, spacing: 20) {
-                    stepHeader(title: "Step 3: 味わいの評価", isComplete: isStep3Complete())
+        private var aromaAndTasteStepView: some View {
+            ScrollView {
+                VStack {
+                    Spacer(minLength: 0)
                     
-                    VStack(spacing: 16) {
-                        ratingRow(label: "苦味", rating: $editCoffeeLogViewModel.bitternessrating)
-                        ratingRow(label: "酸味", rating: $editCoffeeLogViewModel.acidityrating)
-                        ratingRow(label: "コク", rating: $editCoffeeLogViewModel.bodyrating)
+                    VStack(alignment: .leading, spacing: 16) {
+                        stepHeader(title: "Step 2: フレーバーと味わい", isComplete: isStep2Complete())
+                        
+                        // --- フレーバーの評価 ---
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("フレーバーの評価").font(.subheadline).bold()
+                            ratingRow(label: "強さ", rating: $editCoffeeLogViewModel.aromarating)
+                            
+                            Text("特徴を選択").font(.caption).foregroundColor(.secondary)
+                            
+                            // 💡 修正: CoffeeRecordView と完全に同じロジックとデザインに変更
+                            VStack(alignment: .leading, spacing: 8) {
+                                ForEach(editCoffeeLogViewModel.flavorOptions, id: \.self) { aroma in
+                                    let isSelected = editCoffeeLogViewModel.selectedAromas.contains(aroma)
+                                    Button(action: {
+                                        withAnimation {
+                                            if isSelected {
+                                                editCoffeeLogViewModel.selectedAromas.removeAll { $0 == aroma }
+                                            } else {
+                                                editCoffeeLogViewModel.selectedAromas.append(aroma)
+                                            }
+                                        }
+                                    }) {
+                                        HStack {
+                                            Text(aroma) // カッコ付きの文字列をそのまま表示
+                                                .font(.system(size: 14, weight: .medium))
+                                                .foregroundColor(isSelected ? .white : .primary)
+                                            Spacer()
+                                            if isSelected {
+                                                Image(systemName: "checkmark")
+                                                    .font(.system(size: 14, weight: .bold))
+                                                    .foregroundColor(.white)
+                                            }
+                                        }
+                                        .padding(.vertical, 12)
+                                        .padding(.horizontal, 16)
+                                        .background(isSelected ? Color.blue : Color(.systemGray6))
+                                        .cornerRadius(12)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        Divider()
+                        
+                        // --- 味わいの評価 ---
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("味わいの評価").font(.subheadline).bold()
+                            
+                            ratingRow(label: "苦味", rating: $editCoffeeLogViewModel.bitternessrating)
+                            ratingRow(label: "酸味", rating: $editCoffeeLogViewModel.acidityrating)
+                            ratingRow(label: "コク", rating: $editCoffeeLogViewModel.bodyrating)
+                        }
+                        
+                        Divider()
+                        
+                        // --- 一言メモ ---
+                        memoField(
+                            label: "一言メモ",
+                            text: $editCoffeeLogViewModel.memo,
+                            placeholder: "例）１口目のインパクトがすごい！\n冷めると酸味が強くなる！\n次はアイスも！etc"
+                        )
                     }
+                    .padding(24)
+                    
+                    Spacer(minLength: 0)
                 }
-                .padding(24)
-                
-                Spacer(minLength: 0)
+                .frame(maxWidth: .infinity, minHeight: 500)
             }
-            .frame(maxWidth: .infinity, minHeight: 500)
+            .onTapGesture {
+                isFocused = false
+            }
         }
-    }
     
     @ViewBuilder
     private var step4View: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 HStack {
-                    stepHeader(title: "Step 4: 編集内容の確認", isComplete: false)
+                    stepHeader(title: "Step 3: 編集内容の確認", isComplete: false)
                     
                     Button {
-                        // 1. 新しいログオブジェクトを作成（更新された値をすべて反映）
                         var updatedPost = post
                         updatedPost.shopName = editCoffeeLogViewModel.shopName.isEmpty ? "店舗名未入力" : editCoffeeLogViewModel.shopName
                         updatedPost.countryName = editCoffeeLogViewModel.countryName.isEmpty ? "生産国未入力" : editCoffeeLogViewModel.countryName
                         updatedPost.farmName = editCoffeeLogViewModel.farmName
                         updatedPost.roastLevel = editCoffeeLogViewModel.roastLevel
                         updatedPost.aromarating = editCoffeeLogViewModel.aromarating
-                        updatedPost.aromaComment = editCoffeeLogViewModel.aromaComment
+                        updatedPost.aromaComment = editCoffeeLogViewModel.memo
                         updatedPost.bitternessrating = editCoffeeLogViewModel.bitternessrating
                         updatedPost.acidityrating = editCoffeeLogViewModel.acidityrating
                         updatedPost.bodyrating = editCoffeeLogViewModel.bodyrating
+                        updatedPost.aromaTags = editCoffeeLogViewModel.selectedAromas
                         
-                        // 2. バインディングへ「オブジェクトごと」代入（これで確実に更新が親に伝わる）
                         post = updatedPost
-                        
-                        // 3. 画面を閉じる
                         dismiss()
                         
-                        // 4. 裏側でFirebaseの更新
                         editCoffeeLogViewModel.updateLog(targetPost: post) { success in
                             if !success {
                                 print("⚠️ サーバーへの保存に失敗")
@@ -193,7 +226,6 @@ struct PostEditView: View {
                     .padding(.top, 10)
                 }
                 
-                // プレビュー表示部分
                 CoffeeLogView(
                     log: Log(
                         id: post.id,
@@ -203,10 +235,11 @@ struct PostEditView: View {
                         farmName: editCoffeeLogViewModel.farmName,
                         roastLevel: editCoffeeLogViewModel.roastLevel,
                         aromarating: editCoffeeLogViewModel.aromarating,
-                        aromaComment: editCoffeeLogViewModel.aromaComment,
+                        aromaComment: editCoffeeLogViewModel.memo,
                         bitternessrating: editCoffeeLogViewModel.bitternessrating,
                         acidityrating: editCoffeeLogViewModel.acidityrating,
                         bodyrating: editCoffeeLogViewModel.bodyrating,
+                        aromaTags: editCoffeeLogViewModel.selectedAromas,
                         createdAt: post.createdAt,
                         tagX: post.tagX,
                         tagY: post.tagY,
@@ -222,6 +255,9 @@ struct PostEditView: View {
             }
             .padding(24)
         }
+        .onTapGesture {
+            isFocused = false
+        }
     }
     
     // MARK: - 各ステップの完了判定ロジック
@@ -233,12 +269,6 @@ struct PostEditView: View {
     
     private func isStep2Complete() -> Bool {
         return editCoffeeLogViewModel.aromarating > 0
-    }
-    
-    private func isStep3Complete() -> Bool {
-        return editCoffeeLogViewModel.bitternessrating > 0 ||
-        editCoffeeLogViewModel.acidityrating > 0 ||
-        editCoffeeLogViewModel.bodyrating > 0
     }
     
     // MARK: - UI パーツ
@@ -264,13 +294,12 @@ struct PostEditView: View {
             ForEach(1...editCoffeeLogViewModel.maxRating, id: \.self) { number in
                 let isSelected = number <= rating.wrappedValue
                 
-                // 👈 星からコーヒー豆画像に変更
                 Image(isSelected ? "coffeeBeanFill" : "coffeeBean")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 26, height: 26) // 👈 星のフォントサイズ(26)と同じ大きさに調整
+                    .frame(width: 26, height: 26)
                     .foregroundColor(isSelected ? editCoffeeLogViewModel.onColor : editCoffeeLogViewModel.offColor)
-                    .contentShape(Rectangle()) // 👈 タップ判定を確実に拾うため追加
+                    .contentShape(Rectangle())
                     .onTapGesture {
                         rating.wrappedValue = number
                     }
@@ -286,5 +315,37 @@ struct PostEditView: View {
         }
         .padding(.vertical, 4)
         Divider()
+    }
+    
+    @ViewBuilder
+    private func memoField(label: String, text: Binding<String>, placeholder: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(label)
+                .font(.caption)
+                .fontWeight(.bold)
+                .foregroundColor(.secondary)
+                .padding(.top, 10)
+            
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.systemGray6))
+                    .frame(height: 100)
+                
+                TextEditor(text: text)
+                    .frame(height: 100)
+                    .padding(4)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.clear)
+                
+                if text.wrappedValue.isEmpty {
+                    Text(placeholder)
+                        .font(.body)
+                        .foregroundColor(Color(.placeholderText))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 12)
+                        .allowsHitTesting(false)
+                }
+            }
+        }
     }
 }

@@ -28,8 +28,19 @@ class ProfileEditViewModel {
     var proaroma: Int = 0
     var proflavorList: [String] = [] // 💡 フレーバーのタグ選択用配列に変更
     
-    // 👇 フレーバーの選択肢（お好みに合わせて自由に変更・追加してください）
-    let flavorOptions = ["チョコレート", "キャラメル", "ナッツ", "ベリー", "シトラス", "フローラル", "バニラ", "ハーブ", "スパイス", "黒糖"]
+    let flavorOptions = [
+        "フルーティー (みずみずしい果実感)",
+        "シトラス (爽やかな柑橘系)",
+        "ベリー (甘酸っぱい果実系)",
+        "チョコレート (コクのある甘み)",
+        "キャラメル (香ばしい甘さ)",
+        "ナッツ (香ばしいナッツ感)",
+        "黒糖 (まろやかなコク・甘み)",
+        "フローラル (華やかな香り)",
+        "アーシー (土や大地を思わせる風味)",
+        "ハーブ (爽やかな植物感)",
+        "スパイス (スパイシーなアクセント)"
+    ]
     
     // 道具
     var dripper: String = ""
@@ -69,6 +80,9 @@ class ProfileEditViewModel {
         self.user = user
         configure(with: user)
     }
+    
+    var isShowingImageCropView: Bool = false
+    var tempSelectedUIImage: UIImage? = nil
     
     init() {
         self.user = User(
@@ -122,7 +136,9 @@ class ProfileEditViewModel {
         
         await MainActor.run {
             if isProfile {
-                self.profileImage = uiImage
+                // プロフィール画像の場合は直接反映せず、トリミング画面用の変数に保持して画面を開く
+                self.tempSelectedUIImage = uiImage
+                self.isShowingImageCropView = true
             } else {
                 self.favoriteCoffeeImage = uiImage
             }

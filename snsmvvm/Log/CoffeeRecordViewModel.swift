@@ -22,13 +22,26 @@ class CoffeeRecordViewModel {
     
     // 評価（5段階評価）
     var aromarating: Int = 0
-    var aromaComment: String = ""
+    var memo: String = ""
     var bitternessrating: Int = 0
     var acidityrating: Int = 0
     var bodyrating: Int = 0
     
     // 香りのタグ選択用プロパティ
     var selectedAromas: [String] = []
+    let flavorOptions = [
+        "フルーティー (みずみずしい果実感)",
+        "シトラス (爽やかな柑橘系)",
+        "ベリー (甘酸っぱい果実系)",
+        "チョコレート (コクのある甘み)",
+        "キャラメル (香ばしい甘さ)",
+        "ナッツ (香ばしいナッツ感)",
+        "黒糖 (まろやかなコク・甘み)",
+        "フローラル (華やかな香り)",
+        "アーシー (土や大地を思わせる風味)",
+        "ハーブ (爽やかな植物感)",
+        "スパイス (スパイシーなアクセント)"
+    ]
     
     // 写真関連
     var selectedItems: [PhotosPickerItem] = [] {
@@ -68,63 +81,69 @@ class CoffeeRecordViewModel {
     
     // MARK: - 投稿・保存処理
     func uploadAndSaveLog(currentUser: FirebaseAuth.User, completion: @escaping (Bool) -> Void) {
-        guard let image = logImages.first else {
-            saveLogToFirestore(imageUrl: nil, completion: completion)
-            return
-        }
-         
-        // 画像の切り抜き処理
-        guard let cropped = cropImage(image: image, scale: scale, offset: offset, containerSize: CGSize(width: 300, height: 400)),
-              let data = cropped.jpegData(compressionQuality: 0.7) else {
-            completion(false); return
-        }
-         
-        let filename = NSUUID().uuidString + ".jpg"
-        let ref = Storage.storage().reference().child("post_images").child(filename)
-         
-        ref.putData(data, metadata: nil) { _, error in
-            if error != nil { completion(false); return }
-            ref.downloadURL { url, _ in
-                self.saveLogToFirestore(imageUrl: url?.absoluteString, completion: completion)
+            guard let image = logImages.first else {
+                saveLogToFirestore(imageUrl: nil, completion: completion)
+                return
+            }
+             
+            // 💡 追加: 切り抜きや圧縮の前に、まず長辺を1080pxにリサイズしてピクセル数を落とす
+        // 💡 修正: resize(toMaxLongSide: 1080) を呼び出す
+                guard let resizedBaseImage = image.resize(toMaxLongSide: 1080) else {
+                    completion(false); return
+                }
+
+            // 画像の切り抜き処理（リサイズ済みの画像を使う）
+            guard let cropped = cropImage(image: resizedBaseImage, scale: scale, offset: offset, containerSize: CGSize(width: 300, height: 400)),
+                  let data = cropped.jpegData(compressionQuality: 0.7) else {
+                completion(false); return
+            }
+             
+            let filename = NSUUID().uuidString + ".jpg"
+            let ref = Storage.storage().reference().child("post_images").child(filename)
+             
+            ref.putData(data, metadata: nil) { _, error in
+                if error != nil { completion(false); return }
+                ref.downloadURL { url, _ in
+                    self.saveLogToFirestore(imageUrl: url?.absoluteString, completion: completion)
+                }
             }
         }
-    }
       
     private func saveLogToFirestore(imageUrl: String?, completion: @escaping (Bool) -> Void) {
-        guard let uid = Auth.auth().currentUser?.uid else {
-            print("エラー: ログインユーザーのUIDが取得できません")
-            completion(false);
-            return
+            guard let uid = Auth.auth().currentUser?.uid else {
+                print("エラー: ログインユーザーのUIDが取得できません")
+                completion(false);
+                return
+            }
+             
+            let newLog = Log(
+                userId: uid,
+                shopName: shopName,
+                countryName: countryName,
+                farmName: farmName,
+                roastLevel: roastLevel,
+                aromarating: aromarating,
+                aromaComment: memo, // 💡 Log構造体へ渡す際に memo を指定
+                bitternessrating: bitternessrating,
+                acidityrating: acidityrating,
+                bodyrating: bodyrating,
+                aromaTags: selectedAromas,
+                createdAt: Date(),
+                tagX: 0,
+                tagY: 0,
+                imageUrl: imageUrl
+            )
+             
+            do {
+                _ = try db.collection("posts").addDocument(from: newLog)
+                clearFormFields()
+                print("Firestoreへの保存に成功しました！")
+                completion(true)
+            } catch {
+                print("Firestoreへの保存に失敗しました: \(error.localizedDescription)")
+                completion(false)
+            }
         }
-         
-        let newLog = Log(
-            userId: uid,
-            shopName: shopName,
-            countryName: countryName,
-            farmName: farmName,
-            roastLevel: roastLevel,
-            aromarating: aromarating,
-            aromaComment: aromaComment,
-            bitternessrating: bitternessrating,
-            acidityrating: acidityrating,
-            bodyrating: bodyrating,
-            aromaTags: selectedAromas, // 💡 ここで選択された香りのタグを渡す
-            createdAt: Date(),
-            tagX: 0,
-            tagY: 0,
-            imageUrl: imageUrl
-        )
-         
-        do {
-            _ = try db.collection("posts").addDocument(from: newLog)
-            clearFormFields()
-            print("Firestoreへの保存に成功しました！")
-            completion(true)
-        } catch {
-            print("Firestoreへの保存に失敗しました: \(error.localizedDescription)")
-            completion(false)
-        }
-    }
       
     // 外部からフォームをリセットできるように公開
     func resetForm() {
@@ -132,12 +151,12 @@ class CoffeeRecordViewModel {
     }
       
     private func clearFormFields() {
-        shopName = ""; countryName = ""; farmName = ""; roastLevel = ""
-        aromarating = 0; aromaComment = ""; bitternessrating = 0
-        acidityrating = 0; bodyrating = 0; logImages = []
-        selectedAromas = [] // リセット時にタグ選択もクリア
-        selectedItems = []; scale = 1.0; offset = .zero
-    }
+            shopName = ""; countryName = ""; farmName = ""; roastLevel = ""
+            aromarating = 0; memo = ""; bitternessrating = 0 // 💡 クリア対象も memo に変更
+            acidityrating = 0; bodyrating = 0; logImages = []
+            selectedAromas = []
+            selectedItems = []; scale = 1.0; offset = .zero
+        }
       
     // 画像切り抜きロジック
     private func cropImage(image: UIImage, scale: CGFloat, offset: CGSize, containerSize: CGSize) -> UIImage? {

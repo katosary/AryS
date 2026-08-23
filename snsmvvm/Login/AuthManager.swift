@@ -67,12 +67,12 @@ class AuthManager: ObservableObject {
                 completion(error.localizedDescription)
                 return
             }
-            
+             
             guard let user = authResult?.user else {
                 completion("ユーザーの作成に失敗しました。")
                 return
             }
-            
+             
             // Firestoreへの詳細情報付きユーザー保存処理
             self?.saveUserToFirestore(
                 uid: user.uid,
@@ -95,7 +95,7 @@ class AuthManager: ObservableObject {
         completion: @escaping (String?) -> Void
     ) {
         let db = Firestore.firestore()
-        
+         
         let userData: [String: Any] = [
             "userNo": 0,
             "userName": name,
@@ -112,7 +112,7 @@ class AuthManager: ObservableObject {
             "proaroma": 0,
             "proflavor": ""
         ]
-        
+         
         db.collection("users").document(uid).setData(userData) { error in
             if let error = error {
                 completion(error.localizedDescription)
@@ -125,14 +125,18 @@ class AuthManager: ObservableObject {
     // MARK: - 投稿ログの保存処理
     func saveLogToFirestore(
         shopName: String,
+        blend: String,
         countryName: String,
         farmName: String,
+        grade: String,
         roastLevel: String,
         aromarating: Int,
-        aromaComment: String,
+        memo: String,
         bitternessrating: Int,
         acidityrating: Int,
         bodyrating: Int,
+        sweetnessrating: Int,
+        flavorTags: [String],
         tagX: CGFloat,
         tagY: CGFloat,
         imageUrl: String?,
@@ -148,20 +152,24 @@ class AuthManager: ObservableObject {
         let newLog = Log(
             userId: uid,
             shopName: shopName,
+            blend: blend,
             countryName: countryName,
             farmName: farmName,
+            grade: grade,
             roastLevel: roastLevel,
-            aromarating: aromarating,
-            aromaComment: aromaComment,
+            flavorrating: aromarating,
+            memo: memo,
             bitternessrating: bitternessrating,
             acidityrating: acidityrating,
             bodyrating: bodyrating,
+            sweetnessrating: sweetnessrating,
+            flavorTags: flavorTags,
             createdAt: Date(),
             tagX: tagX,
             tagY: tagY,
             imageUrl: imageUrl
         )
-        
+         
         do {
             _ = try db.collection("posts").addDocument(from: newLog)
             completion(true)
@@ -175,12 +183,12 @@ class AuthManager: ObservableObject {
     func signOut(userManager: UserManager, profileViewModel: ProfileViewModel) {
         do {
             try self.auth.signOut()
-            
+             
             Task { @MainActor in
                 userManager.currentUser = nil
                 profileViewModel.reset()
             }
-            
+             
         } catch {
             print("ログアウトエラー: \(error.localizedDescription)")
         }

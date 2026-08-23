@@ -55,7 +55,6 @@ struct ProfileEditView: View {
                             }
                         }
                         .padding(.top, 10)
-                        // ▼ ここを追加（トリミング用シートの呼び出し）
                         .sheet(isPresented: $profileEditViewModel.isShowingImageCropView) {
                             if let inputImage = profileEditViewModel.tempSelectedUIImage {
                                 ImageCropView(inputImage: inputImage) { croppedImage in
@@ -106,31 +105,44 @@ struct ProfileEditView: View {
                             ratingRow(label: "苦味", rating: $profileEditViewModel.probitter)
                             ratingRow(label: "酸味", rating: $profileEditViewModel.proacidity)
                             ratingRow(label: "コク", rating: $profileEditViewModel.probody)
-                            ratingRow(label: "香り", rating: $profileEditViewModel.proaroma)
+                            ratingRow(label: "甘味", rating: $profileEditViewModel.prosweetness)
+                            ratingRow(label: "フレーバー", rating: $profileEditViewModel.proflavor)
                             
-                            // 💡 フレーバー選択UI（タグ形式）
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("フレーバー").font(.body).padding(.top, 12)
+                            // 💡 フレーバー選択UI（縦並び形式）
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("フレーバー")
+                                    .font(.body)
+                                    .padding(.top, 12)
                                 
-                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 90))], spacing: 10) {
+                                VStack(alignment: .leading, spacing: 8) {
                                     ForEach(profileEditViewModel.flavorOptions, id: \.self) { flavor in
-                                        let isSelected = profileEditViewModel.proflavorList.contains(flavor)
-                                        Text(flavor)
-                                            .font(.system(size: 13, weight: .medium))
-                                            .padding(.vertical, 8)
-                                            .padding(.horizontal, 12)
-                                            .background(isSelected ? Color.blue : Color(.systemGray6))
-                                            .foregroundColor(isSelected ? .white : .primary)
-                                            .cornerRadius(16)
-                                            .onTapGesture {
-                                                withAnimation {
-                                                    if isSelected {
-                                                        profileEditViewModel.proflavorList.removeAll { $0 == flavor }
-                                                    } else {
-                                                        profileEditViewModel.proflavorList.append(flavor)
-                                                    }
+                                        // 💡 proflavorTags から flavorTags に修正
+                                        let isSelected = profileEditViewModel.flavorTags.contains(flavor)
+                                        Button(action: {
+                                            withAnimation {
+                                                if isSelected {
+                                                    profileEditViewModel.flavorTags.removeAll { $0 == flavor }
+                                                } else {
+                                                    profileEditViewModel.flavorTags.append(flavor)
                                                 }
                                             }
+                                        }) {
+                                            HStack {
+                                                Text(flavor)
+                                                    .font(.system(size: 14, weight: .medium))
+                                                    .foregroundColor(isSelected ? .white : .primary)
+                                                Spacer()
+                                                if isSelected {
+                                                    Image(systemName: "checkmark")
+                                                        .font(.system(size: 14, weight: .bold))
+                                                        .foregroundColor(.white)
+                                                }
+                                            }
+                                            .padding(.vertical, 12)
+                                            .padding(.horizontal, 16)
+                                            .background(isSelected ? Color.blue : Color(.systemGray6))
+                                            .cornerRadius(12)
+                                        }
                                     }
                                 }
                                 .padding(.bottom, 12)
@@ -189,7 +201,7 @@ struct ProfileEditView: View {
             }
             .navigationTitle("プロフィール編集")
             .navigationBarTitleDisplayMode(.inline)
-            .task(id: user) {
+            .task {
                 profileEditViewModel.configure(with: user)
                 if profileEditViewModel.profileImage == nil { profileEditViewModel.loadProfileImageFromUrl() }
                 if profileEditViewModel.favoriteCoffeeImage == nil { profileEditViewModel.loadFavoriteCoffeeImageFromUrl() }
@@ -244,13 +256,12 @@ struct ProfileEditView: View {
                     ForEach(1...profileEditViewModel.maxRating, id: \.self) { number in
                         let isSelected = number <= rating.wrappedValue
                         
-                        // 💡 星のシステムイメージからコーヒー豆のカスタム画像に変更
                         Image(isSelected ? "coffeeBeanFill" : "coffeeBean")
                             .resizable()
                             .scaledToFit()
                             .frame(width: 24, height: 24)
-                            .foregroundColor(isSelected ? .yellow : .gray.opacity(0.3)) // 必要に応じて色を調整
-                            .contentShape(Rectangle()) // タップ判定を広げる
+                            .foregroundColor(isSelected ? .yellow : .gray.opacity(0.3))
+                            .contentShape(Rectangle())
                             .onTapGesture {
                                 rating.wrappedValue = number
                             }

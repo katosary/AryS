@@ -27,7 +27,9 @@ final class OtherProfileViewModel {
         proacidity: 0,
         probody: 0,
         proaroma: 0,
-        proflavor: "",
+        prosweetness: 0,
+        proflavor: 0,
+        flavorTags: [],         // ← proflavorTags から flavorTags に修正
         dripper: "",
         paperFilter: "",
         kettle: "",
@@ -82,7 +84,10 @@ final class OtherProfileViewModel {
     
     /// 投稿削除用
     func deleteLog(targetPost: Log) {
-        guard let logId = targetPost.id else { return }
+        guard let logId = targetPost.id,
+              let currentUserId = Auth.auth().currentUser?.uid,
+              targetPost.userId == currentUserId else { return }
+        
         Task {
             do {
                 try await db.collection("posts").document(logId).delete()
@@ -99,12 +104,11 @@ final class OtherProfileViewModel {
         return try snapshot.data(as: User.self)
     }
     
-    // MARK: - ブロック機能の追加
+    // MARK: - ブロック機能
     func blockUser(targetUserId: String) async {
         guard let currentUserId = Auth.auth().currentUser?.uid else { return }
         
         do {
-            // 自分のドキュメントに blockedUserIds 配列として追加 (ArrayUnionを使用)
             let currentUserRef = db.collection("users").document(currentUserId)
             try await currentUserRef.updateData([
                 "blockedUserIds": FieldValue.arrayUnion([targetUserId])
@@ -115,7 +119,7 @@ final class OtherProfileViewModel {
         }
     }
     
-    // MARK: - 通報機能の追加
+    // MARK: - 通報機能
     func reportUser(targetUserId: String, reason: String) async {
         guard let currentUserId = Auth.auth().currentUser?.uid else { return }
         

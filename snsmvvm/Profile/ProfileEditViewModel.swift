@@ -25,21 +25,22 @@ class ProfileEditViewModel {
     var probitter: Int = 0
     var proacidity: Int = 0
     var probody: Int = 0
-    var proaroma: Int = 0
-    var proflavorList: [String] = [] // 💡 フレーバーのタグ選択用配列に変更
+    var prosweetness: Int = 0
+    var proflavor: Int = 0
+    var flavorTags: [String] = [] // 💡 proflavorTags から flavorTags に統一
     
     let flavorOptions = [
-        "フルーティー (みずみずしい果実感)",
-        "シトラス (爽やかな柑橘系)",
-        "ベリー (甘酸っぱい果実系)",
-        "チョコレート (コクのある甘み)",
-        "キャラメル (香ばしい甘さ)",
-        "ナッツ (香ばしいナッツ感)",
-        "黒糖 (まろやかなコク・甘み)",
-        "フローラル (華やかな香り)",
-        "アーシー (土や大地を思わせる風味)",
-        "ハーブ (爽やかな植物感)",
-        "スパイス (スパイシーなアクセント)"
+        "フルーティー",
+        "シトラス",
+        "ベリー",
+        "チョコレート",
+        "キャラメル",
+        "ナッツ",
+        "黒糖",
+        "フローラル",
+        "アーシー",
+        "ハーブ",
+        "スパイス"
     ]
     
     // 道具
@@ -76,23 +77,12 @@ class ProfileEditViewModel {
     
     private let db = Firestore.firestore()
     
-    init(user: User) {
-        self.user = user
-        configure(with: user)
-    }
-    
     var isShowingImageCropView: Bool = false
     var tempSelectedUIImage: UIImage? = nil
     
-    init() {
-        self.user = User(
-            id: "", userName: "", email: "", selfIntroduction: "",
-            userAge: 0, prefecture: "", favoriteCoffee: "",
-            probitter: 0, proacidity: 0, probody: 0, proaroma: 0, proflavor: "",
-            dripper: "", paperFilter: "", kettle: "", server: "", scale: "",
-            mill: "", grinder: "", espressoMachine: "", frenchPress: "",
-            profileImageUrl: nil, favoriteToolImageUrl: nil
-        )
+    init(user: User) {
+        self.user = user
+        configure(with: user)
     }
     
     @MainActor
@@ -106,24 +96,20 @@ class ProfileEditViewModel {
         self.probitter = user.probitter
         self.proacidity = user.proacidity
         self.probody = user.probody
-        self.proaroma = user.proaroma
+        self.prosweetness = user.prosweetness
+        self.proflavor = user.proflavor
+        self.flavorTags = user.flavorTags // 💡 非オプショナルの配列なのでそのまま代入
         
-        // 💡 Firestore側でカンマ区切り（例: "チョコレート,ナッツ"）で保存されていると仮定して配列に変換
-        if !user.proflavor.isEmpty {
-            self.proflavorList = user.proflavor.components(separatedBy: ",")
-        } else {
-            self.proflavorList = []
-        }
-        
-        self.dripper = user.dripper ?? ""
-        self.paperFilter = user.paperFilter ?? ""
-        self.kettle = user.kettle ?? ""
-        self.server = user.server ?? ""
-        self.scale = user.scale ?? ""
-        self.mill = user.mill ?? ""
-        self.grinder = user.grinder ?? ""
-        self.espressoMachine = user.espressoMachine ?? ""
-        self.frenchPress = user.frenchPress ?? ""
+        // 💡 非オプショナル型 String に対する不要な ?? を削除
+        self.dripper = user.dripper
+        self.paperFilter = user.paperFilter
+        self.kettle = user.kettle
+        self.server = user.server
+        self.scale = user.scale
+        self.mill = user.mill
+        self.grinder = user.grinder
+        self.espressoMachine = user.espressoMachine
+        self.frenchPress = user.frenchPress
         
         self.profileImageUrl = user.profileImageUrl
         self.favoriteToolImageUrl = user.favoriteToolImageUrl
@@ -133,10 +119,9 @@ class ProfileEditViewModel {
         guard let item = item else { return }
         guard let data = try? await item.loadTransferable(type: Data.self) else { return }
         guard let uiImage = UIImage(data: data) else { return }
-        
+         
         await MainActor.run {
             if isProfile {
-                // プロフィール画像の場合は直接反映せず、トリミング画面用の変数に保持して画面を開く
                 self.tempSelectedUIImage = uiImage
                 self.isShowingImageCropView = true
             } else {
@@ -181,7 +166,7 @@ class ProfileEditViewModel {
             let timestamp = Int(Date().timeIntervalSince1970)
             imageUrl = "\(rawUrlString)?v=\(timestamp)"
         }
-
+         
         var toolImageUrl: String? = self.user.favoriteToolImageUrl
         if let image = favoriteCoffeeImage, let data = image.jpegData(compressionQuality: 0.5) {
             let storageRef = Storage.storage().reference().child("favorite_tool_images/\(uid).jpg")
@@ -190,10 +175,7 @@ class ProfileEditViewModel {
             let timestamp = Int(Date().timeIntervalSince1970)
             toolImageUrl = "\(rawUrlString)?v=\(timestamp)"
         }
-
-        // 💡 選択されたフレーバー配列をカンマ区切りの文字列に結合して保存
-        let joinedFlavor = self.proflavorList.joined(separator: ",")
-
+         
         self.user.userName = userName
         self.user.selfIntroduction = selfIntroduction
         self.user.userAge = userAge
@@ -201,9 +183,10 @@ class ProfileEditViewModel {
         self.user.probitter = probitter
         self.user.proacidity = proacidity
         self.user.probody = probody
-        self.user.proaroma = proaroma
-        self.user.proflavor = joinedFlavor
-        
+        self.user.prosweetness = prosweetness
+        self.user.proflavor = proflavor
+        self.user.flavorTags = flavorTags
+         
         self.user.dripper = dripper
         self.user.paperFilter = paperFilter
         self.user.kettle = kettle
@@ -213,10 +196,10 @@ class ProfileEditViewModel {
         self.user.grinder = grinder
         self.user.espressoMachine = espressoMachine
         self.user.frenchPress = frenchPress
-        
+         
         if let url = imageUrl { self.user.profileImageUrl = url }
         if let url = toolImageUrl { self.user.favoriteToolImageUrl = url }
-
+         
         let updateData: [String: Any] = [
             "userName": self.user.userName,
             "selfIntroduction": self.user.selfIntroduction,
@@ -226,21 +209,22 @@ class ProfileEditViewModel {
             "probitter": self.user.probitter,
             "proacidity": self.user.proacidity,
             "probody": self.user.probody,
-            "proaroma": self.user.proaroma,
-            "proflavor": self.user.proflavor, // 💡 文字列として保存
-            "dripper": self.user.dripper ?? "",
-            "paperFilter": self.user.paperFilter ?? "",
-            "kettle": self.user.kettle ?? "",
-            "server": self.user.server ?? "",
-            "scale": self.user.scale ?? "",
-            "mill": self.user.mill ?? "",
-            "grinder": self.user.grinder ?? "",
-            "espressoMachine": self.user.espressoMachine ?? "",
-            "frenchPress": self.user.frenchPress ?? "",
+            "prosweetness": self.user.prosweetness,
+            "proflavor": self.user.proflavor,
+            "flavorTags": self.user.flavorTags,
+            "dripper": self.user.dripper,
+            "paperFilter": self.user.paperFilter,
+            "kettle": self.user.kettle,
+            "server": self.user.server,
+            "scale": self.user.scale,
+            "mill": self.user.mill,
+            "grinder": self.user.grinder,
+            "espressoMachine": self.user.espressoMachine,
+            "frenchPress": self.user.frenchPress,
             "profileImageUrl": self.user.profileImageUrl ?? "",
             "favoriteToolImageUrl": self.user.favoriteToolImageUrl ?? ""
         ]
-
+         
         try await db.collection("users").document(uid).setData(updateData, merge: true)
         return self.user
     }

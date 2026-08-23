@@ -11,18 +11,20 @@ import FirebaseFirestore
 @Observable
 class EditCoffeeLogViewModel {
     var shopName: String = ""
+    var blend: String = ""
     var farmName: String = ""
+    var grade: String = ""
     var countryName: String = ""
     var roastLevel: String = ""
     
     var aromarating: Int = 0
-    var memo: String = "" // 💡 aromaComment から memo に変更・統一
+    var memo: String = ""
     
     var bitternessrating: Int = 0
     var acidityrating: Int = 0
     var bodyrating: Int = 0
+    var sweetnessrating: Int = 0
     
-    // 💡 フレーバー選択用のプロパティと選択肢を追加
     var selectedAromas: [String] = []
     let flavorOptions = [
         "フルーティー (みずみずしい果実感)",
@@ -38,7 +40,6 @@ class EditCoffeeLogViewModel {
         "スパイス (スパイシーなアクセント)"
     ]
     
-    // ピッカー表示用のフラグ
     var isShowingCountryPicker: Bool = false
     var isShowingRoastPicker: Bool = false
     
@@ -48,18 +49,20 @@ class EditCoffeeLogViewModel {
     var offColor = Color.gray
     var onColor = Color.yellow
     
-    // 💡 初期化時に既存のLogデータをプロパティに埋め込む
     init(log: Log) {
         self.shopName = log.shopName
+        self.blend = log.blend
         self.farmName = log.farmName
+        self.grade = log.grade
         self.countryName = log.countryName
         self.roastLevel = log.roastLevel
-        self.aromarating = log.aromarating
-        self.memo = log.aromaComment // LogのaromaCommentをmemoに代入
+        self.aromarating = log.flavorrating
+        self.memo = log.memo
         self.bitternessrating = log.bitternessrating
         self.acidityrating = log.acidityrating
         self.bodyrating = log.bodyrating
-        self.selectedAromas = log.aromaTags ?? [] // 💡 nilの場合は空の配列を代入する
+        self.sweetnessrating = log.sweetnessrating
+        self.selectedAromas = log.flavorTags ?? []
     }
     
     func updateLog(targetPost: Log, completion: @escaping (Bool) -> Void) {
@@ -68,22 +71,25 @@ class EditCoffeeLogViewModel {
             completion(false)
             return
         }
-        
+         
         let db = Firestore.firestore()
-        
+         
         let updatedData: [String: Any] = [
             "shopName": shopName,
+            "blend": blend,
             "farmName": farmName,
+            "grade": grade,
             "countryName": countryName,
             "roastLevel": roastLevel,
             "aromarating": aromarating,
-            "aromaComment": memo, // 💡 Firestoreには aromaComment として保存
+            "memo": memo,
             "bitternessrating": bitternessrating,
             "acidityrating": acidityrating,
             "bodyrating": bodyrating,
-            "aromaTags": selectedAromas // 💡 選択されたタグも保存
+            "sweetnessrating": sweetnessrating,
+            "flavorTags": selectedAromas
         ]
-        
+         
         db.collection("posts").document(postId).updateData(updatedData) { error in
             DispatchQueue.main.async {
                 if let error = error {

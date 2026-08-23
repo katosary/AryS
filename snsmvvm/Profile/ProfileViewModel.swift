@@ -27,8 +27,9 @@ final class ProfileViewModel {
         probitter: 0,
         proacidity: 0,
         probody: 0,
-        proaroma: 0,
-        proflavor: "",
+        prosweetness: 0,
+        proflavor: 0,
+        flavorTags: [],         // ← proflavorTags から flavorTags に修正
         dripper: "",
         paperFilter: "",
         kettle: "",
@@ -85,8 +86,9 @@ final class ProfileViewModel {
             probitter: 0,
             proacidity: 0,
             probody: 0,
-            proaroma: 0,
-            proflavor: "",
+            prosweetness: 0,
+            proflavor: 0,
+            flavorTags: [],     // ← proflavorTags から flavorTags に修正
             dripper: "",
             paperFilter: "",
             kettle: "",
@@ -198,7 +200,7 @@ final class ProfileViewModel {
     // MARK: - ブロック機能
     func blockUser(targetUserId: String) async {
         guard let currentUid = Auth.auth().currentUser?.uid else { return }
-        
+         
         do {
             let currentUserRef = db.collection("users").document(currentUid)
             try await currentUserRef.updateData([
@@ -213,14 +215,14 @@ final class ProfileViewModel {
     // MARK: - 通報機能
     func reportUser(targetUserId: String, reason: String) async {
         guard let currentUid = Auth.auth().currentUser?.uid else { return }
-        
+         
         let reportData: [String: Any] = [
             "reporterId": currentUid,
         "targetUserId": targetUserId,
             "reason": reason.isEmpty ? "理由なし" : reason,
             "createdAt": Timestamp()
         ]
-        
+         
         do {
             try await db.collection("reports").addDocument(data: reportData)
             print("ユーザーを通報しました: \(targetUserId)")

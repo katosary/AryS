@@ -103,15 +103,15 @@ struct ProfileDetailContentView: View {
                     
                     // --- 道具の情報のみを左下に配置 ---
                     let toolData: [(String, String)] = [
-                        ("ドリッパー", profileViewModel.user.dripper ?? ""),
-                        ("ペーパー", profileViewModel.user.paperFilter ?? ""),
-                        ("ケトル", profileViewModel.user.kettle ?? ""),
-                        ("サーバー", profileViewModel.user.server ?? ""),
-                        ("スケール", profileViewModel.user.scale ?? ""),
-                        ("ミル", profileViewModel.user.mill ?? ""),
-                        ("グラインダー", profileViewModel.user.grinder ?? ""),
-                        ("マシン", profileViewModel.user.espressoMachine ?? ""),
-                        ("プレス", profileViewModel.user.frenchPress ?? "")
+                        ("ドリッパー", profileViewModel.user.dripper ),
+                        ("ペーパー", profileViewModel.user.paperFilter ),
+                        ("ケトル", profileViewModel.user.kettle ),
+                        ("サーバー", profileViewModel.user.server ),
+                        ("スケール", profileViewModel.user.scale ),
+                        ("ミル", profileViewModel.user.mill ),
+                        ("グラインダー", profileViewModel.user.grinder ),
+                        ("マシン", profileViewModel.user.espressoMachine ),
+                        ("プレス", profileViewModel.user.frenchPress )
                     ].filter { !$0.1.isEmpty }
                     
                     if !toolData.isEmpty {
@@ -170,9 +170,6 @@ struct ProfileDetailContentView: View {
                                 .bold()
                             
                             HStack(spacing: 8) {
-                                if profileViewModel.user.userAge > 0 {
-                                    Text("\(profileViewModel.user.userAge)歳")
-                                }
                                 if !profileViewModel.user.prefecture.isEmpty {
                                     HStack(spacing: 2) {
                                         Image(systemName: "mappin.and.ellipse")
@@ -197,9 +194,9 @@ struct ProfileDetailContentView: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     
-                    // --- 1. お気に入りのコーヒー（国名） ---
+                    // --- これまでのベストコーヒー ---
                     HStack(alignment: .top) {
-                        Text("国")
+                        Text("ベスト")
                             .font(.subheadline)
                             .bold()
                             .foregroundColor(.secondary)
@@ -210,55 +207,23 @@ struct ProfileDetailContentView: View {
                             .foregroundColor(.primary)
                             .bold()
                     }
-                    
-                    // --- 2. 味のパラメータ（縦1列） ---
-                    VStack(spacing: 8) {
-                        parameterRow(label: "苦味", rating: profileViewModel.user.probitter)
-                        parameterRow(label: "酸味", rating: profileViewModel.user.proacidity)
-                        parameterRow(label: "コク", rating: profileViewModel.user.probody)
-                        parameterRow(label: "香り", rating: profileViewModel.user.proaroma)
-                    }
-                    .padding(.top, 4)
-                    
-                    // --- 3. フレーバー（タグ形式） ---
-                    HStack(alignment: .top) {
-                        Text("フレーバー")
-                            .font(.subheadline)
-                            .bold()
-                            .foregroundColor(.secondary)
-                            .frame(width: 80, alignment: .leading)
-                        
-                        let flavorString = profileViewModel.user.proflavor
-                        if flavorString.isEmpty {
-                            Text("未登録")
+
+                    // --- 好きな味わいをもっと詳しくボタン ---
+                    NavigationLink {
+                        ProfileFlavorDetailView()
+                    } label: {
+                        HStack {
+                            Text("好きな味わいをもっと詳しく")
                                 .font(.subheadline)
-                                .foregroundColor(.primary)
-                                .bold()
-                        } else {
-                            // カンマ区切りの文字列を想定して配列に分割（前後の空白も削除）
-                            let flavorTags = flavorString.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
-                            
-                            if flavorTags.isEmpty {
-                                Text("未登録")
-                                    .font(.subheadline)
-                                    .foregroundColor(.primary)
-                                    .bold()
-                            } else {
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 6) {
-                                        ForEach(flavorTags, id: \.self) { tag in
-                                            Text("#\(tag)")
-                                                .font(.system(size: 12, weight: .semibold))
-                                                .padding(.horizontal, 10)
-                                                .padding(.vertical, 5)
-                                                .background(Color.secondary.opacity(0.2))
-                                                .cornerRadius(8)
-                                        }
-                                    }
-                                }
-                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.subheadline)
                         }
+                        .padding()
+                        .cornerRadius(10)
+                        .foregroundColor(.primary)
                     }
+                    .padding(.top, 8)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
@@ -291,9 +256,4 @@ struct ProfileDetailContentView: View {
     }
 }
 
-#Preview {
-    let profileViewModel = ProfileViewModel()
-    return ProfileView()
-        .environment(profileViewModel)
-        .environmentObject(AuthManager())
-}
+

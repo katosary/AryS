@@ -12,54 +12,46 @@ struct CollorRatingView: View {
     let maxRating: Int
     
     var body: some View {
-        HStack(spacing: 12) {
-            // 左側のラベル
-            Text("◀ 弱い")
-                .font(.caption)
-                .bold()
-                .foregroundColor(.secondary)
-                .frame(width: 45, alignment: .leading)
-            
-            // コーヒー豆描画エリア
-            ZStack(alignment: .leading) {
-                // 下地：未選択の時（枠線のコーヒー豆）
-                HStack(spacing: 4) {
-                    ForEach(0..<maxRating, id: \.self) { _ in
-                        Image("coffeeBean") // 💡 枠線用の画像名
-                            .renderingMode(.template)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 20, height: 20)
-                            .foregroundColor(Color(red: 0.55, green: 0.35, blue: 0.2)) // 枠線の色（茶色）
+        // ラベルを削除し、コーヒー豆エリアを横幅いっぱいに広げる
+        ZStack(alignment: .leading) {
+            // 下地：未選択の時（枠線のコーヒー豆）
+            // 💡 間隔を均等（spacedBy など、または Spacer を使う方法）にするため HStack で space を均等配置
+            HStack(spacing: 0) {
+                ForEach(0..<maxRating, id: \.self) { index in
+                    Image("coffeeBean")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 36, height: 36) // さらに大きく（36×36）
+                        .foregroundColor(Color(red: 0.55, green: 0.35, blue: 0.2))
+                    if index < maxRating - 1 {
+                        Spacer(minLength: 0) // 横幅いっぱいに自動で間隔を広げる
                     }
                 }
-                
-                // 上書き：選択された時（塗りつぶしのコーヒー豆）
-                HStack(spacing: 4) {
-                    ForEach(0..<maxRating, id: \.self) { _ in
-                        Image("coffeeBeanFill") // 💡 塗りつぶし用の画像名
-                            .renderingMode(.template)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 20, height: 20)
-                            .foregroundColor(Color(red: 0.55, green: 0.35, blue: 0.2)) // 塗りつぶしの色（茶色）
-                    }
-                }
-                .mask(
-                    GeometryReader { geometry in
-                        Rectangle()
-                            .frame(width: geometry.size.width * CGFloat(rating / Double(maxRating)))
-                    }
-                )
             }
             
-            // 右側のラベル
-            Text("強い ▶")
-                .font(.caption)
-                .bold()
-                .foregroundColor(.secondary)
-                .frame(width: 45, alignment: .trailing)
+            // 上書き：選択された時（塗りつぶしのコーヒー豆）
+            HStack(spacing: 0) {
+                ForEach(0..<maxRating, id: \.self) { index in
+                    Image("coffeeBeanFill")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 36, height: 36) // さらに大きく（36×36）
+                        .foregroundColor(Color(red: 0.55, green: 0.35, blue: 0.2))
+                    if index < maxRating - 1 {
+                        Spacer(minLength: 0) // 横幅いっぱいに自動で間隔を広げる
+                    }
+                }
+            }
+            .mask(
+                GeometryReader { geometry in
+                    Rectangle()
+                        .frame(width: geometry.size.width * CGFloat(rating / Double(maxRating)))
+                }
+            )
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity) // 横幅いっぱいにする
     }
 }
+

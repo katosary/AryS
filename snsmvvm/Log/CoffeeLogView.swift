@@ -60,7 +60,7 @@ struct CoffeeLogView: View {
         let screenWidth = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.screen.bounds.width ?? 393
         let cardWidth = screenWidth - 32
         let cardHeight = cardWidth * (16 / 9)
-        
+         
         ZStack {
             VStack(spacing: 0) {
                 ZStack {
@@ -80,7 +80,7 @@ struct CoffeeLogView: View {
                     }
                     .frame(width: cardWidth, height: cardHeight)
                     .clipped()
-                    
+                     
                     // --- 2. 左下のコーヒー情報 ---
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
@@ -88,41 +88,63 @@ struct CoffeeLogView: View {
                             Text(displayUser?.userName ?? authorName)
                         }
                         Text("Shop \(log.shopName)")
+                        
+                        // 💡 ブレンド名（存在する場合のみ、またはそのまま表示）
+                        if !log.blend.isEmpty {
+                            Text("Blend: \(log.blend)")
+                        }
+                        
                         Text("Country \(log.countryName)")
                         
-                        // --- Bitterness ---
+                         
+
+                        // 全体を包む親 VStack の spacing も狭くする（例: spacing: 6）
                         VStack(alignment: .leading, spacing: 6) {
-                            let rating = Double(log.bitternessrating)
+                            
+                            // --- Bitterness ---
+                            // VStack を省いて直接 HStack にするか、spacing を 0〜2 にする
                             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                Text("Bitterness").font(.subheadline).bold()
-                                EmptyRatingView(rating: rating)
+                                Text("Bitterness")
+                                    .font(.subheadline)
+                                    .bold()
+                                    .frame(width: 90, alignment: .leading) // 先ほど左端を揃えるために紹介した幅固定も併用すると綺麗です
+                                EmptyRatingView(rating: Double(log.bitternessrating))
                             }
-                        }
-                        
-                        // --- Acidity ---
-                        VStack(alignment: .leading, spacing: 6) {
-                            let rating = Double(log.acidityrating)
+                            
+                            // --- Acidity ---
                             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                Text("Acidity").font(.subheadline).bold()
-                                EmptyRatingView(rating: rating)
+                                Text("Acidity")
+                                    .font(.subheadline)
+                                    .bold()
+                                    .frame(width: 90, alignment: .leading)
+                                EmptyRatingView(rating: Double(log.acidityrating))
                             }
-                        }
-                        
-                        // --- Body ---
-                        VStack(alignment: .leading, spacing: 6) {
-                            let rating = Double(log.bodyrating)
+                            
+                            // --- Body ---
                             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                Text("Body").font(.subheadline).bold()
-                                EmptyRatingView(rating: rating)
+                                Text("Body")
+                                    .font(.subheadline)
+                                    .bold()
+                                    .frame(width: 90, alignment: .leading)
+                                EmptyRatingView(rating: Double(log.bodyrating))
                             }
-                        }
-                        
-                        // --- Aroma ---
-                        VStack(alignment: .leading, spacing: 6) {
-                            let rating = Double(log.aromarating)
+                            
+                            // --- Sweetness ---
                             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                Text("Aroma").font(.subheadline).bold()
-                                EmptyRatingView(rating: rating)
+                                Text("Sweetness")
+                                    .font(.subheadline)
+                                    .bold()
+                                    .frame(width: 90, alignment: .leading)
+                                EmptyRatingView(rating: Double(log.sweetnessrating))
+                            }
+                            
+                            // --- Flavor ---
+                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                Text("Flavor")
+                                    .font(.subheadline)
+                                    .bold()
+                                    .frame(width: 90, alignment: .leading)
+                                EmptyRatingView(rating: Double(log.flavorrating))
                             }
                         }
                         HStack(spacing: 4) {
@@ -141,11 +163,11 @@ struct CoffeeLogView: View {
                     .shadow(color: .black.opacity(0.6), radius: 2, x: 0, y: 1)
                     .padding(16)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-                    
+                     
                     // --- 3. 右上のメニューボタン ---
                     HStack(spacing: 12) {
                         Text(log.createdAt, style: .date).font(.caption).foregroundColor(.secondary)
-                        
+                         
                         if let customMenuAction = onTapMenu {
                             Button(action: customMenuAction) {
                                 Image(systemName: "ellipsis").padding(5).foregroundColor(.primary)
@@ -163,7 +185,7 @@ struct CoffeeLogView: View {
                                     } label: {
                                         Label("このユーザーをブロックする", systemImage: "hand.raised")
                                     }
-                                    
+                                     
                                     Button(role: .destructive) {
                                         showingReportAlert = true
                                     } label: {
@@ -178,7 +200,7 @@ struct CoffeeLogView: View {
                     .foregroundColor(.white)
                     .shadow(color: .black.opacity(0.6), radius: 2, x: 0, y: 1)
                     .padding(16)
-                    
+                     
                     // --- 4. 右下のアクションボタン ---
                     VStack(spacing: 15) {
                         VStack(spacing: 4) {
@@ -198,7 +220,7 @@ struct CoffeeLogView: View {
                                 .font(.system(size: 12, weight: .bold))
                                 .foregroundColor(.white)
                         }
-                        
+                         
                         Button {
                             if let customBookmark = onTapBookmark {
                                 customBookmark()
@@ -210,7 +232,7 @@ struct CoffeeLogView: View {
                                 .font(.system(size: 28))
                                 .foregroundColor(bookmarkManager.isSaved(log.id) ? .yellow : .white)
                         }
-                        
+                         
                         Button {
                             if let customProfile = onTapProfile {
                                 customProfile()
@@ -288,4 +310,3 @@ struct CoffeeLogView: View {
         }
     }
 }
-

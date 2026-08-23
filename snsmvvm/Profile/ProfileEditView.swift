@@ -96,53 +96,65 @@ struct ProfileEditView: View {
                             .padding(.vertical, 12)
                             .sheet(isPresented: $profileEditViewModel.isShowingPrefecturePicker) {
                                 PrefectureSelectionView { profileEditViewModel.user.prefecture = $0 }
+                                    .presentationDetents([.medium, .large])
                             }
                             Divider()
                             
                             // --- 3. コーヒーの好み ---
                             Text("コーヒーの好み").font(.caption).fontWeight(.bold).foregroundColor(.secondary).padding(.top, 20).padding(.bottom, 10)
-                            editField(label: "国名", text: $profileEditViewModel.favoriteCoffee, placeholder: "好きな国")
+                            
                             ratingRow(label: "苦味", rating: $profileEditViewModel.probitter)
                             ratingRow(label: "酸味", rating: $profileEditViewModel.proacidity)
                             ratingRow(label: "コク", rating: $profileEditViewModel.probody)
                             ratingRow(label: "甘味", rating: $profileEditViewModel.prosweetness)
                             ratingRow(label: "フレーバー", rating: $profileEditViewModel.proflavor)
                             
-                            // 💡 フレーバー選択UI（縦並び形式）
+                            // 💡 フレーバー選択UI（制限なしの複数選択）
                             VStack(alignment: .leading, spacing: 12) {
-                                Text("フレーバー")
+                                Text("お気に入りのフレーバー（最大3つまで）")
                                     .font(.body)
                                     .padding(.top, 12)
                                 
                                 VStack(alignment: .leading, spacing: 8) {
-                                    ForEach(profileEditViewModel.flavorOptions, id: \.self) { flavor in
-                                        // 💡 proflavorTags から flavorTags に修正
-                                        let isSelected = profileEditViewModel.flavorTags.contains(flavor)
+                                    ForEach(profileEditViewModel.flavorOptions, id: \.self) { aroma in
+                                        let isSelected = profileEditViewModel.selectedFlavors.contains(aroma)
+                                        // 💡 3つに達しているかどうかの判定
+                                        let isMaxReached = profileEditViewModel.selectedFlavors.count >= 3
+                                        
                                         Button(action: {
                                             withAnimation {
+                                                var current = profileEditViewModel.selectedFlavors
                                                 if isSelected {
-                                                    profileEditViewModel.flavorTags.removeAll { $0 == flavor }
+                                                    // 選択済みなら外す
+                                                    current.removeAll { $0 == aroma }
                                                 } else {
-                                                    profileEditViewModel.flavorTags.append(flavor)
+                                                    // 未選択で、まだ3つ未満なら追加する
+                                                    if current.count < 3 {
+                                                        current.append(aroma)
+                                                    }
                                                 }
+                                                // 配列のインスタンスを新しくして確実に変更を通知
+                                                profileEditViewModel.selectedFlavors = current
                                             }
                                         }) {
                                             HStack {
-                                                Text(flavor)
+                                                Text(aroma)
                                                     .font(.system(size: 14, weight: .medium))
-                                                    .foregroundColor(isSelected ? .white : .primary)
                                                 Spacer()
                                                 if isSelected {
                                                     Image(systemName: "checkmark")
                                                         .font(.system(size: 14, weight: .bold))
-                                                        .foregroundColor(.white)
                                                 }
                                             }
                                             .padding(.vertical, 12)
                                             .padding(.horizontal, 16)
+                                            // 💡 3つに達していて未選択の項目は、少し薄くして押せない雰囲気を出す
                                             .background(isSelected ? Color.blue : Color(.systemGray6))
+                                            .foregroundColor(isSelected ? .white : (isMaxReached && !isSelected ? .gray.opacity(0.6) : .primary))
                                             .cornerRadius(12)
                                         }
+                                        // 💡 3つに達しているとき、未選択のボタンはタップ不可にしたい場合は .disabled() をつけてもOK
+                                        // .disabled(isMaxReached && !isSelected)
                                     }
                                 }
                                 .padding(.bottom, 12)
@@ -157,7 +169,7 @@ struct ProfileEditView: View {
                                 .padding(.top, 20)
                                 .padding(.bottom, 10)
                             
-                            // カバー画像（横幅いっぱい）
+                            // カバー画像
                             PhotosPicker(selection: $profileEditViewModel.selectedCoffeeItem, matching: .images) {
                                 ZStack {
                                     if let uiImage = profileEditViewModel.favoriteCoffeeImage {
@@ -255,7 +267,7 @@ struct ProfileEditView: View {
                 HStack(spacing: 4) {
                     ForEach(1...profileEditViewModel.maxRating, id: \.self) { number in
                         let isSelected = number <= rating.wrappedValue
-                        
+                         
                         Image(isSelected ? "coffeeBeanFill" : "coffeeBean")
                             .resizable()
                             .scaledToFit()

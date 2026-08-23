@@ -41,12 +41,13 @@ struct OtherProfileFlavorDetailView: View {
                                 .frame(width: 80, alignment: .leading)
                             
                             CollorRatingView(
-                                rating: animateRatings ? Double(viewModel.user.probitter) : 0,
-                                maxRating: 5
+                                rating: Double(viewModel.user.probitter),
+                                maxRating: 5,
+                                animateTrigger: animateRatings
                             )
                         }
                         .frame(height: 36)
-                        
+
                         // 酸味
                         HStack(spacing: 16) {
                             Text("酸味")
@@ -54,12 +55,13 @@ struct OtherProfileFlavorDetailView: View {
                                 .frame(width: 80, alignment: .leading)
                             
                             CollorRatingView(
-                                rating: animateRatings ? Double(viewModel.user.proacidity) : 0,
-                                maxRating: 5
+                                rating: Double(viewModel.user.proacidity),
+                                maxRating: 5,
+                                animateTrigger: animateRatings
                             )
                         }
                         .frame(height: 36)
-                        
+
                         // コク
                         HStack(spacing: 16) {
                             Text("コク")
@@ -67,12 +69,13 @@ struct OtherProfileFlavorDetailView: View {
                                 .frame(width: 80, alignment: .leading)
                             
                             CollorRatingView(
-                                rating: animateRatings ? Double(viewModel.user.probody) : 0,
-                                maxRating: 5
+                                rating: Double(viewModel.user.probody),
+                                maxRating: 5,
+                                animateTrigger: animateRatings
                             )
                         }
                         .frame(height: 36)
-                        
+
                         // 甘味
                         HStack(spacing: 16) {
                             Text("甘味")
@@ -80,12 +83,13 @@ struct OtherProfileFlavorDetailView: View {
                                 .frame(width: 80, alignment: .leading)
                             
                             CollorRatingView(
-                                rating: animateRatings ? Double(viewModel.user.prosweetness) : 0,
-                                maxRating: 5
+                                rating: Double(viewModel.user.prosweetness),
+                                maxRating: 5,
+                                animateTrigger: animateRatings
                             )
                         }
                         .frame(height: 36)
-                        
+
                         // フレーバー
                         HStack(spacing: 16) {
                             Text("フレーバー")
@@ -93,29 +97,30 @@ struct OtherProfileFlavorDetailView: View {
                                 .frame(width: 80, alignment: .leading)
                             
                             CollorRatingView(
-                                rating: animateRatings ? Double(viewModel.user.proflavor) : 0,
-                                maxRating: 5
+                                rating: Double(viewModel.user.proflavor),
+                                maxRating: 5,
+                                animateTrigger: animateRatings
                             )
                         }
                         .frame(height: 36)
                         
-                        // フレーバータグの表示エリア
+                        // フレーバータグの表示エリア（マイページと合わせる場合は縦並びに変更）
                         let tags = viewModel.user.flavorTags
                         if !tags.isEmpty {
-                            HStack(spacing: 6) {
+                            HStack(alignment: .top, spacing: 6) {
                                 Text("フレーバータグ:")
                                     .font(.body)
+                                    .frame(width: 110, alignment: .leading)
                                 
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 6) {
-                                        ForEach(tags, id: \.self) { tag in
-                                            Text("#\(tag)")
-                                                .font(.system(size: 12, weight: .semibold))
-                                                .padding(.horizontal, 10)
-                                                .padding(.vertical, 5)
-                                                .background(Color.secondary.opacity(0.2))
-                                                .cornerRadius(8)
-                                        }
+                                // 縦並び（VStack）にする場合
+                                VStack(alignment: .leading, spacing: 6) {
+                                    ForEach(tags, id: \.self) { tag in
+                                        Text("#\(tag)")
+                                            .font(.system(size: 12, weight: .semibold))
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 5)
+                                            .background(Color.secondary.opacity(0.2))
+                                            .cornerRadius(8)
                                     }
                                 }
                             }
@@ -126,7 +131,7 @@ struct OtherProfileFlavorDetailView: View {
                         if !animateRatings {
                             Task {
                                 try? await Task.sleep(nanoseconds: 200_000_000)
-                                withAnimation(.easeInOut(duration: 2.0)) {
+                                withAnimation(.easeInOut(duration: 1.5)) {
                                     animateRatings = true
                                 }
                             }

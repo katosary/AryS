@@ -36,7 +36,7 @@ struct OtherUserProfileView: View {
                 // 全体を上下ページングするための親 ScrollView
                 ScrollView(.vertical) {
                     VStack(spacing: 0) {
-                        // 1ページ目：プロフィール詳細とツール情報（viewModelを渡すように修正）
+                        // 1ページ目：プロフィール詳細とツール情報
                         OtherProfileDetailContentView(
                             viewModel: viewModel,
                             totalWidth: totalWidth,
@@ -58,7 +58,7 @@ struct OtherUserProfileView: View {
                 }
                 .scrollTargetBehavior(.paging)
                 .refreshable {
-                    if let userId = user?.id {
+                    if let userId = user?.id ?? viewModel.user.id {
                         await viewModel.loadUserData(userId: userId)
                     }
                 }
@@ -89,7 +89,7 @@ struct OtherUserProfileView: View {
                 .alert("ユーザーのブロック", isPresented: $showingBlockAlert) {
                     Button("ブロックする", role: .destructive) {
                         Task {
-                            if let targetId = user?.id {
+                            if let targetId = user?.id ?? viewModel.user.id {
                                 await viewModel.blockUser(targetUserId: targetId)
                                 dismiss() // ブロックしたら前の画面に戻る
                             }
@@ -104,13 +104,16 @@ struct OtherUserProfileView: View {
                     TextField("通報の理由（例：不適切な発言など）", text: $reportReason)
                     Button("送信", role: .destructive) {
                         Task {
-                            if let targetId = user?.id {
+                            let targetId = user?.id ?? viewModel.user.id
+                            if let targetId = targetId, !targetId.isEmpty {
                                 await viewModel.reportUser(targetUserId: targetId, reason: reportReason)
                                 reportReason = ""
                             }
                         }
                     }
-                    Button("キャンセル", role: .cancel) {}
+                    Button("キャンセル", role: .cancel) {
+                        reportReason = ""
+                    }
                 } message: {
                     Text("運営チームが内容を確認し、適切に対処いたします。")
                 }
@@ -138,13 +141,13 @@ struct OtherUserProfileView: View {
 
 // MARK: - 他人用の 1ページ目プロフィール詳細ビュー
 struct OtherProfileDetailContentView: View {
-    @Bindable var viewModel: OtherProfileViewModel // ViewModelを受け取るように変更
+    @Bindable var viewModel: OtherProfileViewModel
     let totalWidth: CGFloat
     let totalHeight: CGFloat
     let profileSize: CGFloat
     
     var body: some View {
-        let user = viewModel.user // viewModelから最新のuserを取得
+        let user = viewModel.user
         
         return ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
@@ -275,7 +278,7 @@ struct OtherProfileDetailContentView: View {
                     // --- 好きな味わいをもっと詳しくボタン ---
                     NavigationLink {
                         OtherProfileFlavorDetailView()
-                            .environment(viewModel) // EnvironmentとしてViewModelを渡す
+                            .environment(viewModel)
                     } label: {
                         HStack {
                             Text("好きな味わいをもっと詳しく")
@@ -388,3 +391,4 @@ struct OtherProfileCoffeeLogFullscreenView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 }
+

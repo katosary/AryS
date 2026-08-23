@@ -1,5 +1,5 @@
 //
-//  EditSheetView.swift
+//  PostEditView.swift
 //  snsmvvm
 //
 //  Created by katoso on 2026/03/16.
@@ -7,6 +7,7 @@
 
 import SwiftUI
 import FirebaseAuth
+import UIKit
 
 struct PostEditView: View {
     @State private var editCoffeeLogViewModel: EditCoffeeLogViewModel
@@ -16,7 +17,6 @@ struct PostEditView: View {
     @State private var currentStep = 0
     @FocusState private var isFocused: Bool
     
-    // イニシャライザでLogを受け取りViewModelを初期化
     init(post: Binding<Log>) {
         self._post = post
         self._editCoffeeLogViewModel = State(initialValue: EditCoffeeLogViewModel(log: post.wrappedValue))
@@ -25,67 +25,84 @@ struct PostEditView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .top) {
-                // メインコンテンツ
                 VStack(spacing: 0) {
-                    TabView(selection: $currentStep) {
-                        step1View().tag(0)
-                        step2View().tag(1)
-                        step3View().tag(2)
+                    Group {
+                        switch currentStep {
+                        case 0: step1View()
+                        case 1: step2View()
+                        case 2: step3View()
+                        default: step1View()
+                        }
                     }
-                    .tabViewStyle(.page(indexDisplayMode: .never))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .background(Color(.systemGroupedBackground))
                  
-                // 上部固定ヘッダーエリア（×ボタンと保存ボタン）
-                HStack {
-                    // ×ボタン
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(.primary)
-                            .padding(10)
-                            .background(Color(.systemGray5))
-                            .clipShape(Circle())
+                // ヘッダー（戻る/×ボタン と 次へ/保存するボタン）
+                HStack(spacing: 12) {
+                    if currentStep == 0 {
+                        Button(action: {
+                            triggerHaptic(style: .light)
+                            dismiss()
+                        }) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.primary)
+                                .padding(10)
+                                .background(Color(.systemGray5))
+                                .clipShape(Circle())
+                        }
+                    } else {
+                        Button(action: {
+                            triggerHaptic(style: .light)
+                            isFocused = false
+                            withAnimation { currentStep -= 1 }
+                        }) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.primary)
+                                .padding(10)
+                                .background(Color(.systemGray5))
+                                .clipShape(Circle())
+                        }
                     }
                      
                     Spacer()
                      
-                    // 「保存する」ボタン（Step 3 / 最後のステップの時だけ表示）
+                    if currentStep == 0 {
+                        Button(action: {
+                            triggerHaptic(style: .medium)
+                            withAnimation { currentStep = 1 }
+                        }) {
+                            nextButtonLabel(text: "次へ")
+                        }
+                    }
+                     
+                    if currentStep == 1 {
+                        Button(action: {
+                            triggerHaptic(style: .medium)
+                            isFocused = false
+                            withAnimation { currentStep = 2 }
+                        }) {
+                            nextButtonLabel(text: "次へ")
+                        }
+                    }
+
                     if currentStep == 2 {
                         Button(action: {
+                            triggerHaptic(style: .heavy)
                             isFocused = false
-                            
-                            var updatedPost = post
-                            updatedPost.shopName = editCoffeeLogViewModel.shopName.isEmpty ? "店舗名未入力" : editCoffeeLogViewModel.shopName
-                            updatedPost.blend = editCoffeeLogViewModel.blend
-                            updatedPost.countryName = editCoffeeLogViewModel.countryName.isEmpty ? "生産国未入力" : editCoffeeLogViewModel.countryName
-                            updatedPost.farmName = editCoffeeLogViewModel.farmName
-                            updatedPost.grade = editCoffeeLogViewModel.grade
-                            updatedPost.roastLevel = editCoffeeLogViewModel.roastLevel
-                            updatedPost.flavorrating = editCoffeeLogViewModel.aromarating
-                            updatedPost.memo = editCoffeeLogViewModel.memo
-                            updatedPost.bitternessrating = editCoffeeLogViewModel.bitternessrating
-                            updatedPost.acidityrating = editCoffeeLogViewModel.acidityrating
-                            updatedPost.bodyrating = editCoffeeLogViewModel.bodyrating
-                            updatedPost.sweetnessrating = editCoffeeLogViewModel.sweetnessrating
-                            updatedPost.flavorTags = editCoffeeLogViewModel.selectedAromas
-                            
-                            post = updatedPost
-                            dismiss()
-                            
-                            editCoffeeLogViewModel.updateLog(targetPost: post) { success in
-                                if !success {
+                             
+                            // 💡 $post を渡してローカルのBindingも同時に即時更新させる
+                            editCoffeeLogViewModel.updateLog(targetPost: $post.wrappedValue) { success in
+                                if success {
+                                    dismiss()
+                                } else {
                                     print("⚠️ サーバーへの保存に失敗")
                                 }
                             }
                         }) {
-                            Text("保存する")
-                                .bold()
-                                .padding(.vertical, 8)
-                                .padding(.horizontal, 16)
-                                .background(Color.blue)
-                                .foregroundColor(.white)
-                                .cornerRadius(20)
+                            nextButtonLabel(text: "保存する")
                         }
                     }
                 }
@@ -94,8 +111,19 @@ struct PostEditView: View {
                 .zIndex(10)
             }
             .toolbar(.hidden, for: .navigationBar)
-            .onChange(of: currentStep) { isFocused = false }
+            .onChange(of: currentStep) { _, _ in isFocused = false }
         }
+    }
+    
+    @ViewBuilder
+    private func nextButtonLabel(text: String) -> some View {
+        Text(text)
+            .bold()
+            .padding(.vertical, 8)
+            .padding(.horizontal, 16)
+            .background(Color.blue)
+            .foregroundColor(.white)
+            .cornerRadius(20)
     }
     
     // MARK: - Steps
@@ -105,13 +133,14 @@ struct PostEditView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 Text("基本情報").font(.title2).bold().padding(.top, 80)
-                
+                 
                 editField(label: "店舗名", text: $editCoffeeLogViewModel.shopName, placeholder: "店舗名を入力")
                 editField(label: "ブレンド名", text: $editCoffeeLogViewModel.blend, placeholder: "ブレンド名 / 銘柄名を入力")
                 editField(label: "農園名", text: $editCoffeeLogViewModel.farmName, placeholder: "農園名を入力")
                 editField(label: "グレード", text: $editCoffeeLogViewModel.grade, placeholder: "グレードを入力 (例: G1, AAなど)")
-                
+                 
                 Button(action: {
+                    triggerHaptic(style: .light)
                     isFocused = false
                     editCoffeeLogViewModel.isShowingCountryPicker = true
                 }) {
@@ -128,8 +157,9 @@ struct PostEditView: View {
                     }
                 }
                 Divider()
-                
+                 
                 Button(action: {
+                    triggerHaptic(style: .light)
                     isFocused = false
                     editCoffeeLogViewModel.isShowingRoastPicker = true
                 }) {
@@ -157,31 +187,27 @@ struct PostEditView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     Text("味わいの評価").font(.title2).bold().padding(.top, 80)
-                    
-                    // 1. 評価項目（苦味、酸味、コク、甘味）
+                     
                     VStack(alignment: .leading, spacing: 16) {
                         ratingRow(label: "苦味", rating: $editCoffeeLogViewModel.bitternessrating)
                         ratingRow(label: "酸味", rating: $editCoffeeLogViewModel.acidityrating)
                         ratingRow(label: "コク", rating: $editCoffeeLogViewModel.bodyrating)
                         ratingRow(label: "甘味", rating: $editCoffeeLogViewModel.sweetnessrating)
                     }
-                    
+                     
                     Divider()
-                    
-                    // 2. フレーバーの特徴
+                     
+                    // 💡 フレーバーの特徴（1つのみ選択）
                     VStack(alignment: .leading, spacing: 12) {
                         ratingRow(label: "フレーバー", rating: $editCoffeeLogViewModel.aromarating)
-                        Text("特徴を選択").font(.subheadline).bold()
-                        
+                        Text("特徴を1つ選択").font(.subheadline).bold()
+                         
                         ForEach(editCoffeeLogViewModel.flavorOptions, id: \.self) { aroma in
-                            let isSelected = editCoffeeLogViewModel.selectedAromas.contains(aroma)
+                            let isSelected = editCoffeeLogViewModel.selectedAroma == aroma
                             Button(action: {
+                                triggerHaptic(style: .light)
                                 withAnimation {
-                                    if isSelected {
-                                        editCoffeeLogViewModel.selectedAromas.removeAll { $0 == aroma }
-                                    } else {
-                                        editCoffeeLogViewModel.selectedAromas.append(aroma)
-                                    }
+                                    editCoffeeLogViewModel.selectedAroma = isSelected ? "" : aroma
                                 }
                             }) {
                                 HStack {
@@ -202,10 +228,9 @@ struct PostEditView: View {
                             .buttonStyle(.plain)
                         }
                     }
-                    
+                     
                     Divider()
-                    
-                    // 3. 一言メモ
+                     
                     memoField(
                         label: "一言メモ（任意）",
                         text: $editCoffeeLogViewModel.memo,
@@ -217,8 +242,8 @@ struct PostEditView: View {
                 .padding(.bottom, 40)
             }
             .onTapGesture { isFocused = false }
-            .onChange(of: isFocused) {
-                if isFocused {
+            .onChange(of: isFocused) { _, focused in
+                if focused {
                     withAnimation {
                         proxy.scrollTo("MemoField", anchor: .bottom)
                     }
@@ -230,9 +255,12 @@ struct PostEditView: View {
     @ViewBuilder
     private func step3View() -> some View {
         ScrollView {
-            VStack(spacing: 20) {
-                Text("編集内容の確認").font(.title2).bold().padding(.top, 80)
-                
+            VStack(spacing: 16) {
+                Text("編集内容の確認")
+                    .font(.title2)
+                    .bold()
+                    .padding(.top, 50)
+                 
                 CoffeeLogView(
                     log: Log(
                         id: post.id,
@@ -249,7 +277,7 @@ struct PostEditView: View {
                         acidityrating: editCoffeeLogViewModel.acidityrating,
                         bodyrating: editCoffeeLogViewModel.bodyrating,
                         sweetnessrating: editCoffeeLogViewModel.sweetnessrating,
-                        flavorTags: editCoffeeLogViewModel.selectedAromas, 
+                        flavorTags: editCoffeeLogViewModel.selectedAroma.isEmpty ? [] : [editCoffeeLogViewModel.selectedAroma],
                         createdAt: post.createdAt,
                         tagX: post.tagX,
                         tagY: post.tagY,
@@ -267,11 +295,18 @@ struct PostEditView: View {
                 .cornerRadius(16)
                 .shadow(radius: 4)
             }
-            .padding(24)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 40)
         }
     }
     
     // MARK: - Helpers
+    
+    private func triggerHaptic(style: UIImpactFeedbackGenerator.FeedbackStyle) {
+        let generator = UIImpactFeedbackGenerator(style: style)
+        generator.prepare()
+        generator.impactOccurred()
+    }
     
     @ViewBuilder
     private func ratingRow(label: String, rating: Binding<Int>) -> some View {
@@ -284,7 +319,10 @@ struct PostEditView: View {
                     .resizable()
                     .frame(width: 26, height: 26)
                     .contentShape(Rectangle())
-                    .onTapGesture { rating.wrappedValue = n }
+                    .onTapGesture {
+                        triggerHaptic(style: .light)
+                        rating.wrappedValue = n
+                    }
             }
         }
     }

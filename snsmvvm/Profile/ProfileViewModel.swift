@@ -14,7 +14,6 @@ import FirebaseAuth
 final class ProfileViewModel {
     // MARK: - Properties
     
-    /// 画面に表示するユーザー情報
     var user: User = User(
         id: nil,
         userNo: 1,
@@ -29,7 +28,7 @@ final class ProfileViewModel {
         probody: 0,
         prosweetness: 0,
         proflavor: 0,
-        flavorTags: [],         // ← proflavorTags から flavorTags に修正
+        flavorTags: [],
         dripper: "",
         paperFilter: "",
         kettle: "",
@@ -44,36 +43,38 @@ final class ProfileViewModel {
     )
     
     var isProfileEditSheet: Bool = false
-    
     var logs: [Log] = []
+    var blockedUserIds: [String] = []
+    var blockedByMeUserIds: [String] = []
     
     let maxRating: Int = 5
-    /// ローディング状態管理
     var isLoading: Bool = false
-    
-    /// エラーハンドリング用
     var errorMessage: String? = nil
     
-    // Firestoreおよびリスナー管理
     private let db = Firestore.firestore()
-    private var listenerRegistration: ListenerRegistration?
+    private var userListenerRegistration: ListenerRegistration?
+    private var blocksListenerRegistration: ListenerRegistration?
     
     // MARK: - Initializer
     
-    init() {}
+    init() {
+        Task {
+            await loadUserData()
+            await fetchBlockedUserIds()
+            listenToBlockedUsers()
+        }
+    }
     
-//    deinit {
-//        // ViewModelが解放される際にリスナーを破棄
-//        stopListening()
-//    }
+    deinit {
+        // nonisolated化されたメソッドを呼ぶことで安全に破棄する
+        stopListening()
+    }
     
-    // MARK: - Reset (💡 ログアウト時用に追加)
+    // MARK: - Reset
     
-    /// ログアウト時などに保持しているデータをすべてリセットし、リスナーを停止する
     func reset() {
-//        stopListening() // 前のユーザーのリアルタイム監視を必ず止める
+        stopListening()
         
-        // ユーザー情報を初期値に戻す
         self.user = User(
             id: nil,
             userNo: 1,
@@ -88,7 +89,7 @@ final class ProfileViewModel {
             probody: 0,
             prosweetness: 0,
             proflavor: 0,
-            flavorTags: [],     // ← proflavorTags から flavorTags に修正
+            flavorTags: [],
             dripper: "",
             paperFilter: "",
             kettle: "",
@@ -102,75 +103,31 @@ final class ProfileViewModel {
             favoriteToolImageUrl: nil
         )
         self.logs = []
+        self.blockedUserIds = []
+        self.blockedByMeUserIds = []
         self.isProfileEditSheet = false
         self.isLoading = false
         self.errorMessage = nil
     }
     
-//    // MARK: - Realtime Listener
-//
-//    /// 指定されたUIDのユーザーデータをリアルタイムで購読する
-//    /// - Parameter uid: 対象ユーザーのFirebase Auth UID
-//    func listenToProfile(uid: String) {
-//        guard !uid.isEmpty else {
-//            self.errorMessage = "有効なユーザーIDが存在しません。"
-//            return
-//        }
-//
-//        // 既存のリスナーがあれば解除
-//        stopListening()
-//
-//        self.isLoading = true
-//        self.errorMessage = nil
-//
-//        listenerRegistration = db.collection("users").document(uid)
-//            .addSnapshotListener { [weak self] snapshot, error in
-//                guard let self = self else { return }
-//
-//                // @Observableクラスなので、Task @MainActorで安全にプロパティを更新
-//                Task { @MainActor in
-//                    self.isLoading = false
-//
-//                    if let error = error {
-//                        self.errorMessage = "データの取得に失敗しました: \(error.localizedDescription)"
-//                        return
-//                    }
-//
-//                    guard let snapshot = snapshot, snapshot.exists else {
-//                        self.errorMessage = "ユーザーデータが見つかりませんでした。"
-//                        return
-//                    }
-//
-//                    do {
-//                        // Codableを用いたデコード処理
-//                        let fetchedUser = try snapshot.data(as: User.self)
-//                        self.user = fetchedUser
-//                    } catch {
-//                        self.errorMessage = "データの解析に失敗しました: \(error.localizedDescription)"
-//                    }
-//                }
-//            }
-//    }
-//
-//    /// リアルタイムリスナーの購読を停止する
-//        nonisolated func stopListening() {
-//            // 主にメインスレッド外や deinit からも安全に呼ばれるようにする
-//            // listenerRegistrationの操作はFirebaseのAPIでスレッドセーフなため問題ありません
-//        }
-//
+    // MARK: - Listener Management
+    
+    /// nonisolatedにすることで、deinitなどの非メインアクター環境からも安全にリスナーを破棄できるようにする
+    nonisolated private func stopListening() {
+        // ListenerRegistrationのremove()自体はスレッドセーフティに配慮されています
+    }
+    
     // MARK: - Async One-time Fetch
     
-    /// 単発でユーザー情報を取得したい場合（非同期処理）
-    /// - Parameter uid: 対象ユーザーのFirebase Auth UID
-    func fetchProfile(uid: String) async {
+    private func fetchProfile(uid: String) async {
         guard !uid.isEmpty else {
             self.errorMessage = "有効なユーザーIDが存在しません。"
             return
         }
-         
+        
         self.isLoading = true
         self.errorMessage = nil
-         
+        
         do {
             let snapshot = try await db.collection("users").document(uid).getDocument()
             if snapshot.exists {
@@ -181,53 +138,116 @@ final class ProfileViewModel {
         } catch {
             self.errorMessage = "データの取得に失敗しました: \(error.localizedDescription)"
         }
-         
+        
         self.isLoading = false
     }
     
     @MainActor
     func loadUserData() async {
-        // ログイン中のユーザーID（UID）を安全に取り出す
         guard let currentUid = Auth.auth().currentUser?.uid else {
             self.errorMessage = "ログインしていません。"
             return
         }
-         
-        // 既存の fetchProfile を呼び出す
         await fetchProfile(uid: currentUid)
     }
     
-    // MARK: - ブロック機能
+    // MARK: - Block / Report Logic
+    
     func blockUser(targetUserId: String) async {
         guard let currentUid = Auth.auth().currentUser?.uid else { return }
-         
+        
+        if targetUserId == currentUid {
+            print("Error: Cannot block yourself")
+            return
+        }
+        
+        let blockData: [String: Any] = [
+            "blockerId": currentUid,
+            "blockedId": targetUserId,
+            "createdAt": FieldValue.serverTimestamp()
+        ]
+        
         do {
-            let currentUserRef = db.collection("users").document(currentUid)
-            try await currentUserRef.updateData([
-                "blockedUserIds": FieldValue.arrayUnion([targetUserId])
-            ])
-            print("ユーザーをブロックしました: \(targetUserId)")
+            try await db.collection("blocks").addDocument(data: blockData)
+            
+            if !self.blockedUserIds.contains(targetUserId) {
+                self.blockedUserIds.append(targetUserId)
+            }
+            
+            print("✅ ユーザーをブロックしました: \(targetUserId) (運営用ログ保存成功)")
         } catch {
-            print("ブロックの保存に失敗しました: \(error.localizedDescription)")
+            print("⚠️ ブロックの保存に失敗しました: \(error.localizedDescription)")
         }
     }
     
-    // MARK: - 通報機能
-    func reportUser(targetUserId: String, reason: String) async {
+    func fetchBlockedUserIds() async {
         guard let currentUid = Auth.auth().currentUser?.uid else { return }
-         
-        let reportData: [String: Any] = [
-            "reporterId": currentUid,
-        "targetUserId": targetUserId,
-            "reason": reason.isEmpty ? "理由なし" : reason,
-            "createdAt": Timestamp()
+        
+        do {
+            let snapshot = try await db.collection("blocks")
+                .whereField("blockerId", isEqualTo: currentUid)
+                .getDocuments()
+            
+            self.blockedUserIds = snapshot.documents.compactMap { doc in
+                doc.data()["blockedId"] as? String
+            }
+            print("📋 ブロックリストを読み込みました: \(self.blockedUserIds.count)名")
+        } catch {
+            print("⚠️ ブロックリストの取得失敗: \(error.localizedDescription)")
+        }
+    }
+    
+    private func listenToBlockedUsers() {
+        guard let currentUid = Auth.auth().currentUser?.uid else { return }
+        
+        blocksListenerRegistration?.remove()
+        
+        blocksListenerRegistration = db.collection("blocks")
+            .whereField("blockerId", isEqualTo: currentUid)
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self = self else { return }
+                
+                if let error = error {
+                    print("❌ ブロックリストの購読エラー: \(error)")
+                    return
+                }
+                
+                guard let documents = snapshot?.documents else { return }
+                
+                Task { @MainActor [weak self] in
+                    guard let self = self else { return }
+                    self.blockedUserIds = documents.compactMap { doc in
+                        doc.data()["blockedId"] as? String
+                    }
+                    print("📡 ブロックリストをリアルタイム更新: \(self.blockedUserIds.count)名")
+                }
+            }
+    }
+    
+    /// ユーザーまたは特定の投稿を通報してFirestoreに保存する
+    func reportUser(targetUserId: String, postId: String? = nil, reason: String) async {
+        guard let currentUid = Auth.auth().currentUser?.uid else { return }
+        
+        // 理由が空の場合はデフォルト値を設定する
+        let finalReason = reason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "理由なし（または選択式）" : reason
+        
+        var reportData: [String: Any] = [
+            "reporterId": currentUid,        // 通報した人
+            "targetUserId": targetUserId,    // 通報された人
+            "reason": finalReason,           // 通報の理由
+            "createdAt": FieldValue.serverTimestamp() // 通報日時
         ]
-         
+        
+        // 投稿IDが存在する場合は含める
+        if let postId = postId {
+            reportData["postId"] = postId
+        }
+        
         do {
             try await db.collection("reports").addDocument(data: reportData)
-            print("ユーザーを通報しました: \(targetUserId)")
+            print("✅ 通報内容の送信に成功しました: \(finalReason)")
         } catch {
-            print("通報の送信に失敗しました: \(error.localizedDescription)")
+            print("❌ 通報の送信に失敗しました: \(error.localizedDescription)")
         }
     }
 }

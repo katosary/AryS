@@ -25,7 +25,8 @@ class EditCoffeeLogViewModel {
     var bodyrating: Int = 0
     var sweetnessrating: Int = 0
     
-    var selectedAromas: [String] = []
+    // 💡 フレーバーを1つだけ選択する仕様
+    var selectedAroma: String = ""
     let flavorOptions = [
         "フルーティー (みずみずしい果実感)",
         "シトラス (爽やかな柑橘系)",
@@ -62,7 +63,11 @@ class EditCoffeeLogViewModel {
         self.acidityrating = log.acidityrating
         self.bodyrating = log.bodyrating
         self.sweetnessrating = log.sweetnessrating
-        self.selectedAromas = log.flavorTags ?? []
+        
+        // 既存のflavorTagsの最初の要素を単一選択用としてセット
+        if let firstTag = log.flavorTags?.first {
+            self.selectedAroma = firstTag
+        }
     }
     
     func updateLog(targetPost: Log, completion: @escaping (Bool) -> Void) {
@@ -71,9 +76,12 @@ class EditCoffeeLogViewModel {
             completion(false)
             return
         }
-         
+        
         let db = Firestore.firestore()
-         
+        
+        // 保存時は選択された1つのフレーバーを配列（1要素）にして保存
+        let tagsToSave = selectedAroma.isEmpty ? [] : [selectedAroma]
+        
         let updatedData: [String: Any] = [
             "shopName": shopName,
             "blend": blend,
@@ -81,15 +89,15 @@ class EditCoffeeLogViewModel {
             "grade": grade,
             "countryName": countryName,
             "roastLevel": roastLevel,
-            "aromarating": aromarating,
+            "flavorrating": aromarating, // 💡 ここを "flavorrating" に合わせる
             "memo": memo,
             "bitternessrating": bitternessrating,
             "acidityrating": acidityrating,
             "bodyrating": bodyrating,
             "sweetnessrating": sweetnessrating,
-            "flavorTags": selectedAromas
+            "flavorTags": tagsToSave
         ]
-         
+        
         db.collection("posts").document(postId).updateData(updatedData) { error in
             DispatchQueue.main.async {
                 if let error = error {

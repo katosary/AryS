@@ -47,8 +47,9 @@ struct ProfileFlavorDetailView: View {
                                     .frame(width: 80, alignment: .leading)
                                 
                                 CollorRatingView(
-                                    rating: animateRatings ? Double(profileViewModel.user.probitter) : 0,
-                                    maxRating: 5
+                                    rating: Double(profileViewModel.user.probitter),
+                                    maxRating: 5,
+                                    animateTrigger: animateRatings
                                 )
                             }
                             .frame(height: 36)
@@ -60,8 +61,9 @@ struct ProfileFlavorDetailView: View {
                                     .frame(width: 80, alignment: .leading)
                                 
                                 CollorRatingView(
-                                    rating: animateRatings ? Double(profileViewModel.user.proacidity) : 0,
-                                    maxRating: 5
+                                    rating: Double(profileViewModel.user.proacidity),
+                                    maxRating: 5,
+                                    animateTrigger: animateRatings
                                 )
                             }
                             .frame(height: 36)
@@ -73,8 +75,9 @@ struct ProfileFlavorDetailView: View {
                                     .frame(width: 80, alignment: .leading)
                                 
                                 CollorRatingView(
-                                    rating: animateRatings ? Double(profileViewModel.user.probody) : 0,
-                                    maxRating: 5
+                                    rating: Double(profileViewModel.user.probody),
+                                    maxRating: 5,
+                                    animateTrigger: animateRatings
                                 )
                             }
                             .frame(height: 36)
@@ -86,42 +89,42 @@ struct ProfileFlavorDetailView: View {
                                     .frame(width: 80, alignment: .leading)
                                 
                                 CollorRatingView(
-                                    rating: animateRatings ? Double(profileViewModel.user.prosweetness) : 0,
-                                    maxRating: 5
+                                    rating: Double(profileViewModel.user.prosweetness),
+                                    maxRating: 5,
+                                    animateTrigger: animateRatings
                                 )
                             }
                             .frame(height: 36)
                             
-                            // フレーバー（proflavor） ✨追加
+                            // フレーバー（proflavor）
                             HStack(spacing: 16) {
                                 Text("フレーバー")
                                     .font(.body)
                                     .frame(width: 80, alignment: .leading)
                                 
                                 CollorRatingView(
-                                    rating: animateRatings ? Double(profileViewModel.user.proflavor) : 0,
-                                    maxRating: 5
+                                    rating: Double(profileViewModel.user.proflavor),
+                                    maxRating: 5,
+                                    animateTrigger: animateRatings
                                 )
                             }
                             .frame(height: 36)
                             
-                            // フレーバータグの表示エリア
-                            let tags = profileViewModel.user.flavorTags
+                            let tags = profileViewModel.user.flavorTags // (※Profile画面のほうは profileViewModel.user.flavorTags)
                             if !tags.isEmpty {
-                                HStack(spacing: 6) {
-                                    Text("フレーバータグ:")
+                                HStack(alignment: .top, spacing: 6) {
+                                    Text("フレーバータグ") // 💡 「：」を削除
                                         .font(.body)
+                                        .frame(width: 95, alignment: .leading) // 💡 幅を少し広げて1行に収める
                                     
-                                    ScrollView(.horizontal, showsIndicators: false) {
-                                        HStack(spacing: 6) {
-                                            ForEach(tags, id: \.self) { tag in
-                                                Text("#\(tag)")
-                                                    .font(.system(size: 12, weight: .semibold))
-                                                    .padding(.horizontal, 10)
-                                                    .padding(.vertical, 5)
-                                                    .background(Color.secondary.opacity(0.2))
-                                                    .cornerRadius(8)
-                                            }
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        ForEach(tags, id: \.self) { tag in
+                                            Text("#\(tag)")
+                                                .font(.system(size: 12, weight: .semibold))
+                                                .padding(.horizontal, 10)
+                                                .padding(.vertical, 5)
+                                                .background(Color.secondary.opacity(0.2))
+                                                .cornerRadius(8)
                                         }
                                     }
                                 }
@@ -132,6 +135,7 @@ struct ProfileFlavorDetailView: View {
                             if !animateRatings {
                                 Task {
                                     try? await Task.sleep(nanoseconds: 200_000_000)
+                                    // アニメーションの時間を少し長めにすることで、左から順に伸びていく軌跡が滑らかになります
                                     withAnimation(.easeInOut(duration: 2.0)) {
                                         animateRatings = true
                                     }
@@ -141,28 +145,10 @@ struct ProfileFlavorDetailView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(24)
-                    //フレーバータグの下にこれまでのランキング３位以内までを入力 これは各投稿のメニューから選択できるようにしたい
                 }
             }
             .navigationTitle("好きな味わい詳細")
             .navigationBarTitleDisplayMode(.inline)
         }
     }
-}
-
-// MARK: - Preview
-#Preview {
-    let viewModel: ProfileViewModel = {
-        let vm = ProfileViewModel()
-        vm.user.probitter = 4
-        vm.user.proacidity = 3
-        vm.user.probody = 5
-        vm.user.prosweetness = 4
-        vm.user.proflavor = 4 // ← プレビュー用に追加
-        vm.user.flavorTags = ["フルーティー", "チョコレート", "ナッティ"]
-        return vm
-    }()
-    
-    return ProfileFlavorDetailView()
-        .environment(viewModel)
 }

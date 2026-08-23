@@ -1,10 +1,3 @@
-//
-//  HomeView.swift
-//  snsmvvm
-//
-//  Created by katoso on 2026/02/25.
-//
-
 import SwiftUI
 import FirebaseAuth
 import FirebaseFirestore
@@ -15,29 +8,31 @@ struct HomeView: View {
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var userManager: UserManager
     
+    // 💡 タイムライン用のViewModelをここで一元管理する
+    @State private var timeLineViewModel = TimeLineViewModel()
+    
     let barColor = Color(red: 74 / 255, green: 55 / 255, blue: 43 / 255)
     
     var body: some View {
         TabView(selection: $homeViewModel.selectedTab) {
             // --- 0: ホーム（タイムライン）タブ ---
             NavigationStack {
-                TimeLineView()
+                // 💡 生成したインスタンスを渡す
+                TimeLineView(timeLineViewModel: timeLineViewModel)
                     .modifier(DarkToolbarModifier(profileViewModel: profileViewModel, authManager: authManager))
             }
             .tabItem {
                 Label("ホーム", systemImage: "house")
             }
             .tag(0)
-            
+             
             // --- 1: 投稿するタブ ---
             NavigationStack {
                 CoffeeRecordView(
                     onDismiss: {
-                        // 💡 ✖︎ボタンが押されたらホーム（タブ0）に戻す
                         homeViewModel.selectedTab = 0
                     },
                     onCompleted: {
-                        // 💡 投稿完了したらホーム（タブ0）に戻す
                         homeViewModel.selectedTab = 0
                     }
                 )
@@ -48,7 +43,7 @@ struct HomeView: View {
                 Label("投稿する", systemImage: "plus")
             }
             .tag(1)
-            
+             
             // --- 2: プロフィールタブ ---
             NavigationStack {
                 ProfileView()
@@ -88,7 +83,6 @@ struct HomeView: View {
 
 // MARK: - 黒で統一された上部バー用のModifier
 struct DarkToolbarModifier: ViewModifier {
-    // 💡 修正：はっきりした茶色（例: #5C4633 系の濃い茶色）
     let barColor = Color(red: 92/255, green: 70/255, blue: 51/255)
     
     var profileViewModel: ProfileViewModel
@@ -97,7 +91,6 @@ struct DarkToolbarModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .toolbar {
-                // 💡 左上のハンバーガーメニューボタン
                 ToolbarItem(placement: .topBarLeading) {
                     NavigationLink {
                         ProfileMenuView(profileViewModel: profileViewModel)
@@ -110,17 +103,13 @@ struct DarkToolbarModifier: ViewModifier {
                     }
                 }
                  
-                // 💡 中央のロゴ部分（サイズを調整）
                 ToolbarItem(placement: .principal) {
-                    Image("logo") // アセットで登録した名前
+                    Image("logo")
                         .resizable()
                         .scaledToFit()
-                        // 💡 修正：高さを大きくしてロゴを強調（例: 32 → 40 または 44）
                         .frame(height: 44)
-                        // 💡 ヒント: アイコンが大きくはみ出る場合は、.clipped() を追加して調整します
                 }
                  
-                // 💡 右上のベルボタン
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink {
                         NotificationView()

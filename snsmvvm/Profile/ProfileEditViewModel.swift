@@ -27,20 +27,22 @@ class ProfileEditViewModel {
     var probody: Int = 0
     var prosweetness: Int = 0
     var proflavor: Int = 0
-    var flavorTags: [String] = [] // 💡 proflavorTags から flavorTags に統一
+    
+    // 💡 フレーバー選択用プロパティ（制限なしの複数選択）
+    var selectedFlavors: [String] = []
     
     let flavorOptions = [
-        "フルーティー",
-        "シトラス",
-        "ベリー",
-        "チョコレート",
-        "キャラメル",
-        "ナッツ",
-        "黒糖",
-        "フローラル",
-        "アーシー",
-        "ハーブ",
-        "スパイス"
+        "フルーティー (みずみずしい果実感)",
+        "シトラス (爽やかな柑橘系)",
+        "ベリー (甘酸っぱい果実系)",
+        "チョコレート (コクのある甘み)",
+        "キャラメル (香ばしい甘さ)",
+        "ナッツ (香ばしいナッツ感)",
+        "黒糖 (まろやかなコク・甘み)",
+        "フローラル (華やかな香り)",
+        "アーシー (土や大地を思わせる風味)",
+        "ハーブ (爽やかな植物感)",
+        "スパイス (スパイシーなアクセント)"
     ]
     
     // 道具
@@ -98,9 +100,10 @@ class ProfileEditViewModel {
         self.probody = user.probody
         self.prosweetness = user.prosweetness
         self.proflavor = user.proflavor
-        self.flavorTags = user.flavorTags // 💡 非オプショナルの配列なのでそのまま代入
         
-        // 💡 非オプショナル型 String に対する不要な ?? を削除
+        // 💡 ユーザーの保持する flavorTags をそのまま反映
+        self.selectedFlavors = user.flavorTags
+        
         self.dripper = user.dripper
         self.paperFilter = user.paperFilter
         self.kettle = user.kettle
@@ -185,7 +188,9 @@ class ProfileEditViewModel {
         self.user.probody = probody
         self.user.prosweetness = prosweetness
         self.user.proflavor = proflavor
-        self.user.flavorTags = flavorTags
+        
+        // 💡 複数選択されたフレーバー配列をそのまま保存
+        self.user.flavorTags = selectedFlavors
          
         self.user.dripper = dripper
         self.user.paperFilter = paperFilter

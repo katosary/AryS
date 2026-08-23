@@ -113,7 +113,6 @@ struct CoffeeLogDetailView: View {
                                 Divider()
                                     .padding(.vertical, 4)
                                 
-                                
                                 // --- 3. RatingView (CollorRatingView) エリア ---
                                 VStack(alignment: .leading, spacing: 18) {
                                     HStack(alignment: .bottom) {
@@ -133,11 +132,12 @@ struct CoffeeLogDetailView: View {
                                     HStack(spacing: 16) {
                                         Text("苦味")
                                             .font(.body)
-                                            .frame(width: 80, alignment: .leading) //
+                                            .frame(width: 80, alignment: .leading)
                                         
                                         CollorRatingView(
-                                            rating: animateRatings ? Double(log.bitternessrating) : 0,
-                                            maxRating: 5
+                                            rating: Double(log.bitternessrating),
+                                            maxRating: 5,
+                                            animateTrigger: animateRatings
                                         )
                                     }
                                     .frame(height: 36)
@@ -149,8 +149,9 @@ struct CoffeeLogDetailView: View {
                                             .frame(width: 80, alignment: .leading)
                                         
                                         CollorRatingView(
-                                            rating: animateRatings ? Double(log.acidityrating) : 0,
-                                            maxRating: 5
+                                            rating: Double(log.acidityrating),
+                                            maxRating: 5,
+                                            animateTrigger: animateRatings
                                         )
                                     }
                                     .frame(height: 36)
@@ -162,8 +163,9 @@ struct CoffeeLogDetailView: View {
                                             .frame(width: 80, alignment: .leading)
                                         
                                         CollorRatingView(
-                                            rating: animateRatings ? Double(log.bodyrating) : 0,
-                                            maxRating: 5
+                                            rating: Double(log.bodyrating),
+                                            maxRating: 5,
+                                            animateTrigger: animateRatings
                                         )
                                     }
                                     .frame(height: 36)
@@ -175,8 +177,9 @@ struct CoffeeLogDetailView: View {
                                             .frame(width: 80, alignment: .leading)
                                         
                                         CollorRatingView(
-                                            rating: animateRatings ? Double(log.sweetnessrating) : 0,
-                                            maxRating: 5
+                                            rating: Double(log.sweetnessrating),
+                                            maxRating: 5,
+                                            animateTrigger: animateRatings
                                         )
                                     }
                                     .frame(height: 36)
@@ -188,13 +191,13 @@ struct CoffeeLogDetailView: View {
                                             .frame(width: 80, alignment: .leading)
                                         
                                         CollorRatingView(
-                                            rating: animateRatings ? Double(log.flavorrating) : 0,
-                                            maxRating: 5
+                                            rating: Double(log.flavorrating),
+                                            maxRating: 5,
+                                            animateTrigger: animateRatings
                                         )
                                     }
                                     .frame(height: 36)
                                     
-                                    // 以降のアロマタグやコメント、プロフィールへ続く…
                                     // 香りのタグ（flavorTags）の表示エリア
                                     if let tags = log.flavorTags, !tags.isEmpty {
                                         HStack(spacing: 6) {

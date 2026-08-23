@@ -7,6 +7,8 @@
 
 import SwiftUI
 import FirebaseAuth
+import PhotosUI
+import UIKit // 💡 振動（Haptic Feedback）用
 
 struct CoffeeRecordView: View {
     @State var coffeeRecordViewModel = CoffeeRecordViewModel()
@@ -14,11 +16,31 @@ struct CoffeeRecordView: View {
     
     @State private var currentStep = 0
     @State private var shouldCapture = false
+    @State private var isShowingPhotoPicker = false
+    @State private var selectedPhotoItem: PhotosPickerItem?
     
     @FocusState private var isFocused: Bool
     
     var onDismiss: (() -> Void)?
     var onCompleted: (() -> Void)?
+    
+    // 💡 基本情報の必須チェック（店舗名・ブレンド名・生産国・焙煎度が入力/選択されているか）
+    private var isBasicInfoValid: Bool {
+        !coffeeRecordViewModel.shopName.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !coffeeRecordViewModel.blend.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !coffeeRecordViewModel.countryName.isEmpty &&
+        !coffeeRecordViewModel.roastLevel.isEmpty
+    }
+    
+    // 💡 味わいの評価の必須チェック（苦味・酸味・コク・甘味・フレーバー評価が0より大きく、特徴タグも1つ選択されているか）
+    private var isTasteValid: Bool {
+        coffeeRecordViewModel.bitternessrating > 0 &&
+        coffeeRecordViewModel.acidityrating > 0 &&
+        coffeeRecordViewModel.bodyrating > 0 &&
+        coffeeRecordViewModel.sweetnessrating > 0 &&
+        coffeeRecordViewModel.aromarating > 0 &&
+        !coffeeRecordViewModel.selectedAroma.isEmpty
+    }
     
     private var previewLog: Log {
         Log(
@@ -35,7 +57,7 @@ struct CoffeeRecordView: View {
             bitternessrating: coffeeRecordViewModel.bitternessrating,
             acidityrating: coffeeRecordViewModel.acidityrating,
             bodyrating: coffeeRecordViewModel.bodyrating,
-            sweetnessrating: coffeeRecordViewModel.sweetnessrating, // 追加: 画面から取得
+            sweetnessrating: coffeeRecordViewModel.sweetnessrating,
             flavorTags: coffeeRecordViewModel.selectedAroma.isEmpty ? [] : [coffeeRecordViewModel.selectedAroma],
             createdAt: Date(),
             tagX: 0.0,
@@ -48,35 +70,114 @@ struct CoffeeRecordView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .top) {
-                // メインコンテンツ
+                // 💡 メインコンテンツ（横スワイプをなくし、switch文でステップを制御）
                 VStack(spacing: 0) {
-                    TabView(selection: $currentStep) {
-                        cameraStepView().tag(0)
-                        basicInfoStepView().tag(1)
-                        tasteStepView().tag(2)
-                        previewStepView().tag(3)
+                    Group {
+                        switch currentStep {
+                        case 0: cameraStepView()
+                        case 1: basicInfoStepView()
+                        case 2: tasteStepView()
+                        case 3: previewStepView()
+                        default: cameraStepView()
+                        }
                     }
-                    .tabViewStyle(.page(indexDisplayMode: .never))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .background(Color(.systemGroupedBackground))
                  
-                // 上部固定ヘッダーエリア（×ボタンと投稿ボタン）
-                HStack {
-                    // ×ボタン
-                    Button(action: handleDismiss) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(.primary)
-                            .padding(10)
-                            .background(Color(.systemGray5))
-                            .clipShape(Circle())
+                // 上部固定ヘッダーエリア（×ボタン / 戻るボタン と 右上のアクションボタン）
+                HStack(spacing: 12) {
+                    // ×ボタン (Step 0のとき) または 戻るボタン (Step 1〜3のとき)
+                    if currentStep == 0 {
+                        Button(action: handleDismiss) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(10)
+                                .background(Color.black.opacity(0.4))
+                                .clipShape(Circle())
+                        }
+                    } else {
+                        Button(action: {
+                            triggerHaptic(style: .light)
+                            isFocused = false
+                            withAnimation {
+                                currentStep -= 1
+                            }
+                        }) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.primary)
+                                .padding(10)
+                                .background(Color(.systemGray5))
+                                .clipShape(Circle())
+                        }
                     }
                      
                     Spacer()
                      
-                    // 「投稿する」ボタン（Step 3の時だけ表示）
+                    // 💡 Step 1: 基本情報の「次へ」ボタン
+                    if currentStep == 1 {
+                        Button(action: {
+                            triggerHaptic(style: .medium)
+                            
+                            // 💡 味わい評価画面に遷移する直前に、味わいの評価項目を一旦リセットして必ず「未選択（灰色）」からスタートさせる
+                            coffeeRecordViewModel.bitternessrating = 0
+                            coffeeRecordViewModel.acidityrating = 0
+                            coffeeRecordViewModel.bodyrating = 0
+                            coffeeRecordViewModel.sweetnessrating = 0
+                            coffeeRecordViewModel.aromarating = 0
+                            coffeeRecordViewModel.selectedAroma = ""
+                            
+                            withAnimation { currentStep = 2 }
+                        }) {
+                            Text("次へ")
+                                .bold()
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 16)
+                                .background(isBasicInfoValid ? Color.blue : Color.gray.opacity(0.4))
+                                .foregroundColor(.white)
+                                .cornerRadius(20)
+                        }
+                        .disabled(!isBasicInfoValid)
+                        .scaleEffect(isBasicInfoValid ? 1.05 : 1.0)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.5), value: isBasicInfoValid)
+                        .onChange(of: isBasicInfoValid) { _, isValid in
+                            if isValid {
+                                triggerHaptic(style: .light)
+                            }
+                        }
+                    }
+                    
+                    // 💡 Step 2: 味わいの評価の「次へ」ボタン
+                    if currentStep == 2 {
+                        Button(action: {
+                            triggerHaptic(style: .medium)
+                            isFocused = false
+                            withAnimation { currentStep = 3 }
+                        }) {
+                            Text("次へ")
+                                .bold()
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 16)
+                                .background(isTasteValid ? Color.blue : Color.gray.opacity(0.4))
+                                .foregroundColor(.white)
+                                .cornerRadius(20)
+                        }
+                        .disabled(!isTasteValid)
+                        .scaleEffect(isTasteValid ? 1.05 : 1.0)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.5), value: isTasteValid)
+                        .onChange(of: isTasteValid) { _, isValid in
+                            if isValid {
+                                triggerHaptic(style: .light)
+                            }
+                        }
+                    }
+
+                    // 💡 Step 3: 「投稿する」ボタン
                     if currentStep == 3 {
                         Button(action: {
+                            triggerHaptic(style: .heavy)
                             isFocused = false
                             if let currentUser = Auth.auth().currentUser {
                                 coffeeRecordViewModel.uploadAndSaveLog(currentUser: currentUser) { success in
@@ -102,45 +203,86 @@ struct CoffeeRecordView: View {
                 .zIndex(10)
             }
             .toolbar(.hidden, for: .navigationBar)
-            .onChange(of: currentStep) { isFocused = false }
+            .onChange(of: currentStep) { _, _ in isFocused = false }
         }
     }
-      
+       
     // MARK: - Steps
-      
+       
     @ViewBuilder
     private func cameraStepView() -> some View {
-        ZStack(alignment: .topLeading) {
-            Color.black.ignoresSafeArea()
-             
-            VStack {
-                Spacer()
-                 
-                ZStack(alignment: .bottom) {
-                    CameraView(
-                        capturedImage: Binding(
-                            get: { coffeeRecordViewModel.logImages.first },
-                            set: { if let img = $0 { coffeeRecordViewModel.logImages = [img] } }
-                        ),
-                        onImageCaptured: { withAnimation { currentStep = 1 } },
-                        triggerCapture: $shouldCapture
-                    )
-                    .aspectRatio(9/16, contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: 24))
-                     
-                    // シャッターボタン
-                    Button(action: { shouldCapture = true }) {
-                        ZStack {
-                            Circle().stroke(Color.white, lineWidth: 4).frame(width: 76, height: 76)
-                            Circle().fill(Color.white).frame(width: 64, height: 64)
+        ZStack(alignment: .bottom) {
+            CameraView(
+                capturedImage: Binding(
+                    get: { coffeeRecordViewModel.logImages.first },
+                    set: { if let img = $0 { coffeeRecordViewModel.logImages = [img] } }
+                ),
+                onImageCaptured: {
+                    triggerHaptic(style: .medium)
+                    withAnimation { currentStep = 1 }
+                },
+                triggerCapture: $shouldCapture
+            )
+            .ignoresSafeArea()
+            
+            HStack {
+                Button(action: { isShowingPhotoPicker = true }) {
+                    ZStack {
+                        if let lastImage = coffeeRecordViewModel.logImages.first {
+                            Image(uiImage: lastImage)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 44, height: 44)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white, lineWidth: 2))
+                        } else {
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.gray.opacity(0.6))
+                                .frame(width: 44, height: 44)
+                                .overlay(
+                                    Image(systemName: "photo.fill")
+                                        .foregroundColor(.white)
+                                        .font(.system(size: 18))
+                                )
+                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white, lineWidth: 2))
                         }
                     }
-                    .padding(.bottom, 40)
                 }
-                .padding(.horizontal, 16)
-                 
+                .photosPicker(isPresented: $isShowingPhotoPicker, selection: $selectedPhotoItem, matching: .images)
+                .onChange(of: selectedPhotoItem) { _, newItem in
+                    Task {
+                        if let newItem,
+                           let data = try? await newItem.loadTransferable(type: Data.self),
+                           let image = UIImage(data: data) {
+                            await MainActor.run {
+                                coffeeRecordViewModel.logImages = [image]
+                                triggerHaptic(style: .medium)
+                                withAnimation {
+                                    currentStep = 1
+                                }
+                            }
+                        }
+                    }
+                }
+                
                 Spacer()
+                
+                Button(action: {
+                    triggerHaptic(style: .heavy)
+                    shouldCapture = true
+                }) {
+                    ZStack {
+                        Circle().stroke(Color.white, lineWidth: 4).frame(width: 76, height: 76)
+                        Circle().fill(Color.white).frame(width: 64, height: 64)
+                    }
+                }
+                
+                Spacer()
+                
+                Color.clear.frame(width: 44, height: 44)
             }
+            .padding(.horizontal, 32)
+            .padding(.bottom, 48)
         }
     }
       
@@ -149,15 +291,14 @@ struct CoffeeRecordView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 Text("基本情報").font(.title2).bold().padding(.top, 80)
-                editField(label: "店舗名", text: $coffeeRecordViewModel.shopName, placeholder: "店舗名を入力")
-                editField(label: "ブレンド名", text: $coffeeRecordViewModel.blend, placeholder: "ブレンド名 / 銘柄名を入力")
+                editField(label: "店舗名（必須）", text: $coffeeRecordViewModel.shopName, placeholder: "店舗名を入力")
+                editField(label: "ブレンド名（必須）", text: $coffeeRecordViewModel.blend, placeholder: "ブレンド名 / 銘柄名を入力")
                 editField(label: "農園名", text: $coffeeRecordViewModel.farmName, placeholder: "農園名を入力")
-                // 💡 修正: FarmNameのテキストボックスの下にgradeのテキストボックスを追加
                 editField(label: "グレード", text: $coffeeRecordViewModel.grade, placeholder: "グレードを入力 (例: G1, AAなど)")
                  
                 Button(action: { isFocused = false; coffeeRecordViewModel.isShowingCountryPicker = true }) {
                     HStack {
-                        Text("生産国").foregroundColor(.primary)
+                        Text("生産国（必須）").foregroundColor(.primary)
                         Spacer()
                         Text(coffeeRecordViewModel.countryName.isEmpty ? "選択してください" : coffeeRecordViewModel.countryName)
                             .foregroundColor(coffeeRecordViewModel.countryName.isEmpty ? .secondary : .primary)
@@ -170,7 +311,7 @@ struct CoffeeRecordView: View {
                  
                 Button(action: { isFocused = false; coffeeRecordViewModel.isShowingRoastPicker = true }) {
                     HStack {
-                        Text("焙煎度").foregroundColor(.primary)
+                        Text("焙煎度（必須）").foregroundColor(.primary)
                         Spacer()
                         Text(coffeeRecordViewModel.roastLevel.isEmpty ? "選択してください" : coffeeRecordViewModel.roastLevel)
                             .foregroundColor(coffeeRecordViewModel.roastLevel.isEmpty ? .secondary : .primary)
@@ -191,24 +332,24 @@ struct CoffeeRecordView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     Text("味わいの評価").font(.title2).bold().padding(.top, 80)
                      
-                    // 1. 評価項目（苦味、酸味、コク、甘味）
                     VStack(alignment: .leading, spacing: 16) {
                         ratingRow(label: "苦味", rating: $coffeeRecordViewModel.bitternessrating)
                         ratingRow(label: "酸味", rating: $coffeeRecordViewModel.acidityrating)
                         ratingRow(label: "コク", rating: $coffeeRecordViewModel.bodyrating)
-                        // 💡 修正: コクの下に甘味のRatingを追加
                         ratingRow(label: "甘味", rating: $coffeeRecordViewModel.sweetnessrating)
                     }
                      
                     Divider()
                      
-                    // 2. フレーバーの特徴
                     VStack(alignment: .leading, spacing: 12) {
                         ratingRow(label: "フレーバー", rating: $coffeeRecordViewModel.aromarating)
                         Text("特徴を1つ選択").font(.subheadline).bold()
                         ForEach(coffeeRecordViewModel.flavorOptions, id: \.self) { aroma in
                             let isSelected = coffeeRecordViewModel.selectedAroma == aroma
-                            Button(action: { withAnimation { coffeeRecordViewModel.selectedAroma = isSelected ? "" : aroma } }) {
+                            Button(action: {
+                                triggerHaptic(style: .light)
+                                withAnimation { coffeeRecordViewModel.selectedAroma = isSelected ? "" : aroma }
+                            }) {
                                 HStack {
                                     Text(aroma).foregroundColor(isSelected ? .white : .primary)
                                     Spacer()
@@ -221,7 +362,6 @@ struct CoffeeRecordView: View {
                      
                     Divider()
                      
-                    // 3. 一言メモ
                     memoField(label: "一言メモ（任意）", text: $coffeeRecordViewModel.memo, placeholder: "例）１口目のインパクトがすごい！\n冷めると酸味が強くなる！\n次はアイスも！etc")
                         .id("MemoField")
                 }
@@ -229,8 +369,8 @@ struct CoffeeRecordView: View {
                 .padding(.bottom, 40)
             }
             .onTapGesture { isFocused = false }
-            .onChange(of: isFocused) {
-                if isFocused {
+            .onChange(of: isFocused) { _, focused in
+                if focused {
                     withAnimation {
                         proxy.scrollTo("MemoField", anchor: .bottom)
                     }
@@ -242,12 +382,27 @@ struct CoffeeRecordView: View {
     @ViewBuilder
     private func previewStepView() -> some View {
         ScrollView {
-            VStack(spacing: 20) {
-                Text("投稿内容の確認").font(.title2).bold().padding(.top, 80)
-                CoffeeLogView(log: previewLog, author: nil, authorName: "あなた", isEditable: false, onTapMenu: {}, onTapLike: {}, onTapBookmark: {}, onTapProfile: {})
-                    .cornerRadius(16).shadow(radius: 4)
+            VStack(spacing: 16) {
+                Text("投稿内容の確認")
+                    .font(.title2)
+                    .bold()
+                    .padding(.top, 50)
+                
+                CoffeeLogView(
+                    log: previewLog,
+                    author: nil,
+                    authorName: "あなた",
+                    isEditable: false,
+                    onTapMenu: {},
+                    onTapLike: {},
+                    onTapBookmark: {},
+                    onTapProfile: {}
+                )
+                .cornerRadius(16)
+                .shadow(radius: 4)
             }
-            .padding(24)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 40)
         }
     }
       
@@ -262,6 +417,12 @@ struct CoffeeRecordView: View {
         coffeeRecordViewModel.resetForm()
         currentStep = 0
     }
+    
+    private func triggerHaptic(style: UIImpactFeedbackGenerator.FeedbackStyle) {
+        let generator = UIImpactFeedbackGenerator(style: style)
+        generator.prepare()
+        generator.impactOccurred()
+    }
       
     @ViewBuilder
     private func ratingRow(label: String, rating: Binding<Int>) -> some View {
@@ -271,7 +432,10 @@ struct CoffeeRecordView: View {
             ForEach(1...coffeeRecordViewModel.maxRating, id: \.self) { n in
                 Image(n <= rating.wrappedValue ? "coffeeBeanFill" : "coffeeBean")
                     .resizable().frame(width: 26, height: 26)
-                    .onTapGesture { rating.wrappedValue = n }
+                    .onTapGesture {
+                        triggerHaptic(style: .light)
+                        rating.wrappedValue = n
+                    }
             }
         }
     }
@@ -310,7 +474,7 @@ struct CoffeeRecordView: View {
     @ViewBuilder
     private func editField(label: String, text: Binding<String>, placeholder: String) -> some View {
         VStack {
-            HStack { Text(label).frame(width: 80); TextField(placeholder, text: text).focused($isFocused) }
+            HStack { Text(label).frame(width: 120); TextField(placeholder, text: text).focused($isFocused) }
             Divider()
         }
     }

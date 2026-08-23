@@ -3,22 +3,19 @@ import FirebaseAuth
 import FirebaseFirestore
 
 @Observable
+@MainActor
 class CoffeeLogViewModel {
     var log: Log
     var author: User?
-    var bookmarkManager: BookmarkManager?
     var shouldNavigateToProfile: Bool = false
-    var onEdit: () -> Void
-     
+    
     var targetUserForProfile: User?
      
     private let db = Firestore.firestore()
      
-    init(log: Log, author: User? = nil, bookmarkManager: BookmarkManager? = nil, onEdit: @escaping () -> Void = {}) {
+    init(log: Log, author: User? = nil) {
         self.log = log
         self.author = author
-        self.bookmarkManager = bookmarkManager
-        self.onEdit = onEdit
     }
      
     private var currentUid: String? {
@@ -65,14 +62,12 @@ class CoffeeLogViewModel {
                     ])
                 }
             } catch {
-                DispatchQueue.main.async {
-                    if previousState {
-                        self.log.likedUserIds.append(currentUid)
-                        self.log.likesCount = previousCount
-                    } else {
-                        self.log.likedUserIds.removeAll { $0 == currentUid }
-                        self.log.likesCount = previousCount
-                    }
+                if previousState {
+                    self.log.likedUserIds.append(currentUid)
+                    self.log.likesCount = previousCount
+                } else {
+                    self.log.likedUserIds.removeAll { $0 == currentUid }
+                    self.log.likesCount = previousCount
                 }
                 print("Failed to toggle like: \(error.localizedDescription)")
             }

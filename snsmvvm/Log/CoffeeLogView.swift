@@ -56,7 +56,6 @@ struct CoffeeLogView: View {
     }
     
     var body: some View {
-        let _ = coffeeLogViewModel.bookmarkManager = bookmarkManager
         let screenWidth = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.screen.bounds.width ?? 393
         let cardWidth = screenWidth - 32
         let cardHeight = cardWidth * (16 / 9)
@@ -95,19 +94,16 @@ struct CoffeeLogView: View {
                         }
                         
                         Text("Country \(log.countryName)")
-                        
-                         
 
                         // 全体を包む親 VStack の spacing も狭くする（例: spacing: 6）
                         VStack(alignment: .leading, spacing: 6) {
                             
                             // --- Bitterness ---
-                            // VStack を省いて直接 HStack にするか、spacing を 0〜2 にする
                             HStack(alignment: .firstTextBaseline, spacing: 8) {
                                 Text("Bitterness")
                                     .font(.subheadline)
                                     .bold()
-                                    .frame(width: 90, alignment: .leading) // 先ほど左端を揃えるために紹介した幅固定も併用すると綺麗です
+                                    .frame(width: 90, alignment: .leading)
                                 EmptyRatingView(rating: Double(log.bitternessrating))
                             }
                             
@@ -215,7 +211,7 @@ struct CoffeeLogView: View {
                                     .font(.system(size: 28))
                                     .foregroundColor(coffeeLogViewModel.isLikedByMe ? .red : .white)
                             }
-                            
+                             
                             Text("\(coffeeLogViewModel.log.likesCount)")
                                 .font(.system(size: 12, weight: .bold))
                                 .foregroundColor(.white)
@@ -300,7 +296,8 @@ struct CoffeeLogView: View {
             TextField("報告の理由（例：不適切な内容など）", text: $reportReason)
             Button("送信", role: .destructive) {
                 Task {
-                    await profileViewModel.reportUser(targetUserId: log.userId, reason: reportReason)
+                    // 修正箇所：postId: log.id を追加
+                    await profileViewModel.reportUser(targetUserId: log.userId, postId: log.id, reason: reportReason)
                     reportReason = ""
                 }
             }

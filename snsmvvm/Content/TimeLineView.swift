@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct TimeLineView: View {
-    @State private var timeLineViewModel = TimeLineViewModel()
+    @State var timeLineViewModel: TimeLineViewModel
     @Environment(ProfileViewModel.self) var profileViewModel
     
     @State private var currentLogId: String?
@@ -29,7 +29,6 @@ struct TimeLineView: View {
                                     try await timeLineViewModel.fetchUser(userId: userId)
                                 }
                             ) { author in
-                                // 💡 複雑な処理を外出ししたビューを呼ぶだけにする
                                 PostCellView(
                                     log: log,
                                     author: author,
@@ -55,9 +54,8 @@ struct TimeLineView: View {
             }
             .sensoryFeedback(.selection, trigger: currentLogId)
             .sheet(item: $editingLog) { logToEdit in
-                // 💡 $editingLog は Binding<Log?> なので、
-                // Binding(Unwrapping:) やカスタムBindingを使って Binding<Log> に変換して渡します
                 if let bindingLog = Binding($editingLog) {
+                    // 💡 クロージャーを削除し、Bindingだけを渡す形に戻します
                     PostEditView(post: bindingLog)
                 }
             }
@@ -65,7 +63,7 @@ struct TimeLineView: View {
     }
 }
 
-// 💡 複雑さを解消するための切り出し用ビュー
+// 複雑さを解消するための切り出し用ビュー
 private struct PostCellView: View {
     let log: Log
     let author: User
@@ -77,7 +75,7 @@ private struct PostCellView: View {
     var body: some View {
         let isMyPost = log.userId == profileUser.id
         let displayAuthor = isMyPost ? profileUser : author
-        
+         
         CoffeeLogView(
             log: log,
             author: displayAuthor,

@@ -16,14 +16,25 @@ import FirebaseAuth
 class CoffeeRecordViewModel {
     // MARK: - フォーム入力データ
     var shopName: String = ""
-    var blend: String = ""
+    
+    // 💡 シングルオリジン / ブレンドの切り替え (false: シングルオリジン, true: ブレンド)
+    var isBlend: Bool = false
+    
+    // シングルオリジン用
+    var countryName: String = ""
+    var blend: String = "" // （※既存のコード構造に合わせてブレンド用名称として使用）
     var farmName: String = ""
     var grade: String = ""
-    var countryName: String = ""
+    
+    // ブレンド用（3つまで選択可能）
+    var blendCountry1: String = ""
+    var blendCountry2: String = ""
+    var blendCountry3: String = ""
+    
     var roastLevel: String = ""
      
     // 評価（5段階評価）
-    var aromarating: Int = 0
+    var flavorrating: Int = 0
     var memo: String = ""
     var bitternessrating: Int = 0
     var acidityrating: Int = 0
@@ -56,7 +67,12 @@ class CoffeeRecordViewModel {
      
     // ピッカーの状態管理
     var isShowingCountryPicker: Bool = false
+    var activeCountryTarget: CountryTarget = .single // 💡 どの国のピッカーを開いているかを識別
     var isShowingRoastPicker: Bool = false
+     
+    enum CountryTarget {
+        case single, blend1, blend2, blend3
+    }
      
     // 定数・設定
     let maxRating = 5
@@ -65,11 +81,6 @@ class CoffeeRecordViewModel {
      
     // MARK: - 初期化
     private let db = Firestore.firestore()
-     
-    // MARK: - UIヘルパー
-    func image(for number: Int, rating: Int) -> Image {
-        number > rating ? Image(systemName: "star") : Image(systemName: "star.fill")
-    }
      
     @MainActor
     private func loadImages() async {
@@ -110,51 +121,71 @@ class CoffeeRecordViewModel {
     }
      
     private func saveLogToFirestore(imageUrl: String?, completion: @escaping (Bool) -> Void) {
-        guard let uid = Auth.auth().currentUser?.uid else {
-            completion(false); return
+            guard let uid = Auth.auth().currentUser?.uid else {
+                completion(false); return
+            }
+            
+            let newLog = Log(
+                userId: uid,
+                shopName: shopName,
+                blend: blend,
+                countryName: isBlend ? "" : countryName, // 💡 シングル時のみ保持
+                isBlend: isBlend,                        // 💡 追加
+                blendCountry1: isBlend ? blendCountry1 : "", // 💡 ブレンド時のみ保持
+                blendCountry2: isBlend ? blendCountry2 : "",
+                blendCountry3: isBlend ? blendCountry3 : "",
+                farmName: isBlend ? "" : farmName,
+                grade: isBlend ? "" : grade,
+                roastLevel: roastLevel,
+                flavorrating: flavorrating,
+                memo: memo,
+                bitternessrating: bitternessrating,
+                acidityrating: acidityrating,
+                bodyrating: bodyrating,
+                sweetnessrating: sweetnessrating,
+                flavorTags: selectedAroma.isEmpty ? [] : [selectedAroma],
+                createdAt: Date(),
+                tagX: 0,
+                tagY: 0,
+                imageUrl: imageUrl
+            )
+             
+            do {
+                _ = try db.collection("posts").document().setData(from: newLog) // あるいは addDocument(from:)
+                clearFormFields()
+                completion(true)
+            } catch {
+                print("Firestore保存失敗: \(error.localizedDescription)")
+                completion(false)
+            }
         }
-          
-        let newLog = Log(
-            userId: uid,
-            shopName: shopName,
-            blend: blend,
-            countryName: countryName,
-            farmName: farmName,
-            grade: grade,
-            roastLevel: roastLevel,
-            flavorrating: aromarating,
-            memo: memo,
-            bitternessrating: bitternessrating,
-            acidityrating: acidityrating,
-            bodyrating: bodyrating,
-            sweetnessrating: sweetnessrating, // 💡 修正: 甘味の評価を反映
-            flavorTags: selectedAroma.isEmpty ? [] : [selectedAroma],
-            createdAt: Date(),
-            tagX: 0,
-            tagY: 0,
-            imageUrl: imageUrl
-        )
-          
-        do {
-            _ = try db.collection("posts").addDocument(from: newLog)
-            clearFormFields()
-            completion(true)
-        } catch {
-            print("Firestore保存失敗: \(error.localizedDescription)")
-            completion(false)
-        }
-    }
      
     func resetForm() {
         clearFormFields()
     }
      
     private func clearFormFields() {
-        shopName = ""; blend = ""; countryName = ""; farmName = ""; grade = ""; roastLevel = ""
-        aromarating = 0; memo = ""; bitternessrating = 0
-        acidityrating = 0; bodyrating = 0; sweetnessrating = 0; logImages = []
+        shopName = ""
+        isBlend = false
+        blend = ""
+        countryName = ""
+        farmName = ""
+        grade = ""
+        blendCountry1 = ""
+        blendCountry2 = ""
+        blendCountry3 = ""
+        roastLevel = ""
+        flavorrating = 0
+        memo = ""
+        bitternessrating = 0
+        acidityrating = 0
+        bodyrating = 0
+        sweetnessrating = 0
+        logImages = []
         selectedAroma = ""
-        selectedItems = []; scale = 1.0; offset = .zero
+        selectedItems = []
+        scale = 1.0
+        offset = .zero
     }
      
     private func cropImage(image: UIImage, scale: CGFloat, offset: CGSize, containerSize: CGSize) -> UIImage? {

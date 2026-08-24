@@ -8,7 +8,7 @@
 import SwiftUI
 import FirebaseAuth
 import PhotosUI
-import UIKit // 💡 振動（Haptic Feedback）用
+import UIKit
 
 struct CoffeeRecordView: View {
     @State var coffeeRecordViewModel = CoffeeRecordViewModel()
@@ -24,53 +24,67 @@ struct CoffeeRecordView: View {
     var onDismiss: (() -> Void)?
     var onCompleted: (() -> Void)?
     
-    // 💡 基本情報の必須チェック（店舗名・ブレンド名・生産国・焙煎度が入力/選択されているか）
+    // 基本情報の必須チェック（シングルオリジンは焙煎度も必須、ブレンドは店舗名・ブレンド名のみ必須）
     private var isBasicInfoValid: Bool {
-        !coffeeRecordViewModel.shopName.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !coffeeRecordViewModel.blend.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !coffeeRecordViewModel.countryName.isEmpty &&
-        !coffeeRecordViewModel.roastLevel.isEmpty
+        let isShopValid = !coffeeRecordViewModel.shopName.trimmingCharacters(in: .whitespaces).isEmpty
+        
+        if coffeeRecordViewModel.isBlend {
+            let isBlendNameValid = !coffeeRecordViewModel.blend.trimmingCharacters(in: .whitespaces).isEmpty
+            return isShopValid && isBlendNameValid
+        } else {
+            let isCountryValid = !coffeeRecordViewModel.countryName.isEmpty
+            let isRoastValid = !coffeeRecordViewModel.roastLevel.isEmpty
+            return isShopValid && isCountryValid && isRoastValid
+        }
     }
     
-    // 💡 味わいの評価の必須チェック（苦味・酸味・コク・甘味・フレーバー評価が0より大きく、特徴タグも1つ選択されているか）
+    // 味わいの評価の必須チェック
     private var isTasteValid: Bool {
         coffeeRecordViewModel.bitternessrating > 0 &&
         coffeeRecordViewModel.acidityrating > 0 &&
         coffeeRecordViewModel.bodyrating > 0 &&
         coffeeRecordViewModel.sweetnessrating > 0 &&
-        coffeeRecordViewModel.aromarating > 0 &&
+        coffeeRecordViewModel.flavorrating > 0 &&
         !coffeeRecordViewModel.selectedAroma.isEmpty
     }
     
     private var previewLog: Log {
-        Log(
-            id: nil,
-            userId: Auth.auth().currentUser?.uid ?? "",
-            shopName: coffeeRecordViewModel.shopName.isEmpty ? "店舗名未入力" : coffeeRecordViewModel.shopName,
-            blend: coffeeRecordViewModel.blend,
-            countryName: coffeeRecordViewModel.countryName.isEmpty ? "生産国未入力" : coffeeRecordViewModel.countryName,
-            farmName: coffeeRecordViewModel.farmName,
-            grade: coffeeRecordViewModel.grade,
-            roastLevel: coffeeRecordViewModel.roastLevel,
-            flavorrating: coffeeRecordViewModel.aromarating,
-            memo: coffeeRecordViewModel.memo,
-            bitternessrating: coffeeRecordViewModel.bitternessrating,
-            acidityrating: coffeeRecordViewModel.acidityrating,
-            bodyrating: coffeeRecordViewModel.bodyrating,
-            sweetnessrating: coffeeRecordViewModel.sweetnessrating,
-            flavorTags: coffeeRecordViewModel.selectedAroma.isEmpty ? [] : [coffeeRecordViewModel.selectedAroma],
-            createdAt: Date(),
-            tagX: 0.0,
-            tagY: 0.0,
-            imageUrl: nil,
-            previewImage: coffeeRecordViewModel.logImages.first
-        )
-    }
+            let finalCountryName: String
+            if coffeeRecordViewModel.isBlend {
+                let countries = [coffeeRecordViewModel.blendCountry1, coffeeRecordViewModel.blendCountry2, coffeeRecordViewModel.blendCountry3].filter { !$0.isEmpty }
+                finalCountryName = countries.joined(separator: ", ")
+            } else {
+                finalCountryName = coffeeRecordViewModel.countryName.isEmpty ? "生産国未入力" : coffeeRecordViewModel.countryName
+            }
+             
+            return Log(
+                id: nil,
+                userId: Auth.auth().currentUser?.uid ?? "",
+                shopName: coffeeRecordViewModel.shopName.isEmpty ? "店舗名未入力" : coffeeRecordViewModel.shopName,
+                blend: coffeeRecordViewModel.blend,
+                countryName: finalCountryName,
+                farmName: coffeeRecordViewModel.isBlend ? "" : coffeeRecordViewModel.farmName,
+                grade: coffeeRecordViewModel.isBlend ? "" : coffeeRecordViewModel.grade,
+                // 変更：ブレンドの場合は焙煎度を空文字にする
+                roastLevel: coffeeRecordViewModel.isBlend ? "" : coffeeRecordViewModel.roastLevel,
+                flavorrating: coffeeRecordViewModel.flavorrating,
+                memo: coffeeRecordViewModel.memo,
+                bitternessrating: coffeeRecordViewModel.bitternessrating,
+                acidityrating: coffeeRecordViewModel.acidityrating,
+                bodyrating: coffeeRecordViewModel.bodyrating,
+                sweetnessrating: coffeeRecordViewModel.sweetnessrating,
+                flavorTags: coffeeRecordViewModel.selectedAroma.isEmpty ? [] : [coffeeRecordViewModel.selectedAroma],
+                createdAt: Date(),
+                tagX: 0.0,
+                tagY: 0.0,
+                imageUrl: nil,
+                previewImage: coffeeRecordViewModel.logImages.first
+            )
+        }
     
     var body: some View {
         NavigationStack {
             ZStack(alignment: .top) {
-                // 💡 メインコンテンツ（横スワイプをなくし、switch文でステップを制御）
                 VStack(spacing: 0) {
                     Group {
                         switch currentStep {
@@ -85,9 +99,8 @@ struct CoffeeRecordView: View {
                 }
                 .background(Color(.systemGroupedBackground))
                  
-                // 上部固定ヘッダーエリア（×ボタン / 戻るボタン と 右上のアクションボタン）
+                // 上部固定ヘッダーエリア
                 HStack(spacing: 12) {
-                    // ×ボタン (Step 0のとき) または 戻るボタン (Step 1〜3のとき)
                     if currentStep == 0 {
                         Button(action: handleDismiss) {
                             Image(systemName: "xmark")
@@ -116,17 +129,14 @@ struct CoffeeRecordView: View {
                      
                     Spacer()
                      
-                    // 💡 Step 1: 基本情報の「次へ」ボタン
                     if currentStep == 1 {
                         Button(action: {
                             triggerHaptic(style: .medium)
-                            
-                            // 💡 味わい評価画面に遷移する直前に、味わいの評価項目を一旦リセットして必ず「未選択（灰色）」からスタートさせる
                             coffeeRecordViewModel.bitternessrating = 0
                             coffeeRecordViewModel.acidityrating = 0
                             coffeeRecordViewModel.bodyrating = 0
                             coffeeRecordViewModel.sweetnessrating = 0
-                            coffeeRecordViewModel.aromarating = 0
+                            coffeeRecordViewModel.flavorrating = 0
                             coffeeRecordViewModel.selectedAroma = ""
                             
                             withAnimation { currentStep = 2 }
@@ -143,13 +153,10 @@ struct CoffeeRecordView: View {
                         .scaleEffect(isBasicInfoValid ? 1.05 : 1.0)
                         .animation(.spring(response: 0.3, dampingFraction: 0.5), value: isBasicInfoValid)
                         .onChange(of: isBasicInfoValid) { _, isValid in
-                            if isValid {
-                                triggerHaptic(style: .light)
-                            }
+                            if isValid { triggerHaptic(style: .light) }
                         }
                     }
-                    
-                    // 💡 Step 2: 味わいの評価の「次へ」ボタン
+                     
                     if currentStep == 2 {
                         Button(action: {
                             triggerHaptic(style: .medium)
@@ -168,13 +175,10 @@ struct CoffeeRecordView: View {
                         .scaleEffect(isTasteValid ? 1.05 : 1.0)
                         .animation(.spring(response: 0.3, dampingFraction: 0.5), value: isTasteValid)
                         .onChange(of: isTasteValid) { _, isValid in
-                            if isValid {
-                                triggerHaptic(style: .light)
-                            }
+                            if isValid { triggerHaptic(style: .light) }
                         }
                     }
 
-                    // 💡 Step 3: 「投稿する」ボタン
                     if currentStep == 3 {
                         Button(action: {
                             triggerHaptic(style: .heavy)
@@ -206,9 +210,9 @@ struct CoffeeRecordView: View {
             .onChange(of: currentStep) { _, _ in isFocused = false }
         }
     }
-       
+        
     // MARK: - Steps
-       
+        
     @ViewBuilder
     private func cameraStepView() -> some View {
         ZStack(alignment: .bottom) {
@@ -224,7 +228,7 @@ struct CoffeeRecordView: View {
                 triggerCapture: $shouldCapture
             )
             .ignoresSafeArea()
-            
+             
             HStack {
                 Button(action: { isShowingPhotoPicker = true }) {
                     ZStack {
@@ -264,9 +268,9 @@ struct CoffeeRecordView: View {
                         }
                     }
                 }
-                
+                 
                 Spacer()
-                
+                 
                 Button(action: {
                     triggerHaptic(style: .heavy)
                     shouldCapture = true
@@ -276,55 +280,151 @@ struct CoffeeRecordView: View {
                         Circle().fill(Color.white).frame(width: 64, height: 64)
                     }
                 }
-                
+                 
                 Spacer()
-                
+                 
                 Color.clear.frame(width: 44, height: 44)
             }
             .padding(.horizontal, 32)
             .padding(.bottom, 48)
         }
     }
-      
+        
     @ViewBuilder
     private func basicInfoStepView() -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 20) {
                 Text("基本情報").font(.title2).bold().padding(.top, 80)
+                
+                // 1. 店舗名
                 editField(label: "店舗名（必須）", text: $coffeeRecordViewModel.shopName, placeholder: "店舗名を入力")
-                editField(label: "ブレンド名（必須）", text: $coffeeRecordViewModel.blend, placeholder: "ブレンド名 / 銘柄名を入力")
-                editField(label: "農園名", text: $coffeeRecordViewModel.farmName, placeholder: "農園名を入力")
-                editField(label: "グレード", text: $coffeeRecordViewModel.grade, placeholder: "グレードを入力 (例: G1, AAなど)")
-                 
-                Button(action: { isFocused = false; coffeeRecordViewModel.isShowingCountryPicker = true }) {
-                    HStack {
-                        Text("生産国（必須）").foregroundColor(.primary)
-                        Spacer()
-                        Text(coffeeRecordViewModel.countryName.isEmpty ? "選択してください" : coffeeRecordViewModel.countryName)
-                            .foregroundColor(coffeeRecordViewModel.countryName.isEmpty ? .secondary : .primary)
+                
+                // 2. 豆の種類
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("豆の種類").font(.subheadline).foregroundColor(.secondary)
+                    Picker("豆の種類", selection: $coffeeRecordViewModel.isBlend) {
+                        Text("シングルオリジン").tag(false)
+                        Text("ブレンド").tag(true)
                     }
+                    .pickerStyle(.segmented)
                 }
-                .sheet(isPresented: $coffeeRecordViewModel.isShowingCountryPicker) {
-                    CountrySelectionView { coffeeRecordViewModel.countryName = $0 }
-                }
-                Divider()
-                 
-                Button(action: { isFocused = false; coffeeRecordViewModel.isShowingRoastPicker = true }) {
-                    HStack {
-                        Text("焙煎度（必須）").foregroundColor(.primary)
-                        Spacer()
-                        Text(coffeeRecordViewModel.roastLevel.isEmpty ? "選択してください" : coffeeRecordViewModel.roastLevel)
-                            .foregroundColor(coffeeRecordViewModel.roastLevel.isEmpty ? .secondary : .primary)
+                
+                // 3. タイプに応じた動的フォーム
+                if coffeeRecordViewModel.isBlend {
+                    // --- ブレンドの場合 ---
+                    editField(label: "ブレンド名（必須）", text: $coffeeRecordViewModel.blend, placeholder: "ブレンド名を入力")
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("含まれている国（含有率の多い国から）")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        
+                        blendCountryPickerButton(label: "国 1", country: coffeeRecordViewModel.blendCountry1) {
+                            coffeeRecordViewModel.activeCountryTarget = .blend1
+                            coffeeRecordViewModel.isShowingCountryPicker = true
+                        }
+                        blendCountryPickerButton(label: "国 2", country: coffeeRecordViewModel.blendCountry2) {
+                            coffeeRecordViewModel.activeCountryTarget = .blend2
+                            coffeeRecordViewModel.isShowingCountryPicker = true
+                        }
+                        blendCountryPickerButton(label: "国 3", country: coffeeRecordViewModel.blendCountry3) {
+                            coffeeRecordViewModel.activeCountryTarget = .blend3
+                            coffeeRecordViewModel.isShowingCountryPicker = true
+                        }
                     }
-                }
-                .sheet(isPresented: $coffeeRecordViewModel.isShowingRoastPicker) {
-                    RoastSelectionView { coffeeRecordViewModel.roastLevel = $0 }
+                } else {
+                    // --- シングルオリジンの場合 ---
+                    Button(action: {
+                        isFocused = false
+                        coffeeRecordViewModel.activeCountryTarget = .single
+                        coffeeRecordViewModel.isShowingCountryPicker = true
+                    }) {
+                        HStack {
+                            Text("生産国（必須）")
+                                .frame(width: 130, alignment: .leading)
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Text(coffeeRecordViewModel.countryName.isEmpty ? "選択してください" : coffeeRecordViewModel.countryName)
+                                .foregroundColor(coffeeRecordViewModel.countryName.isEmpty ? .secondary : .primary)
+                            Image(systemName: "chevron.right").font(.caption).foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 12)
+                    }
+                    Divider()
+                    
+                    editField(label: "銘柄 / 品種", text: $coffeeRecordViewModel.blend, placeholder: "銘柄名を入力")
+                    editField(label: "農園名", text: $coffeeRecordViewModel.farmName, placeholder: "農園名を入力")
+                    editField(label: "グレード", text: $coffeeRecordViewModel.grade, placeholder: "例: G1, AAなど")
+                    
+                    // 4. 焙煎度（シングルオリジンのみ）
+                    Button(action: { isFocused = false; coffeeRecordViewModel.isShowingRoastPicker = true }) {
+                        HStack {
+                            Text("焙煎度（必須）")
+                                .frame(width: 130, alignment: .leading)
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Text(coffeeRecordViewModel.roastLevel.isEmpty ? "選択してください" : coffeeRecordViewModel.roastLevel)
+                                .foregroundColor(coffeeRecordViewModel.roastLevel.isEmpty ? .secondary : .primary)
+                            Image(systemName: "chevron.right").font(.caption).foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 12)
+                    }
+                    .sheet(isPresented: $coffeeRecordViewModel.isShowingRoastPicker) {
+                        RoastSelectionView { coffeeRecordViewModel.roastLevel = $0 }
+                    }
+                    Divider()
                 }
             }
             .padding(24)
         }
+        .sheet(isPresented: $coffeeRecordViewModel.isShowingCountryPicker) {
+            CountrySelectionView { selectedCountry in
+                switch coffeeRecordViewModel.activeCountryTarget {
+                case .single:
+                    coffeeRecordViewModel.countryName = selectedCountry
+                case .blend1:
+                    coffeeRecordViewModel.blendCountry1 = selectedCountry
+                case .blend2:
+                    coffeeRecordViewModel.blendCountry2 = selectedCountry
+                case .blend3:
+                    coffeeRecordViewModel.blendCountry3 = selectedCountry
+                }
+            }
+        }
     }
-      
+        
+    @ViewBuilder
+    private func editField(label: String, text: Binding<String>, placeholder: String) -> some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                Text(label)
+                    .frame(width: 130, alignment: .leading)
+                    .foregroundColor(.primary)
+                TextField(placeholder, text: text)
+                    .focused($isFocused)
+            }
+            .padding(.vertical, 12)
+            Divider()
+        }
+    }
+        
+    @ViewBuilder
+    private func blendCountryPickerButton(label: String, country: String, action: @escaping () -> Void) -> some View {
+        Button(action: { isFocused = false; action() }) {
+            HStack {
+                Text(label)
+                    .frame(width: 60, alignment: .leading)
+                    .foregroundColor(.primary)
+                Spacer()
+                Text(country.isEmpty ? "選択してください" : country)
+                    .foregroundColor(country.isEmpty ? .secondary : .primary)
+                Image(systemName: "chevron.right").font(.caption).foregroundColor(.secondary)
+            }
+            .padding(.vertical, 10)
+        }
+        Divider()
+    }
+        
     @ViewBuilder
     private func tasteStepView() -> some View {
         ScrollViewReader { proxy in
@@ -342,7 +442,7 @@ struct CoffeeRecordView: View {
                     Divider()
                      
                     VStack(alignment: .leading, spacing: 12) {
-                        ratingRow(label: "フレーバー", rating: $coffeeRecordViewModel.aromarating)
+                        ratingRow(label: "フレーバー", rating: $coffeeRecordViewModel.flavorrating)
                         Text("特徴を1つ選択").font(.subheadline).bold()
                         ForEach(coffeeRecordViewModel.flavorOptions, id: \.self) { aroma in
                             let isSelected = coffeeRecordViewModel.selectedAroma == aroma
@@ -378,7 +478,7 @@ struct CoffeeRecordView: View {
             }
         }
     }
-      
+        
     @ViewBuilder
     private func previewStepView() -> some View {
         ScrollView {
@@ -387,7 +487,7 @@ struct CoffeeRecordView: View {
                     .font(.title2)
                     .bold()
                     .padding(.top, 50)
-                
+                 
                 CoffeeLogView(
                     log: previewLog,
                     author: nil,
@@ -405,14 +505,14 @@ struct CoffeeRecordView: View {
             .padding(.bottom, 40)
         }
     }
-      
+        
     // MARK: - Helpers
-      
+        
     private func handleDismiss() {
         resetStateAndForm()
         onDismiss?() ?? dismiss()
     }
-      
+        
     private func resetStateAndForm() {
         coffeeRecordViewModel.resetForm()
         currentStep = 0
@@ -423,7 +523,7 @@ struct CoffeeRecordView: View {
         generator.prepare()
         generator.impactOccurred()
     }
-      
+        
     @ViewBuilder
     private func ratingRow(label: String, rating: Binding<Int>) -> some View {
         HStack {
@@ -439,7 +539,7 @@ struct CoffeeRecordView: View {
             }
         }
     }
-      
+        
     @ViewBuilder
     private func memoField(label: String, text: Binding<String>, placeholder: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -468,14 +568,6 @@ struct CoffeeRecordView: View {
                         }
                     }, alignment: .topLeading
                 )
-        }
-    }
-      
-    @ViewBuilder
-    private func editField(label: String, text: Binding<String>, placeholder: String) -> some View {
-        VStack {
-            HStack { Text(label).frame(width: 120); TextField(placeholder, text: text).focused($isFocused) }
-            Divider()
         }
     }
 }

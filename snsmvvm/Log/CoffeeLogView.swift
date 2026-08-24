@@ -88,14 +88,14 @@ struct CoffeeLogView: View {
                         }
                         Text("Shop \(log.shopName)")
                         
-                        // 💡 ブレンド名（存在する場合のみ、またはそのまま表示）
+                        // ブレンド名が存在する場合はブレンド名を優先、なければ品種名などを表示
                         if !log.blend.isEmpty {
                             Text("Blend: \(log.blend)")
                         }
                         
                         Text("Country \(log.countryName)")
 
-                        // 全体を包む親 VStack の spacing も狭くする（例: spacing: 6）
+                        // 全体を包む親 VStack
                         VStack(alignment: .leading, spacing: 6) {
                             
                             // --- Bitterness ---
@@ -296,7 +296,6 @@ struct CoffeeLogView: View {
             TextField("報告の理由（例：不適切な内容など）", text: $reportReason)
             Button("送信", role: .destructive) {
                 Task {
-                    // 修正箇所：postId: log.id を追加
                     await profileViewModel.reportUser(targetUserId: log.userId, postId: log.id, reason: reportReason)
                     reportReason = ""
                 }

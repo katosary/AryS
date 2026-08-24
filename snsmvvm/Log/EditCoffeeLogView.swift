@@ -93,7 +93,6 @@ struct PostEditView: View {
                             triggerHaptic(style: .heavy)
                             isFocused = false
                              
-                            // 💡 $post を渡してローカルのBindingも同時に即時更新させる
                             editCoffeeLogViewModel.updateLog(targetPost: $post.wrappedValue) { success in
                                 if success {
                                     dismiss()
@@ -114,7 +113,7 @@ struct PostEditView: View {
             .onChange(of: currentStep) { _, _ in isFocused = false }
         }
     }
-    
+     
     @ViewBuilder
     private func nextButtonLabel(text: String) -> some View {
         Text(text)
@@ -125,62 +124,116 @@ struct PostEditView: View {
             .foregroundColor(.white)
             .cornerRadius(20)
     }
-    
+     
     // MARK: - Steps
-    
+     
     @ViewBuilder
     private func step1View() -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 20) {
                 Text("基本情報").font(.title2).bold().padding(.top, 80)
                  
-                editField(label: "店舗名", text: $editCoffeeLogViewModel.shopName, placeholder: "店舗名を入力")
-                editField(label: "ブレンド名", text: $editCoffeeLogViewModel.blend, placeholder: "ブレンド名 / 銘柄名を入力")
-                editField(label: "農園名", text: $editCoffeeLogViewModel.farmName, placeholder: "農園名を入力")
-                editField(label: "グレード", text: $editCoffeeLogViewModel.grade, placeholder: "グレードを入力 (例: G1, AAなど)")
+                // 1. 店舗名
+                editField(label: "店舗名（必須）", text: $editCoffeeLogViewModel.shopName, placeholder: "店舗名を入力")
                  
-                Button(action: {
-                    triggerHaptic(style: .light)
-                    isFocused = false
-                    editCoffeeLogViewModel.isShowingCountryPicker = true
-                }) {
-                    HStack {
-                        Text("生産国").foregroundColor(.primary)
-                        Spacer()
-                        Text(editCoffeeLogViewModel.countryName.isEmpty ? "選択してください" : editCoffeeLogViewModel.countryName)
-                            .foregroundColor(editCoffeeLogViewModel.countryName.isEmpty ? .secondary : .primary)
+                // 2. 豆の種類 (isBlendによる切り替え)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("豆の種類").font(.subheadline).foregroundColor(.secondary)
+                    Picker("豆の種類", selection: $editCoffeeLogViewModel.isBlend) {
+                        Text("シングルオリジン").tag(false)
+                        Text("ブレンド").tag(true)
                     }
+                    .pickerStyle(.segmented)
                 }
-                .sheet(isPresented: $editCoffeeLogViewModel.isShowingCountryPicker) {
-                    CountrySelectionView { selectedCountry in
-                        editCoffeeLogViewModel.countryName = selectedCountry
-                    }
-                }
-                Divider()
                  
-                Button(action: {
-                    triggerHaptic(style: .light)
-                    isFocused = false
-                    editCoffeeLogViewModel.isShowingRoastPicker = true
-                }) {
-                    HStack {
-                        Text("焙煎度").foregroundColor(.primary)
-                        Spacer()
-                        Text(editCoffeeLogViewModel.roastLevel.isEmpty ? "選択してください" : editCoffeeLogViewModel.roastLevel)
-                            .foregroundColor(editCoffeeLogViewModel.roastLevel.isEmpty ? .secondary : .primary)
+                // 3. タイプに応じた動的フォーム
+                if editCoffeeLogViewModel.isBlend {
+                    // --- ブレンドの場合 ---
+                    editField(label: "ブレンド名（必須）", text: $editCoffeeLogViewModel.blend, placeholder: "ブレンド名を入力")
+                     
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("含まれている国（含有率の多い国から）")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                         
+                        blendCountryPickerButton(label: "国 1", country: editCoffeeLogViewModel.blendCountry1) {
+                            editCoffeeLogViewModel.activeCountryTarget = .blend1
+                            editCoffeeLogViewModel.isShowingCountryPicker = true
+                        }
+                        blendCountryPickerButton(label: "国 2", country: editCoffeeLogViewModel.blendCountry2) {
+                            editCoffeeLogViewModel.activeCountryTarget = .blend2
+                            editCoffeeLogViewModel.isShowingCountryPicker = true
+                        }
+                        blendCountryPickerButton(label: "国 3", country: editCoffeeLogViewModel.blendCountry3) {
+                            editCoffeeLogViewModel.activeCountryTarget = .blend3
+                            editCoffeeLogViewModel.isShowingCountryPicker = true
+                        }
                     }
-                }
-                .sheet(isPresented: $editCoffeeLogViewModel.isShowingRoastPicker) {
-                    RoastSelectionView { selectedRoast in
-                        editCoffeeLogViewModel.roastLevel = selectedRoast
+                } else {
+                    // --- シングルオリジンの場合 ---
+                    Button(action: {
+                        isFocused = false
+                        editCoffeeLogViewModel.activeCountryTarget = .single
+                        editCoffeeLogViewModel.isShowingCountryPicker = true
+                    }) {
+                        HStack {
+                            Text("生産国（必須）")
+                                .frame(width: 130, alignment: .leading)
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Text(editCoffeeLogViewModel.countryName.isEmpty ? "選択してください" : editCoffeeLogViewModel.countryName)
+                                .foregroundColor(editCoffeeLogViewModel.countryName.isEmpty ? .secondary : .primary)
+                            Image(systemName: "chevron.right").font(.caption).foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 12)
                     }
+                    Divider()
+                     
+                    editField(label: "銘柄 / 品種", text: $editCoffeeLogViewModel.blend, placeholder: "銘柄名を入力")
+                    editField(label: "農園名", text: $editCoffeeLogViewModel.farmName, placeholder: "農園名を入力")
+                    editField(label: "グレード", text: $editCoffeeLogViewModel.grade, placeholder: "例: G1, AAなど")
+                     
+                    // 4. 焙煎度（シングルオリジンのみ）
+                    Button(action: {
+                        isFocused = false
+                        editCoffeeLogViewModel.isShowingRoastPicker = true
+                    }) {
+                        HStack {
+                            Text("焙煎度（必須）")
+                                .frame(width: 130, alignment: .leading)
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Text(editCoffeeLogViewModel.roastLevel.isEmpty ? "選択してください" : editCoffeeLogViewModel.roastLevel)
+                                .foregroundColor(editCoffeeLogViewModel.roastLevel.isEmpty ? .secondary : .primary)
+                            Image(systemName: "chevron.right").font(.caption).foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 12)
+                    }
+                    .sheet(isPresented: $editCoffeeLogViewModel.isShowingRoastPicker) {
+                        RoastSelectionView { editCoffeeLogViewModel.roastLevel = $0 }
+                    }
+                    Divider()
                 }
             }
             .padding(24)
         }
+        .sheet(isPresented: $editCoffeeLogViewModel.isShowingCountryPicker) {
+            CountrySelectionView { selectedCountry in
+                switch editCoffeeLogViewModel.activeCountryTarget {
+                case .single:
+                    editCoffeeLogViewModel.countryName = selectedCountry
+                case .blend1:
+                    editCoffeeLogViewModel.blendCountry1 = selectedCountry
+                case .blend2:
+                    editCoffeeLogViewModel.blendCountry2 = selectedCountry
+                case .blend3:
+                    editCoffeeLogViewModel.blendCountry3 = selectedCountry
+                }
+            }
+        }
         .onTapGesture { isFocused = false }
     }
-    
+     
     @ViewBuilder
     private func step2View() -> some View {
         ScrollViewReader { proxy in
@@ -197,9 +250,8 @@ struct PostEditView: View {
                      
                     Divider()
                      
-                    // 💡 フレーバーの特徴（1つのみ選択）
                     VStack(alignment: .leading, spacing: 12) {
-                        ratingRow(label: "フレーバー", rating: $editCoffeeLogViewModel.aromarating)
+                        ratingRow(label: "フレーバー", rating: $editCoffeeLogViewModel.flavorrating)
                         Text("特徴を1つ選択").font(.subheadline).bold()
                          
                         ForEach(editCoffeeLogViewModel.flavorOptions, id: \.self) { aroma in
@@ -251,7 +303,7 @@ struct PostEditView: View {
             }
         }
     }
-    
+     
     @ViewBuilder
     private func step3View() -> some View {
         ScrollView {
@@ -267,11 +319,11 @@ struct PostEditView: View {
                         userId: post.userId,
                         shopName: editCoffeeLogViewModel.shopName.isEmpty ? "店舗名未入力" : editCoffeeLogViewModel.shopName,
                         blend: editCoffeeLogViewModel.blend,
-                        countryName: editCoffeeLogViewModel.countryName.isEmpty ? "生産国未入力" : editCoffeeLogViewModel.countryName,
+                        countryName: editCoffeeLogViewModel.isBlend ? editCoffeeLogViewModel.blendCountry1 : editCoffeeLogViewModel.countryName,
                         farmName: editCoffeeLogViewModel.farmName,
                         grade: editCoffeeLogViewModel.grade,
-                        roastLevel: editCoffeeLogViewModel.roastLevel,
-                        flavorrating: editCoffeeLogViewModel.aromarating,
+                        roastLevel: editCoffeeLogViewModel.isBlend ? "" : editCoffeeLogViewModel.roastLevel,
+                        flavorrating: editCoffeeLogViewModel.flavorrating,
                         memo: editCoffeeLogViewModel.memo,
                         bitternessrating: editCoffeeLogViewModel.bitternessrating,
                         acidityrating: editCoffeeLogViewModel.acidityrating,
@@ -299,15 +351,37 @@ struct PostEditView: View {
             .padding(.bottom, 40)
         }
     }
-    
+     
     // MARK: - Helpers
-    
+     
     private func triggerHaptic(style: UIImpactFeedbackGenerator.FeedbackStyle) {
         let generator = UIImpactFeedbackGenerator(style: style)
         generator.prepare()
         generator.impactOccurred()
     }
-    
+     
+    @ViewBuilder
+    private func blendCountryPickerButton(label: String, country: String, action: @escaping () -> Void) -> some View {
+        Button(action: {
+            isFocused = false
+            action()
+        }) {
+            HStack {
+                Text(label)
+                    .frame(width: 60, alignment: .leading)
+                    .foregroundColor(.primary)
+                Spacer()
+                Text(country.isEmpty ? "選択してください" : country)
+                    .foregroundColor(country.isEmpty ? .secondary : .primary)
+                Image(systemName: "chevron.right").font(.caption).foregroundColor(.secondary)
+            }
+            .padding(.vertical, 10)
+            .padding(.horizontal, 12)
+            .background(Color(.systemGray6))
+            .cornerRadius(8)
+        }
+    }
+     
     @ViewBuilder
     private func ratingRow(label: String, rating: Binding<Int>) -> some View {
         HStack {
@@ -326,7 +400,7 @@ struct PostEditView: View {
             }
         }
     }
-    
+     
     @ViewBuilder
     private func memoField(label: String, text: Binding<String>, placeholder: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -357,12 +431,12 @@ struct PostEditView: View {
                 )
         }
     }
-    
+     
     @ViewBuilder
     private func editField(label: String, text: Binding<String>, placeholder: String) -> some View {
         VStack {
             HStack {
-                Text(label).frame(width: 80)
+                Text(label).frame(width: 130, alignment: .leading)
                 TextField(placeholder, text: text).focused($isFocused)
             }
             Divider()

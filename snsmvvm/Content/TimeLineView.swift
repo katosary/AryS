@@ -55,8 +55,16 @@ struct TimeLineView: View {
             .sensoryFeedback(.selection, trigger: currentLogId)
             .sheet(item: $editingLog) { logToEdit in
                 if let bindingLog = Binding($editingLog) {
-                    // 💡 クロージャーを削除し、Bindingだけを渡す形に戻します
                     PostEditView(post: bindingLog)
+                        .onDisappear {
+                            if let edited = editingLog {
+                                timeLineViewModel.updateLocalLog(edited)
+                                
+                                // 💡 タイムラインの配列自体を「別の配列インスタンス」に代入し直すことで、
+                                // SwiftUIに「配列の中身が変わったから再描画して！」と強制的に伝える
+                                timeLineViewModel.logs = timeLineViewModel.logs
+                            }
+                        }
                 }
             }
         }

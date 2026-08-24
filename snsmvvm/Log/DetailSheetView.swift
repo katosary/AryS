@@ -12,13 +12,9 @@ struct CoffeeLogDetailView: View {
     let author: User?
     let authorName: String
     
-    // ViewModel を受け取るプロパティを用意
     let coffeeLogViewModel: CoffeeLogViewModel
-    
-    // ProfileViewModel もシート内で使うため @Environment で受け取る
     @Environment(ProfileViewModel.self) var profileViewModel
     
-    // レーティングが左からぐーと伸びるアニメーション用のトリガー状態
     @State private var animateRatings = false
     
     var body: some View {
@@ -27,10 +23,8 @@ struct CoffeeLogDetailView: View {
                 let cardWidth = geometry.size.width
                 let cardHeight = cardWidth * (16 / 9)
                 
-                // 💡 スクロール位置をプログラムで制御するための Reader
                 ScrollViewReader { proxy in
                     ScrollView {
-                        // スクロールビューの中身全体を左寄せにする
                         VStack(alignment: .leading, spacing: 0) {
                             // --- 1. 画像エリア（上部） ---
                             Group {
@@ -63,48 +57,70 @@ struct CoffeeLogDetailView: View {
                                             .font(.body)
                                     }
                                     
-                                    // 国名
-                                    HStack(spacing: 16) {
-                                        Text("国名")
-                                            .font(.body)
-                                            .frame(width: 80, alignment: .leading)
-                                        Text(log.countryName)
-                                            .font(.body)
-                                    }
-                                    
-                                    // 農園名
-                                    HStack(spacing: 16) {
-                                        Text("農園名")
-                                            .font(.body)
-                                            .frame(width: 80, alignment: .leading)
-                                        Text(log.farmName)
-                                            .font(.body)
-                                    }
-                                    
-                                    if !log.grade.isEmpty {
+                                    // ブレンドかどうかで項目を動的に切り替え
+                                    if !log.blend.isEmpty && log.farmName.isEmpty {
+                                        // --- ブレンドの場合 ---
                                         HStack(spacing: 16) {
-                                            Text("グレード")
-                                                .font(.body)
-                                                .frame(width: 80, alignment: .leading)
-                                            Text(log.grade)
-                                                .font(.body)
-                                        }
-                                    }
-                                    
-                                    HStack(spacing: 16) {
-                                        Text("焙煎度")
-                                            .font(.body)
-                                            .frame(width: 80, alignment: .leading)
-                                        Text(log.roastLevel)
-                                            .font(.body)
-                                    }
-                                    
-                                    if !log.blend.isEmpty {
-                                        HStack(spacing: 16) {
-                                            Text("ブレンド")
+                                            Text("ブレンド名")
                                                 .font(.body)
                                                 .frame(width: 80, alignment: .leading)
                                             Text(log.blend)
+                                                .font(.body)
+                                        }
+                                        
+                                        HStack(spacing: 16) {
+                                            Text("使用国")
+                                                .font(.body)
+                                                .frame(width: 80, alignment: .leading)
+                                            Text(log.countryName)
+                                                .font(.body)
+                                        }
+                                    } else {
+                                        // --- シングルオリジンの場合 ---
+                                        HStack(spacing: 16) {
+                                            Text("生産国")
+                                                .font(.body)
+                                                .frame(width: 80, alignment: .leading)
+                                            Text(log.countryName)
+                                                .font(.body)
+                                        }
+                                        
+                                        if !log.blend.isEmpty {
+                                            HStack(spacing: 16) {
+                                                Text("銘柄 / 品種")
+                                                    .font(.body)
+                                                    .frame(width: 80, alignment: .leading)
+                                                Text(log.blend)
+                                                    .font(.body)
+                                            }
+                                        }
+                                        
+                                        if !log.farmName.isEmpty {
+                                            HStack(spacing: 16) {
+                                                Text("農園名")
+                                                    .font(.body)
+                                                    .frame(width: 80, alignment: .leading)
+                                                Text(log.farmName)
+                                                    .font(.body)
+                                            }
+                                        }
+                                        
+                                        if !log.grade.isEmpty {
+                                            HStack(spacing: 16) {
+                                                Text("グレード")
+                                                    .font(.body)
+                                                    .frame(width: 80, alignment: .leading)
+                                                Text(log.grade)
+                                                    .font(.body)
+                                            }
+                                        }
+                                        
+                                        // 焙煎度（シングルオリジンなどの場合のみ表示）
+                                        HStack(spacing: 16) {
+                                            Text("焙煎度")
+                                                .font(.body)
+                                                .frame(width: 80, alignment: .leading)
+                                            Text(log.roastLevel)
                                                 .font(.body)
                                         }
                                     }
@@ -113,7 +129,7 @@ struct CoffeeLogDetailView: View {
                                 Divider()
                                     .padding(.vertical, 4)
                                 
-                                // --- 3. RatingView (CollorRatingView) エリア ---
+                                // --- 3. RatingView エリア ---
                                 VStack(alignment: .leading, spacing: 18) {
                                     HStack(alignment: .bottom) {
                                         Text("味わい評価")
@@ -268,7 +284,6 @@ struct CoffeeLogDetailView: View {
                             .padding(24)
                         }
                     }
-                    // 💡 シートが開いた瞬間（無アニメーション）に、詳細情報の位置へスクロールさせて写真を隠す
                     .onAppear {
                         proxy.scrollTo("DetailTop", anchor: .top)
                     }
@@ -287,42 +302,4 @@ struct CoffeeLogDetailView: View {
             }
         }
     }
-}
-
-// MARK: - Preview
-#Preview {
-    let sampleLog = Log(
-        id: "sample_id",
-        userId: "sample_user",
-        shopName: "Sample Coffee Roasters",
-        blend: "House Blend",
-        countryName: "Ethiopia",
-        farmName: "Yirgacheffe Coop",
-        grade: "G-1",
-        roastLevel: "Medium",
-        flavorrating: 4,
-        memo: "とても華やかな香りと爽やかな酸味があります。",
-        bitternessrating: 2,
-        acidityrating: 4,
-        bodyrating: 3,
-        sweetnessrating: 4,
-        flavorTags: ["Jasmine", "Citrus"],
-        createdAt: Date(),
-        tagX: 0.0,
-        tagY: 0.0,
-        imageUrl: nil,
-        previewImage: nil,
-        likesCount: 10,
-        likedUserIds: []
-    )
-    
-    let sampleViewModel = CoffeeLogViewModel(log: sampleLog)
-    
-    return CoffeeLogDetailView(
-        log: sampleLog,
-        author: nil,
-        authorName: "Coffee Lover",
-        coffeeLogViewModel: sampleViewModel
-    )
-    .environment(ProfileViewModel())
 }

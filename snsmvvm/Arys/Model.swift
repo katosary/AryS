@@ -15,7 +15,14 @@ struct Log: Codable, Identifiable, Equatable {
     var userId: String = ""
     var shopName: String = ""
     var blend: String = ""
-    var countryName: String = ""
+    var countryName: String = "" // シングルオリジン用
+    
+    // 💡 古いデータでも落ちないようにオプショナルにする
+    var isBlend: Bool? = false
+    var blendCountry1: String? = ""
+    var blendCountry2: String? = ""
+    var blendCountry3: String? = ""
+    
     var farmName: String = ""
     var grade: String = ""
     var roastLevel: String = ""
@@ -26,10 +33,6 @@ struct Log: Codable, Identifiable, Equatable {
     var acidityrating: Int = 0
     var bodyrating: Int = 0
     var sweetnessrating: Int = 0
-    
-    var aromarating: Int? = 0
-    var aromaComment: String? = nil
-    var aromaTags: [String]? = []
     
     var flavorTags: [String]? = []
     var createdAt: Date = Date()
@@ -44,10 +47,12 @@ struct Log: Codable, Identifiable, Equatable {
     var likedUserIds: [String] = []
 
     enum CodingKeys: String, CodingKey {
-        case id, userId, shopName, blend, countryName, farmName, grade, roastLevel
-        case flavorrating, memo, aromarating, aromaComment
+        case id, userId, shopName, blend, countryName
+        case isBlend, blendCountry1, blendCountry2, blendCountry3
+        case farmName, grade, roastLevel
+        case flavorrating, memo
         case bitternessrating, acidityrating, bodyrating, sweetnessrating
-        case flavorTags, aromaTags
+        case flavorTags
         case createdAt, tagX, tagY, imageUrl
         case likesCount, likedUserIds
     }
@@ -56,7 +61,6 @@ struct Log: Codable, Identifiable, Equatable {
         return lhs.id == rhs.id
     }
 }
-
 
 struct User: Identifiable, Codable {
     @DocumentID var id: String?

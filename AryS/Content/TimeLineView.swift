@@ -10,16 +10,16 @@ import SwiftUI
 struct TimeLineView: View {
     @State var timeLineViewModel: TimeLineViewModel
     @Environment(ProfileViewModel.self) var profileViewModel
-    
+     
     @State private var currentLogId: String?
     @State private var editingLog: Log?
     @State private var isShowingEditSheet = false
-    
+     
     var body: some View {
         NavigationStack {
             ZStack {
                 Color(.systemBackground).ignoresSafeArea()
-                
+                 
                 ScrollView(.vertical, showsIndicators: false) {
                     LazyVStack(spacing: 0) {
                         ForEach(timeLineViewModel.logs) { log in
@@ -54,17 +54,13 @@ struct TimeLineView: View {
             }
             .sensoryFeedback(.selection, trigger: currentLogId)
             .sheet(item: $editingLog) { logToEdit in
-                if let bindingLog = Binding($editingLog) {
-                    PostEditView(post: bindingLog)
-                        .onDisappear {
-                            if let edited = editingLog {
-                                timeLineViewModel.updateLocalLog(edited)
-                                
-                                // 💡 タイムラインの配列自体を「別の配列インスタンス」に代入し直すことで、
-                                // SwiftUIに「配列の中身が変わったから再描画して！」と強制的に伝える
-                                timeLineViewModel.logs = timeLineViewModel.logs
-                            }
+                if let index = timeLineViewModel.logs.firstIndex(where: { $0.id == logToEdit.id }) {
+                    PostEditView(post: $timeLineViewModel.logs[index]) { updatedLog in
+                        // 💡 非同期コンテキストやアニメーションの競合を防ぎ、メインスレッドで確実に即時反映させる
+                        Task { @MainActor in
+                            timeLineViewModel.updateLocalLog(updatedLog)
                         }
+                    }
                 }
             }
         }
@@ -79,11 +75,11 @@ private struct PostCellView: View {
     let onLike: () -> Void
     let onDelete: () -> Void
     let onEdit: () -> Void
-    
+     
     var body: some View {
         let isMyPost = log.userId == profileUser.id
         let displayAuthor = isMyPost ? profileUser : author
-         
+          
         CoffeeLogView(
             log: log,
             author: displayAuthor,

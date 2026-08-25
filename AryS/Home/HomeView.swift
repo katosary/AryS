@@ -11,7 +11,7 @@ struct HomeView: View {
     // 💡 タイムライン用のViewModelをここで一元管理する
     @State private var timeLineViewModel = TimeLineViewModel()
     
-    let barColor = Color(red: 74 / 255, green: 55 / 255, blue: 43 / 255)
+    let barColor = Color(red: 89/255, green: 61/255, blue: 43/255)
     
     var body: some View {
         TabView(selection: $homeViewModel.selectedTab) {
@@ -81,9 +81,9 @@ struct HomeView: View {
     }
 }
 
-// MARK: - 黒で統一された上部バー用のModifier
+
 struct DarkToolbarModifier: ViewModifier {
-    let barColor = Color(red: 92/255, green: 70/255, blue: 51/255)
+    let barColor = Color(red: 89/255, green: 61/255, blue: 43/255)
     
     var profileViewModel: ProfileViewModel
     var authManager: AuthManager

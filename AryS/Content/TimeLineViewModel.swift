@@ -13,22 +13,22 @@ import FirebaseAuth
 class TimeLineViewModel {
     var logs: [Log] = []
     var blockedUserIds: [String] = []
-    
+     
     private var db = Firestore.firestore()
     private var postsListener: ListenerRegistration?
     private var blocksListener: ListenerRegistration?
     private var allFetchedLogs: [Log] = []
-    
+     
     init() {
         listenToBlockedUsersAndPosts()
     }
-    
+     
     // Swift 6 の isolated deinit を使って安全にリスナーを解放する
     isolated deinit {
         postsListener?.remove()
         blocksListener?.remove()
     }
-    
+     
     /// ブロックユーザーと投稿を同時にリアルタイム監視する
     private func listenToBlockedUsersAndPosts() {
         guard let currentUid = Auth.auth().currentUser?.uid else {
@@ -59,7 +59,7 @@ class TimeLineViewModel {
                 }
             }
     }
-    
+     
     private func startListeningPosts() {
         postsListener?.remove()
          
@@ -82,23 +82,29 @@ class TimeLineViewModel {
                 self.applyFilter()
             }
     }
-    
+     
     private func applyFilter() {
         self.logs = allFetchedLogs.filter { log in
             !blockedUserIds.contains(log.userId)
         }
     }
-    
+     
     // MARK: - Update Local Log (即時反映用)
     func updateLocalLog(_ updatedLog: Log) {
+        // 💡 配列の参照自体を新しくしてSwiftUIに変更を確実に検知させる
         if let index = logs.firstIndex(where: { $0.id == updatedLog.id }) {
-            logs[index] = updatedLog
+            var newLogs = logs
+            newLogs[index] = updatedLog
+            self.logs = newLogs
         }
+        
         if let allIndex = allFetchedLogs.firstIndex(where: { $0.id == updatedLog.id }) {
-            allFetchedLogs[allIndex] = updatedLog
+            var newAllLogs = allFetchedLogs
+            newAllLogs[allIndex] = updatedLog
+            self.allFetchedLogs = newAllLogs
         }
     }
-    
+     
     // MARK: - Toggle Like
     func toggleLike(for log: Log) {
         guard let postId = log.id, let currentUid = Auth.auth().currentUser?.uid else { return }
@@ -108,16 +114,19 @@ class TimeLineViewModel {
         let previousLikedUserIds = logs[index].likedUserIds
         let previousLikesCount = logs[index].likesCount
          
+        // 楽観的UI更新（配列インスタンスを新しくして確実に反映）
+        var newLogs = logs
         if isCurrentlyLiked {
-            logs[index].likedUserIds.removeAll { $0 == currentUid }
-            logs[index].likesCount = max(0, logs[index].likesCount - 1)
+            newLogs[index].likedUserIds.removeAll { $0 == currentUid }
+            newLogs[index].likesCount = max(0, newLogs[index].likesCount - 1)
         } else {
-            logs[index].likedUserIds.append(currentUid)
-            logs[index].likesCount += 1
+            newLogs[index].likedUserIds.append(currentUid)
+            newLogs[index].likesCount += 1
         }
+        self.logs = newLogs
          
-        let updatedLikedUserIds = logs[index].likedUserIds
-        let newCount = logs[index].likesCount
+        let updatedLikedUserIds = self.logs[index].likedUserIds
+        let newCount = self.logs[index].likesCount
          
         db.collection("posts").document(postId).updateData([
             "likedUserIds": updatedLikedUserIds,
@@ -127,13 +136,15 @@ class TimeLineViewModel {
                 print("❌ いいねの更新に失敗しました: \(error)")
                 Task { @MainActor [weak self] in
                     guard let self = self, let currentIndex = self.logs.firstIndex(where: { $0.id == postId }) else { return }
-                    self.logs[currentIndex].likedUserIds = previousLikedUserIds
-                    self.logs[currentIndex].likesCount = previousLikesCount
+                    var rollbackLogs = self.logs
+                    rollbackLogs[currentIndex].likedUserIds = previousLikedUserIds
+                    rollbackLogs[currentIndex].likesCount = previousLikesCount
+                    self.logs = rollbackLogs
                 }
             }
         }
     }
-    
+     
     // MARK: - Delete Log
     func deleteLog(targetPost: Log) {
         guard let postId = targetPost.id else { return }
@@ -143,7 +154,7 @@ class TimeLineViewModel {
             }
         }
     }
-    
+     
     // MARK: - Fetch User
     func fetchUser(userId: String) async throws -> User {
         let snapshot = try await db.collection("users").document(userId).getDocument()

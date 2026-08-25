@@ -41,7 +41,6 @@ class AuthManager: ObservableObject {
     func signIn(email: String, password: String, completion: @escaping (String?) -> Void) {
         self.auth.signIn(withEmail: email, password: password) { _, error in
             if let error = error as NSError? {
-                // 未登録のメールアドレス、または認証情報の不一致エラーを判定
                 if error.code == AuthErrorCode.userNotFound.rawValue || error.code == AuthErrorCode.invalidCredential.rawValue {
                     completion("登録されていないメールアドレス、またはパスワードが間違っています。")
                 } else {
@@ -53,13 +52,21 @@ class AuthManager: ObservableObject {
         }
     }
     
-    // MARK: - 新規登録処理（氏名・住所・電話番号などを一緒にFirestoreへ保存）
+    // MARK: - 新規登録処理（確認メール送信 ＆ Firestoreへの保存）
+    // 【変更】SignUpViewModel からすべての詳細データを引数で受け取れるように拡張します
     func signUp(
         email: String,
         password: String,
         name: String,
-        address: String,
-        phone: String,
+        age: Int,
+        prefecture: String,
+        addressDetail: String,
+        probitter: Int,
+        proacidity: Int,
+        probody: Int,
+        prosweetness: Int,
+        proflavor: Int,
+        selectedFlavors: [String],
         completion: @escaping (String?) -> Void
     ) {
         self.auth.createUser(withEmail: email, password: password) { [weak self] authResult, error in
@@ -73,13 +80,27 @@ class AuthManager: ObservableObject {
                 return
             }
              
+            // 確認メールを送信
+            user.sendEmailVerification { error in
+                if let error = error {
+                    print("確認メールの送信に失敗しました: \(error.localizedDescription)")
+                }
+            }
+             
             // Firestoreへの詳細情報付きユーザー保存処理
             self?.saveUserToFirestore(
                 uid: user.uid,
                 email: email,
                 name: name,
-                address: address,
-                phone: phone,
+                age: age,
+                prefecture: prefecture,
+                addressDetail: addressDetail,
+                probitter: probitter,
+                proacidity: proacidity,
+                probody: probody,
+                prosweetness: prosweetness,
+                proflavor: proflavor,
+                selectedFlavors: selectedFlavors,
                 completion: completion
             )
         }
@@ -90,92 +111,57 @@ class AuthManager: ObservableObject {
         uid: String,
         email: String,
         name: String,
-        address: String,
-        phone: String,
+        age: Int,
+        prefecture: String,
+        addressDetail: String,
+        probitter: Int,
+        proacidity: Int,
+        probody: Int,
+        prosweetness: Int,
+        proflavor: Int,
+        selectedFlavors: [String],
         completion: @escaping (String?) -> Void
     ) {
         let db = Firestore.firestore()
-         
+          
+        let fullAddress = prefecture + addressDetail
+          
+        // ProfileEditViewModel と同じキー構造で初期データを構築
         let userData: [String: Any] = [
             "userNo": 0,
             "userName": name,
-            "userAddress": address,
-            "userPhone": phone,
+            "userAddress": fullAddress,
+            "userPhone": "",
             "email": email,
             "selfIntroduction": "",
-            "userAge": 0,
-            "prefecture": "",
+            "userAge": age,
+            "prefecture": prefecture,
             "favoriteCoffee": "",
-            "probitter": 0,
-            "proacidity": 0,
-            "probody": 0,
-            "proaroma": 0,
-            "proflavor": ""
+            "probitter": probitter,
+            "proacidity": proacidity,
+            "probody": probody,
+            "prosweetness": prosweetness,
+            "proflavor": proflavor,
+            "flavorTags": selectedFlavors, // 複数選択フレーバー
+            "dripper": "",
+            "paperFilter": "",
+            "kettle": "",
+            "server": "",
+            "scale": "",
+            "mill": "",
+            "grinder": "",
+            "espressoMachine": "",
+            "frenchPress": "",
+            "profileImageUrl": "",
+            "favoriteToolImageUrl": ""
         ]
-         
+          
         db.collection("users").document(uid).setData(userData) { error in
             if let error = error {
                 completion(error.localizedDescription)
             } else {
                 completion(nil) // 成功
             }
-        }
-    }
-    
-    // MARK: - 投稿ログの保存処理
-    func saveLogToFirestore(
-        shopName: String,
-        blend: String,
-        countryName: String,
-        farmName: String,
-        grade: String,
-        roastLevel: String,
-        flavorrating: Int,
-        memo: String,
-        bitternessrating: Int,
-        acidityrating: Int,
-        bodyrating: Int,
-        sweetnessrating: Int,
-        flavorTags: [String],
-        tagX: CGFloat,
-        tagY: CGFloat,
-        imageUrl: String?,
-        completion: @escaping (Bool) -> Void
-    ) {
-        guard let uid = Auth.auth().currentUser?.uid else {
-            completion(false)
-            return
-        }
-
-        let db = Firestore.firestore()
-
-        let newLog = Log(
-            userId: uid,
-            shopName: shopName,
-            blend: blend,
-            countryName: countryName,
-            farmName: farmName,
-            grade: grade,
-            roastLevel: roastLevel,
-            flavorrating: flavorrating,
-            memo: memo,
-            bitternessrating: bitternessrating,
-            acidityrating: acidityrating,
-            bodyrating: bodyrating,
-            sweetnessrating: sweetnessrating,
-            flavorTags: flavorTags,
-            createdAt: Date(),
-            tagX: tagX,
-            tagY: tagY,
-            imageUrl: imageUrl
-        )
-         
-        do {
-            _ = try db.collection("posts").addDocument(from: newLog)
-            completion(true)
-        } catch {
-            print("Error saving log: \(error)")
-            completion(false)
         }
     }
     
@@ -187,6 +173,7 @@ class AuthManager: ObservableObject {
             Task { @MainActor in
                 userManager.currentUser = nil
                 profileViewModel.reset()
+                self.isLoggedIn = false
             }
              
         } catch {

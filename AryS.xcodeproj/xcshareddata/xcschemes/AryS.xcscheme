@@ -16,9 +16,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "7C287E282F4F23C0007D67D4"
-               BuildableName = "snsmvvm.app"
-               BlueprintName = "snsmvvm"
-               ReferencedContainer = "container:snsmvvm.xcodeproj">
+               BuildableName = "AryS.app"
+               ReferencedContainer = "container:AryS.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -35,10 +34,9 @@
             parallelizable = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "7C287E352F4F23C2007D67D4"
-               BuildableName = "snsmvvmTests.xctest"
-               BlueprintName = "snsmvvmTests"
-               ReferencedContainer = "container:snsmvvm.xcodeproj">
+               BlueprintIdentifier = "7C287E3F2F4F23C2007D67D4"
+               BuildableName = "ArySUITests.xctest"
+               ReferencedContainer = "container:AryS.xcodeproj">
             </BuildableReference>
          </TestableReference>
          <TestableReference
@@ -46,10 +44,9 @@
             parallelizable = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "7C287E3F2F4F23C2007D67D4"
-               BuildableName = "snsmvvmUITests.xctest"
-               BlueprintName = "snsmvvmUITests"
-               ReferencedContainer = "container:snsmvvm.xcodeproj">
+               BlueprintIdentifier = "7C287E352F4F23C2007D67D4"
+               BuildableName = "ArySTests.xctest"
+               ReferencedContainer = "container:AryS.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -63,23 +60,17 @@
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
-      allowLocationSimulation = "YES">
+      allowLocationSimulation = "YES"
+      queueDebuggingEnabled = "No">
       <BuildableProductRunnable
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "7C287E282F4F23C0007D67D4"
-            BuildableName = "snsmvvm.app"
-            BlueprintName = "snsmvvm"
-            ReferencedContainer = "container:snsmvvm.xcodeproj">
+            BuildableName = "AryS.app"
+            ReferencedContainer = "container:AryS.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
-      <CommandLineArguments>
-         <CommandLineArgument
-            argument = "-FIRDebugEnabled"
-            isEnabled = "YES">
-         </CommandLineArgument>
-      </CommandLineArguments>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
@@ -92,9 +83,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "7C287E282F4F23C0007D67D4"
-            BuildableName = "snsmvvm.app"
-            BlueprintName = "snsmvvm"
-            ReferencedContainer = "container:snsmvvm.xcodeproj">
+            BuildableName = "AryS.app"
+            ReferencedContainer = "container:AryS.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

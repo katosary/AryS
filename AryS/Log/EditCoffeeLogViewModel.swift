@@ -63,11 +63,11 @@ class EditCoffeeLogViewModel {
     init(log: Log) {
         self.shopName = log.shopName
         self.blend = log.blend
-        
+         
         // 💡 データの読み込み
         let loadedIsBlend = log.isBlend ?? false
         self.isBlend = loadedIsBlend
-        
+         
         // 💡 古いデータなどで isBlend が未設定（nil）かつ、countryName にカンマが含まれている場合の救済処理
         if (log.isBlend == nil || log.isBlend == false) && log.countryName.contains(",") {
             let countries = log.countryName.components(separatedBy: ", ")
@@ -75,7 +75,7 @@ class EditCoffeeLogViewModel {
             self.blendCountry1 = countries.indices.contains(0) ? countries[0] : ""
             self.blendCountry2 = countries.indices.contains(1) ? countries[1] : ""
             self.blendCountry3 = countries.indices.contains(2) ? countries[2] : ""
-            
+             
             // ブレンド扱いになったのでシングル側は空にする
             self.countryName = ""
             self.farmName = ""
@@ -86,7 +86,7 @@ class EditCoffeeLogViewModel {
             self.blendCountry1 = log.blendCountry1 ?? ""
             self.blendCountry2 = log.blendCountry2 ?? ""
             self.blendCountry3 = log.blendCountry3 ?? ""
-            
+             
             self.countryName = ""
             self.farmName = ""
             self.grade = ""
@@ -97,19 +97,19 @@ class EditCoffeeLogViewModel {
             self.farmName = log.farmName
             self.grade = log.grade
             self.roastLevel = log.roastLevel
-            
+             
             self.blendCountry1 = ""
             self.blendCountry2 = ""
             self.blendCountry3 = ""
         }
-        
+         
         self.flavorrating = log.flavorrating
         self.memo = log.memo
         self.bitternessrating = log.bitternessrating
         self.acidityrating = log.acidityrating
         self.bodyrating = log.bodyrating
         self.sweetnessrating = log.sweetnessrating
-        
+         
         if let firstTag = log.flavorTags?.first {
             self.selectedAroma = firstTag
         }
@@ -121,20 +121,20 @@ class EditCoffeeLogViewModel {
             completion(false)
             return
         }
-        
+         
         let db = Firestore.firestore()
         let tagsToSave = selectedAroma.isEmpty ? [] : [selectedAroma]
-        
+         
         // 💡 ブレンドかシングルオリジンかに応じて、反対側の不要なデータを確実に空文字にして保存する
         let finalCountryName = isBlend ? "" : countryName
         let finalFarmName = isBlend ? "" : farmName
         let finalGrade = isBlend ? "" : grade
         let finalRoastLevel = isBlend ? "" : roastLevel
-        
+         
         let finalBlendCountry1 = isBlend ? blendCountry1 : ""
         let finalBlendCountry2 = isBlend ? blendCountry2 : ""
         let finalBlendCountry3 = isBlend ? blendCountry3 : ""
-        
+         
         let updatedData: [String: Any] = [
             "shopName": shopName,
             "blend": blend,
@@ -154,7 +154,7 @@ class EditCoffeeLogViewModel {
             "sweetnessrating": sweetnessrating,
             "flavorTags": tagsToSave
         ]
-        
+         
         db.collection("posts").document(postId).updateData(updatedData) { error in
             DispatchQueue.main.async {
                 if let error = error {
@@ -166,6 +166,29 @@ class EditCoffeeLogViewModel {
                 }
             }
         }
+    }
+    
+    // 💡 編集された最新の入力値を反映した Log オブジェクトを生成するヘルパーメソッド
+    func makeUpdatedLog(from original: Log) -> Log {
+        var updated = original
+        updated.shopName = shopName.isEmpty ? "店舗名未入力" : shopName
+        updated.blend = blend
+        updated.isBlend = isBlend
+        updated.countryName = isBlend ? blendCountry1 : countryName
+        updated.blendCountry1 = isBlend ? blendCountry1 : nil
+        updated.blendCountry2 = isBlend ? blendCountry2 : nil
+        updated.blendCountry3 = isBlend ? blendCountry3 : nil
+        updated.farmName = farmName
+        updated.grade = grade
+        updated.roastLevel = roastLevel
+        updated.flavorrating = flavorrating
+        updated.memo = memo
+        updated.bitternessrating = bitternessrating
+        updated.acidityrating = acidityrating
+        updated.bodyrating = bodyrating
+        updated.sweetnessrating = sweetnessrating
+        updated.flavorTags = selectedAroma.isEmpty ? [] : [selectedAroma]
+        return updated
     }
     
     func image(for number: Int, rating: Int) -> Image {

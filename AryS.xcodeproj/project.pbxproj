@@ -12,6 +12,7 @@
 		7C244ED92FD9FAF10032542A /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 7C244ED82FD9FAF10032542A /* FirebaseAuth */; };
 		7C244EDB2FD9FAF10032542A /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 7C244EDA2FD9FAF10032542A /* FirebaseFirestore */; };
 		7CAF5D523035A61400CD103B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7CAF5D513035A61400CD103B /* PrivacyInfo.xcprivacy */; };
+		7CEDA14A303CA2A30030F91B /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 7CEDA149303CA2A30030F91B /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -32,40 +33,41 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		7C287E292F4F23C0007D67D4 /* snsmvvm.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = snsmvvm.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		7C287E362F4F23C2007D67D4 /* snsmvvmTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = snsmvvmTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		7C287E402F4F23C2007D67D4 /* snsmvvmUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = snsmvvmUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7C287E292F4F23C0007D67D4 /* AryS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AryS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7C287E362F4F23C2007D67D4 /* ArySTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ArySTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7C287E402F4F23C2007D67D4 /* ArySUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ArySUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7CAF5D513035A61400CD103B /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		7CEDA149303CA2A30030F91B /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		7CBE8E982FD5299500D758AD /* Exceptions for "snsmvvm" folder in "snsmvvm" target */ = {
+		7CBE8E982FD5299500D758AD /* Exceptions for "AryS" folder in "AryS" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Arys/Untitled.swift,
 				Info.plist,
 			);
-			target = 7C287E282F4F23C0007D67D4 /* snsmvvm */;
+			target = 7C287E282F4F23C0007D67D4 /* AryS */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		7C287E2B2F4F23C0007D67D4 /* snsmvvm */ = {
+		7C287E2B2F4F23C0007D67D4 /* AryS */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				7CBE8E982FD5299500D758AD /* Exceptions for "snsmvvm" folder in "snsmvvm" target */,
+				7CBE8E982FD5299500D758AD /* Exceptions for "AryS" folder in "AryS" target */,
 			);
-			path = snsmvvm;
+			path = AryS;
 			sourceTree = "<group>";
 		};
-		7C287E392F4F23C2007D67D4 /* snsmvvmTests */ = {
+		7C287E392F4F23C2007D67D4 /* ArySTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = snsmvvmTests;
+			path = ArySTests;
 			sourceTree = "<group>";
 		};
-		7C287E432F4F23C2007D67D4 /* snsmvvmUITests */ = {
+		7C287E432F4F23C2007D67D4 /* ArySUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = snsmvvmUITests;
+			path = ArySUITests;
 			sourceTree = "<group>";
 		};
 		FF31B6A92F6CD0E400CBFAF8 /* docs */ = {
@@ -116,10 +118,11 @@
 			children = (
 				7CAF5D513035A61400CD103B /* PrivacyInfo.xcprivacy */,
 				FF31B6A92F6CD0E400CBFAF8 /* docs */,
-				7C287E2B2F4F23C0007D67D4 /* snsmvvm */,
-				7C287E392F4F23C2007D67D4 /* snsmvvmTests */,
-				7C287E432F4F23C2007D67D4 /* snsmvvmUITests */,
+				7C287E2B2F4F23C0007D67D4 /* AryS */,
+				7C287E392F4F23C2007D67D4 /* ArySTests */,
+				7C287E432F4F23C2007D67D4 /* ArySUITests */,
 				7C244ED42FD87A7B0032542A /* Frameworks */,
+				7CEDA149303CA2A30030F91B /* GoogleService-Info.plist */,
 				7C287E2A2F4F23C0007D67D4 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -127,9 +130,9 @@
 		7C287E2A2F4F23C0007D67D4 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				7C287E292F4F23C0007D67D4 /* snsmvvm.app */,
-				7C287E362F4F23C2007D67D4 /* snsmvvmTests.xctest */,
-				7C287E402F4F23C2007D67D4 /* snsmvvmUITests.xctest */,
+				7C287E292F4F23C0007D67D4 /* AryS.app */,
+				7C287E362F4F23C2007D67D4 /* ArySTests.xctest */,
+				7C287E402F4F23C2007D67D4 /* ArySUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -137,9 +140,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		7C287E282F4F23C0007D67D4 /* snsmvvm */ = {
+		7C287E282F4F23C0007D67D4 /* AryS */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 7C287E4A2F4F23C2007D67D4 /* Build configuration list for PBXNativeTarget "snsmvvm" */;
+			buildConfigurationList = 7C287E4A2F4F23C2007D67D4 /* Build configuration list for PBXNativeTarget "AryS" */;
 			buildPhases = (
 				7C287E252F4F23C0007D67D4 /* Sources */,
 				7C287E262F4F23C0007D67D4 /* Frameworks */,
@@ -150,10 +153,10 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				7C287E2B2F4F23C0007D67D4 /* snsmvvm */,
+				7C287E2B2F4F23C0007D67D4 /* AryS */,
 				FF31B6A92F6CD0E400CBFAF8 /* docs */,
 			);
-			name = snsmvvm;
+			name = AryS;
 			packageProductDependencies = (
 				7C244ED62FD9FAF10032542A /* FirebaseAnalytics */,
 				7C244ED82FD9FAF10032542A /* FirebaseAuth */,
@@ -161,12 +164,12 @@
 				7C227D462FDD014800179C48 /* FirebaseStorage */,
 			);
 			productName = snsmvvm;
-			productReference = 7C287E292F4F23C0007D67D4 /* snsmvvm.app */;
+			productReference = 7C287E292F4F23C0007D67D4 /* AryS.app */;
 			productType = "com.apple.product-type.application";
 		};
-		7C287E352F4F23C2007D67D4 /* snsmvvmTests */ = {
+		7C287E352F4F23C2007D67D4 /* ArySTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 7C287E4D2F4F23C2007D67D4 /* Build configuration list for PBXNativeTarget "snsmvvmTests" */;
+			buildConfigurationList = 7C287E4D2F4F23C2007D67D4 /* Build configuration list for PBXNativeTarget "ArySTests" */;
 			buildPhases = (
 				7C287E322F4F23C2007D67D4 /* Sources */,
 				7C287E332F4F23C2007D67D4 /* Frameworks */,
@@ -178,18 +181,18 @@
 				7C287E382F4F23C2007D67D4 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				7C287E392F4F23C2007D67D4 /* snsmvvmTests */,
+				7C287E392F4F23C2007D67D4 /* ArySTests */,
 			);
-			name = snsmvvmTests;
+			name = ArySTests;
 			packageProductDependencies = (
 			);
 			productName = snsmvvmTests;
-			productReference = 7C287E362F4F23C2007D67D4 /* snsmvvmTests.xctest */;
+			productReference = 7C287E362F4F23C2007D67D4 /* ArySTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		7C287E3F2F4F23C2007D67D4 /* snsmvvmUITests */ = {
+		7C287E3F2F4F23C2007D67D4 /* ArySUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 7C287E502F4F23C2007D67D4 /* Build configuration list for PBXNativeTarget "snsmvvmUITests" */;
+			buildConfigurationList = 7C287E502F4F23C2007D67D4 /* Build configuration list for PBXNativeTarget "ArySUITests" */;
 			buildPhases = (
 				7C287E3C2F4F23C2007D67D4 /* Sources */,
 				7C287E3D2F4F23C2007D67D4 /* Frameworks */,
@@ -201,13 +204,13 @@
 				7C287E422F4F23C2007D67D4 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				7C287E432F4F23C2007D67D4 /* snsmvvmUITests */,
+				7C287E432F4F23C2007D67D4 /* ArySUITests */,
 			);
-			name = snsmvvmUITests;
+			name = ArySUITests;
 			packageProductDependencies = (
 			);
 			productName = snsmvvmUITests;
-			productReference = 7C287E402F4F23C2007D67D4 /* snsmvvmUITests.xctest */;
+			productReference = 7C287E402F4F23C2007D67D4 /* ArySUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -233,7 +236,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 7C287E242F4F23C0007D67D4 /* Build configuration list for PBXProject "snsmvvm" */;
+			buildConfigurationList = 7C287E242F4F23C0007D67D4 /* Build configuration list for PBXProject "AryS" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -250,9 +253,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				7C287E282F4F23C0007D67D4 /* snsmvvm */,
-				7C287E352F4F23C2007D67D4 /* snsmvvmTests */,
-				7C287E3F2F4F23C2007D67D4 /* snsmvvmUITests */,
+				7C287E282F4F23C0007D67D4 /* AryS */,
+				7C287E352F4F23C2007D67D4 /* ArySTests */,
+				7C287E3F2F4F23C2007D67D4 /* ArySUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -263,6 +266,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7CAF5D523035A61400CD103B /* PrivacyInfo.xcprivacy in Resources */,
+				7CEDA14A303CA2A30030F91B /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -309,12 +313,12 @@
 /* Begin PBXTargetDependency section */
 		7C287E382F4F23C2007D67D4 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 7C287E282F4F23C0007D67D4 /* snsmvvm */;
+			target = 7C287E282F4F23C0007D67D4 /* AryS */;
 			targetProxy = 7C287E372F4F23C2007D67D4 /* PBXContainerItemProxy */;
 		};
 		7C287E422F4F23C2007D67D4 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 7C287E282F4F23C0007D67D4 /* snsmvvm */;
+			target = 7C287E282F4F23C0007D67D4 /* AryS */;
 			targetProxy = 7C287E412F4F23C2007D67D4 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -453,8 +457,8 @@
 				DEVELOPMENT_TEAM = 3T85Y93H4W;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = snsmvvm/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = UIInterfaceOrientationPortrait;
+				INFOPLIST_FILE = AryS/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = AryS;
 				INFOPLIST_KEY_NSCameraUsageDescription = "コーヒーの写真を撮影するためにカメラを使用します";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -493,8 +497,8 @@
 				DEVELOPMENT_TEAM = 3T85Y93H4W;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = snsmvvm/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = UIInterfaceOrientationPortrait;
+				INFOPLIST_FILE = AryS/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = AryS;
 				INFOPLIST_KEY_NSCameraUsageDescription = "コーヒーの写真を撮影するためにカメラを使用します";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -541,7 +545,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/snsmvvm.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/snsmvvm";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AryS.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AryS";
 			};
 			name = Debug;
 		};
@@ -563,7 +567,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/snsmvvm.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/snsmvvm";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AryS.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AryS";
 			};
 			name = Release;
 		};
@@ -610,7 +614,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		7C287E242F4F23C0007D67D4 /* Build configuration list for PBXProject "snsmvvm" */ = {
+		7C287E242F4F23C0007D67D4 /* Build configuration list for PBXProject "AryS" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				7C287E482F4F23C2007D67D4 /* Debug */,
@@ -619,7 +623,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		7C287E4A2F4F23C2007D67D4 /* Build configuration list for PBXNativeTarget "snsmvvm" */ = {
+		7C287E4A2F4F23C2007D67D4 /* Build configuration list for PBXNativeTarget "AryS" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				7C287E4B2F4F23C2007D67D4 /* Debug */,
@@ -628,7 +632,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		7C287E4D2F4F23C2007D67D4 /* Build configuration list for PBXNativeTarget "snsmvvmTests" */ = {
+		7C287E4D2F4F23C2007D67D4 /* Build configuration list for PBXNativeTarget "ArySTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				7C287E4E2F4F23C2007D67D4 /* Debug */,
@@ -637,7 +641,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		7C287E502F4F23C2007D67D4 /* Build configuration list for PBXNativeTarget "snsmvvmUITests" */ = {
+		7C287E502F4F23C2007D67D4 /* Build configuration list for PBXNativeTarget "ArySUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				7C287E512F4F23C2007D67D4 /* Debug */,

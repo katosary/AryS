@@ -12,13 +12,15 @@ import UIKit
 struct PostEditView: View {
     @State private var editCoffeeLogViewModel: EditCoffeeLogViewModel
     @Binding var post: Log
+    var onUpdate: ((Log) -> Void)? = nil // 💡 追加: 編集完了を親に即時通知するためのクロージャー
     @Environment(\.dismiss) private var dismiss
     
     @State private var currentStep = 0
     @FocusState private var isFocused: Bool
     
-    init(post: Binding<Log>) {
+    init(post: Binding<Log>, onUpdate: ((Log) -> Void)? = nil) {
         self._post = post
+        self.onUpdate = onUpdate
         self._editCoffeeLogViewModel = State(initialValue: EditCoffeeLogViewModel(log: post.wrappedValue))
     }
     
@@ -95,6 +97,16 @@ struct PostEditView: View {
                              
                             editCoffeeLogViewModel.updateLog(targetPost: $post.wrappedValue) { success in
                                 if success {
+                                    // 💡 1. 編集された最新のLogオブジェクトを生成する
+                                    let updatedLog = editCoffeeLogViewModel.makeUpdatedLog(from: $post.wrappedValue)
+                                     
+                                    // 💡 2. Binding元を更新する
+                                    $post.wrappedValue = updatedLog
+                                     
+                                    // 💡 3. 親ビュー（TimeLineViewModelなど）に即時通知する
+                                    onUpdate?(updatedLog)
+                                     
+                                    // 💡 4. 編集画面を閉じる
                                     dismiss()
                                 } else {
                                     print("⚠️ サーバーへの保存に失敗")

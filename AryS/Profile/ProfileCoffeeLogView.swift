@@ -10,6 +10,7 @@ import SwiftUI
 struct ProfileCoffeeLogView: View {
     @State var profileCoffeeLogViewModel = ProfileCoffeeLogViewModel()
     @Environment(ProfileViewModel.self) var profileViewModel
+    @Environment(AuthManager.self) var authManager
     
     let totalWidth: CGFloat
     let totalHeight: CGFloat
@@ -43,7 +44,7 @@ struct ProfileCoffeeLogView: View {
             }
         }
         .task {
-             profileCoffeeLogViewModel.fetchLogs()
+            profileCoffeeLogViewModel.fetchLogs()
         }
     }
 }

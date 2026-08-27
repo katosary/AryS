@@ -11,8 +11,8 @@ import FirebaseFirestore
 import FirebaseStorage
 
 struct ProfileView: View {
+    @Environment(AuthManager.self) var authManager
     @Environment(ProfileViewModel.self) var profileViewModel
-    @EnvironmentObject var authManager: AuthManager
     @State private var isDetailShowing = false
     
     @State private var scrollPosition: Int? = 0
@@ -143,7 +143,7 @@ struct ProfileDetailContentView: View {
                 }
                 
                 // 2. インスタ風レイアウト（アイコン、ユーザー名、自己紹介など）
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 20) {
                     HStack(spacing: 16) {
                         // プロフィールアイコン
                         Group {
@@ -163,7 +163,6 @@ struct ProfileDetailContentView: View {
                         .frame(width: profileSize, height: profileSize)
                         .clipShape(Circle())
                         
-                        // ユーザー名・年齢・場所など
                         VStack(alignment: .leading, spacing: 4) {
                             Text(profileViewModel.user.userName)
                                 .font(.title3)
@@ -196,11 +195,11 @@ struct ProfileDetailContentView: View {
                     
                     // --- これまでのベストコーヒー ---
                     HStack(alignment: .top) {
-                        Text("ベスト")
+                        Text("あなたのベストコーヒー")
                             .font(.subheadline)
+                            .foregroundColor(.primary)
                             .bold()
-                            .foregroundColor(.secondary)
-                            .frame(width: 50, alignment: .leading)
+                            .frame(width:200, alignment: .leading)
                         
                         Text(profileViewModel.user.favoriteCoffee.isEmpty ? "未登録" : profileViewModel.user.favoriteCoffee)
                             .font(.subheadline)
@@ -213,9 +212,8 @@ struct ProfileDetailContentView: View {
                         ProfileFlavorDetailView()
                     } label: {
                         HStack {
-                            Text("好きな味わいをもっと詳しく")
+                            Text("好きな味わいをもっと詳しく...")
                                 .font(.subheadline)
-                            Spacer()
                             Image(systemName: "chevron.right")
                                 .font(.subheadline)
                         }

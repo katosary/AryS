@@ -115,7 +115,7 @@ struct ProfileFlavorDetailView: View {
                                 HStack(alignment: .top, spacing: 6) {
                                     Text("フレーバータグ") // 💡 「：」を削除
                                         .font(.body)
-                                        .frame(width: 95, alignment: .leading) // 💡 幅を少し広げて1行に収める
+                                        .frame(width: 120, alignment: .leading) // 💡 幅を少し広げて1行に収める
                                     
                                     VStack(alignment: .leading, spacing: 6) {
                                         ForEach(tags, id: \.self) { tag in
@@ -147,7 +147,6 @@ struct ProfileFlavorDetailView: View {
                     .padding(24)
                 }
             }
-            .navigationTitle("好きな味わい詳細")
             .navigationBarTitleDisplayMode(.inline)
         }
     }

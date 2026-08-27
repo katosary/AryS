@@ -10,7 +10,7 @@ import FirebaseAuth
 import FirebaseFirestore
 
 struct LoginView: View {
-    @ObservedObject var authManager: AuthManager
+    @Environment(AuthManager.self) var authManager
     @State private var email = ""
     @State private var password = ""
     @State private var errorMessage = ""
@@ -169,7 +169,7 @@ struct LoginView: View {
         }
         .fullScreenCover(isPresented: $isShowingSignUp) {
             // LoginView 側が保持している authManager（または環境変数など）を渡す
-            SignUpView(authManager: authManager)
+            SignUpView()
         }
     }
 }
@@ -190,5 +190,5 @@ struct CoffeeTextFieldStyle: TextFieldStyle {
 }
 
 #Preview {
-    LoginView(authManager: AuthManager())
+    LoginView()
 }

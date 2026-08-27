@@ -8,36 +8,40 @@ class CoffeeLogViewModel {
     var log: Log
     var author: User?
     var shouldNavigateToProfile: Bool = false
-    
     var targetUserForProfile: User?
-     
+    
     private let db = Firestore.firestore()
-     
+    
     init(log: Log, author: User? = nil) {
         self.log = log
         self.author = author
     }
-     
+    
+    /// 💡 親から新しいログデータを受け取って即時反映するためのメソッド
+    func updateLog(_ newLog: Log) {
+        self.log = newLog
+    }
+    
     private var currentUid: String? {
         Auth.auth().currentUser?.uid
     }
-     
+    
     var isMyPost: Bool {
         guard let currentUid else { return false }
         return log.userId == currentUid
     }
-     
+    
     var isLikedByMe: Bool {
         guard let currentUid else { return false }
         return log.likedUserIds.contains(currentUid)
     }
-     
+    
     func toggleLike() {
         guard let currentUid, let logId = log.id else { return }
-         
+        
         let previousState = isLikedByMe
         let previousCount = log.likesCount
-         
+        
         if previousState {
             log.likedUserIds.removeAll { $0 == currentUid }
             log.likesCount = max(0, log.likesCount - 1)
@@ -45,9 +49,9 @@ class CoffeeLogViewModel {
             log.likedUserIds.append(currentUid)
             log.likesCount += 1
         }
-         
+        
         let postRef = db.collection("posts").document(logId)
-         
+        
         Task {
             do {
                 if previousState {
@@ -73,20 +77,20 @@ class CoffeeLogViewModel {
             }
         }
     }
-     
+    
     func toggleSave(bookmarkManager: BookmarkManager) {
         guard let logId = log.id else { return }
         bookmarkManager.toggleSave(for: logId)
     }
-     
+    
     func onTapProfile(currentProfileUser: User? = nil) {
         targetUserForProfile = isMyPost ? currentProfileUser : author
         shouldNavigateToProfile = true
     }
-     
+    
     func deletePost() {
         guard let logId = log.id else { return }
-         
+        
         Task {
             do {
                 try await db.collection("posts").document(logId).delete()

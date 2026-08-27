@@ -64,8 +64,20 @@ struct OtherUserProfileView: View {
                 }
                 .navigationTitle(viewModel.user.userName.isEmpty ? (user?.userName ?? "プロフィール") : viewModel.user.userName)
                 .navigationBarTitleDisplayMode(.inline)
+                
+                
                 // MARK: - 右上にブロック・通報メニューを追加
                 .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                                            Button {
+                                                dismiss()
+                                            } label: {
+                                                HStack(spacing: 2) {
+                                                    Image(systemName: "chevron.left")
+                                                    Text("戻る")
+                                                }
+                                            }
+                                        }
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Menu {
                             Button(role: .destructive) {
@@ -80,7 +92,7 @@ struct OtherUserProfileView: View {
                                 Label("このユーザーを通報する", systemImage: "flag")
                             }
                         } label: {
-                            Image(systemName: "ellipsis.circle")
+                            Image(systemName: "ellipsis")
                                 .font(.body)
                         }
                     }

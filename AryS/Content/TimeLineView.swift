@@ -33,8 +33,6 @@ struct TimeLineView: View {
                                     log: log,
                                     author: author,
                                     profileUser: profileViewModel.user,
-                                    onLike: { timeLineViewModel.toggleLike(for: log) },
-                                    onDelete: { timeLineViewModel.deleteLog(targetPost: log) },
                                     onEdit: {
                                         editingLog = log
                                         isShowingEditSheet = true
@@ -67,25 +65,3 @@ struct TimeLineView: View {
     }
 }
 
-// 複雑さを解消するための切り出し用ビュー
-private struct PostCellView: View {
-    let log: Log
-    let author: User
-    let profileUser: User
-    let onLike: () -> Void
-    let onDelete: () -> Void
-    let onEdit: () -> Void
-     
-    var body: some View {
-        let isMyPost = log.userId == profileUser.id
-        let displayAuthor = isMyPost ? profileUser : author
-          
-        CoffeeLogView(
-            log: log,
-            author: displayAuthor,
-            authorName: displayAuthor.userName,
-            isEditable: isMyPost
-        )
-        .padding(.horizontal, 16)
-    }
-}

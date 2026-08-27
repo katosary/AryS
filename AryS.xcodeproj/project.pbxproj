@@ -44,7 +44,6 @@
 		7CBE8E982FD5299500D758AD /* Exceptions for "AryS" folder in "AryS" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Arys/Untitled.swift,
 				Info.plist,
 			);
 			target = 7C287E282F4F23C0007D67D4 /* AryS */;

@@ -58,43 +58,79 @@ struct CoffeeLogDetailView: View {
                                     }
                                     
                                     // ブレンドかどうかで項目を動的に切り替え
-                                    if !log.blend.isEmpty && log.farmName.isEmpty {
+                                    if log.isBlend == true {
                                         // --- ブレンドの場合 ---
-                                        HStack(spacing: 16) {
-                                            Text("ブレンド名")
-                                                .font(.body)
-                                                .frame(width: 80, alignment: .leading)
-                                            Text(log.blend)
-                                                .font(.body)
-                                        }
                                         
-                                        HStack(spacing: 16) {
-                                            Text("使用国")
-                                                .font(.body)
-                                                .frame(width: 80, alignment: .leading)
-                                            Text(log.countryName)
-                                                .font(.body)
-                                        }
-                                    } else {
-                                        // --- シングルオリジンの場合 ---
-                                        HStack(spacing: 16) {
-                                            Text("生産国")
-                                                .font(.body)
-                                                .frame(width: 80, alignment: .leading)
-                                            Text(log.countryName)
-                                                .font(.body)
-                                        }
-                                        
-                                        if !log.blend.isEmpty {
+                                        // ブレンド名
+                                        if let blend = log.blend, !blend.isEmpty {
                                             HStack(spacing: 16) {
-                                                Text("銘柄 / 品種")
+                                                Text("ブレンド名")
                                                     .font(.body)
                                                     .frame(width: 80, alignment: .leading)
-                                                Text(log.blend)
+                                                Text(blend)
                                                     .font(.body)
                                             }
                                         }
                                         
+                                        // 使用国1 (blendCountry1)
+                                        if let country1 = log.blendCountry1, !country1.isEmpty {
+                                            HStack(spacing: 16) {
+                                                Text("使用国1")
+                                                    .font(.body)
+                                                    .frame(width: 80, alignment: .leading)
+                                                Text(country1)
+                                                    .font(.body)
+                                            }
+                                        }
+                                        
+                                        // 使用国2 (blendCountry2)
+                                        if let country2 = log.blendCountry2, !country2.isEmpty {
+                                            HStack(spacing: 16) {
+                                                Text("使用国2")
+                                                    .font(.body)
+                                                    .frame(width: 80, alignment: .leading)
+                                                Text(country2)
+                                                    .font(.body)
+                                            }
+                                        }
+                                        
+                                        // 使用国3 (blendCountry3)
+                                        if let country3 = log.blendCountry3, !country3.isEmpty {
+                                            HStack(spacing: 16) {
+                                                Text("使用国3")
+                                                    .font(.body)
+                                                    .frame(width: 80, alignment: .leading)
+                                                Text(country3)
+                                                    .font(.body)
+                                            }
+                                        }
+                                        
+                                    } else {
+                                        // --- シングルオリジンの場合 ---
+                                        
+                                        // 生産国
+                                        if !log.countryName.isEmpty {
+                                            HStack(spacing: 16) {
+                                                Text("生産国")
+                                                    .font(.body)
+                                                    .frame(width: 80, alignment: .leading)
+                                                Text(log.countryName)
+                                                    .font(.body)
+                                            }
+                                        }
+                                        
+                                        // 銘柄 / 品種
+                                        if let brand = log.brand, !brand.isEmpty {
+                                            HStack(spacing: 16) {
+                                                Text("銘柄 / 品種")
+                                                    .font(.body)
+                                                    .frame(width: 80, alignment: .leading)
+                                                Text(brand)
+                                                    .font(.body)
+                                            }
+                                        }
+                                        
+                                        // 農園名
                                         if !log.farmName.isEmpty {
                                             HStack(spacing: 16) {
                                                 Text("農園名")
@@ -105,6 +141,7 @@ struct CoffeeLogDetailView: View {
                                             }
                                         }
                                         
+                                        // グレード
                                         if !log.grade.isEmpty {
                                             HStack(spacing: 16) {
                                                 Text("グレード")
@@ -115,13 +152,15 @@ struct CoffeeLogDetailView: View {
                                             }
                                         }
                                         
-                                        // 焙煎度（シングルオリジンなどの場合のみ表示）
-                                        HStack(spacing: 16) {
-                                            Text("焙煎度")
-                                                .font(.body)
-                                                .frame(width: 80, alignment: .leading)
-                                            Text(log.roastLevel)
-                                                .font(.body)
+                                        // 焙煎度
+                                        if !log.roastLevel.isEmpty {
+                                            HStack(spacing: 16) {
+                                                Text("焙煎度")
+                                                    .font(.body)
+                                                    .frame(width: 80, alignment: .leading)
+                                                Text(log.roastLevel)
+                                                    .font(.body)
+                                            }
                                         }
                                     }
                                 }
@@ -236,7 +275,7 @@ struct CoffeeLogDetailView: View {
                                     
                                     if !log.memo.isEmpty {
                                         HStack(spacing: 6) {
-                                            Text("コメント:").font(.subheadline).bold().foregroundColor(.secondary)
+                                            Text("一言メモ:").font(.subheadline).bold().foregroundColor(.secondary)
                                             Text(log.memo).font(.body)
                                         }
                                         .padding(.top, 4)

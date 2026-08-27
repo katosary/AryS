@@ -10,9 +10,10 @@ import FirebaseAuth
 import UIKit
 
 struct PostEditView: View {
+    @State private var isSaving = false
     @State private var editCoffeeLogViewModel: EditCoffeeLogViewModel
     @Binding var post: Log
-    var onUpdate: ((Log) -> Void)? = nil // 💡 追加: 編集完了を親に即時通知するためのクロージャー
+    var onUpdate: ((Log) -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     
     @State private var currentStep = 0
@@ -39,7 +40,7 @@ struct PostEditView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .background(Color(.systemGroupedBackground))
-                 
+                
                 // ヘッダー（戻る/×ボタン と 次へ/保存するボタン）
                 HStack(spacing: 12) {
                     if currentStep == 0 {
@@ -68,9 +69,9 @@ struct PostEditView: View {
                                 .clipShape(Circle())
                         }
                     }
-                     
+                    
                     Spacer()
-                     
+                    
                     if currentStep == 0 {
                         Button(action: {
                             triggerHaptic(style: .medium)
@@ -79,7 +80,7 @@ struct PostEditView: View {
                             nextButtonLabel(text: "次へ")
                         }
                     }
-                     
+                    
                     if currentStep == 1 {
                         Button(action: {
                             triggerHaptic(style: .medium)
@@ -89,32 +90,40 @@ struct PostEditView: View {
                             nextButtonLabel(text: "次へ")
                         }
                     }
-
+                    
                     if currentStep == 2 {
                         Button(action: {
                             triggerHaptic(style: .heavy)
                             isFocused = false
-                             
-                            editCoffeeLogViewModel.updateLog(targetPost: $post.wrappedValue) { success in
-                                if success {
-                                    // 💡 1. 編集された最新のLogオブジェクトを生成する
-                                    let updatedLog = editCoffeeLogViewModel.makeUpdatedLog(from: $post.wrappedValue)
-                                     
-                                    // 💡 2. Binding元を更新する
-                                    $post.wrappedValue = updatedLog
-                                     
-                                    // 💡 3. 親ビュー（TimeLineViewModelなど）に即時通知する
-                                    onUpdate?(updatedLog)
-                                     
-                                    // 💡 4. 編集画面を閉じる
-                                    dismiss()
-                                } else {
-                                    print("⚠️ サーバーへの保存に失敗")
+                            isSaving = true // 👈 2. ローディング開始
+                            
+                            // 最新のログデータを作る
+                            let updatedLog = editCoffeeLogViewModel.makeUpdatedLog(from: post)
+                            
+                            // 3. サーバーへの保存を「待ってから」閉じる
+                            editCoffeeLogViewModel.updateLog(targetPost: updatedLog) { success in
+                                Task { @MainActor in
+                                    isSaving = false
+                                    if success {
+                                        
+                                        post = updatedLog
+                                        onUpdate?(updatedLog)
+                                        dismiss() 
+                                    } else {
+                                        print("⚠️ サーバーへの保存に失敗しました")
+                                    }
                                 }
                             }
                         }) {
-                            nextButtonLabel(text: "保存する")
+                            HStack(spacing: 8) {
+                                if isSaving {
+                                    ProgressView()
+                                        .tint(.white)
+                                }
+                                nextButtonLabel(text: isSaving ? "保存中..." : "保存する")
+                            }
                         }
+                        .disabled(isSaving) // 👈 保存中は連打できないようにする
                     }
                 }
                 .padding(.horizontal, 16)
@@ -125,7 +134,7 @@ struct PostEditView: View {
             .onChange(of: currentStep) { _, _ in isFocused = false }
         }
     }
-     
+    
     @ViewBuilder
     private func nextButtonLabel(text: String) -> some View {
         Text(text)
@@ -136,18 +145,18 @@ struct PostEditView: View {
             .foregroundColor(.white)
             .cornerRadius(20)
     }
-     
+    
     // MARK: - Steps
-     
+    
     @ViewBuilder
     private func step1View() -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 Text("基本情報").font(.title2).bold().padding(.top, 80)
-                 
+                
                 // 1. 店舗名
                 editField(label: "店舗名（必須）", text: $editCoffeeLogViewModel.shopName, placeholder: "店舗名を入力")
-                 
+                
                 // 2. 豆の種類 (isBlendによる切り替え)
                 VStack(alignment: .leading, spacing: 8) {
                     Text("豆の種類").font(.subheadline).foregroundColor(.secondary)
@@ -157,17 +166,17 @@ struct PostEditView: View {
                     }
                     .pickerStyle(.segmented)
                 }
-                 
+                
                 // 3. タイプに応じた動的フォーム
                 if editCoffeeLogViewModel.isBlend {
                     // --- ブレンドの場合 ---
                     editField(label: "ブレンド名（必須）", text: $editCoffeeLogViewModel.blend, placeholder: "ブレンド名を入力")
-                     
+                    
                     VStack(alignment: .leading, spacing: 8) {
                         Text("含まれている国（含有率の多い国から）")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
-                         
+                        
                         blendCountryPickerButton(label: "国 1", country: editCoffeeLogViewModel.blendCountry1) {
                             editCoffeeLogViewModel.activeCountryTarget = .blend1
                             editCoffeeLogViewModel.isShowingCountryPicker = true
@@ -200,11 +209,13 @@ struct PostEditView: View {
                         .padding(.vertical, 12)
                     }
                     Divider()
-                     
-                    editField(label: "銘柄 / 品種", text: $editCoffeeLogViewModel.blend, placeholder: "銘柄名を入力")
+                    
+                    // 銘柄は brand プロパティを使用
+                    editField(label: "銘柄 / 品種", text: $editCoffeeLogViewModel.brand, placeholder: "銘柄名を入力")
+                    
                     editField(label: "農園名", text: $editCoffeeLogViewModel.farmName, placeholder: "農園名を入力")
                     editField(label: "グレード", text: $editCoffeeLogViewModel.grade, placeholder: "例: G1, AAなど")
-                     
+                    
                     // 4. 焙煎度（シングルオリジンのみ）
                     Button(action: {
                         isFocused = false
@@ -245,27 +256,27 @@ struct PostEditView: View {
         }
         .onTapGesture { isFocused = false }
     }
-     
+    
     @ViewBuilder
     private func step2View() -> some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     Text("味わいの評価").font(.title2).bold().padding(.top, 80)
-                     
+                    
                     VStack(alignment: .leading, spacing: 16) {
                         ratingRow(label: "苦味", rating: $editCoffeeLogViewModel.bitternessrating)
                         ratingRow(label: "酸味", rating: $editCoffeeLogViewModel.acidityrating)
                         ratingRow(label: "コク", rating: $editCoffeeLogViewModel.bodyrating)
                         ratingRow(label: "甘味", rating: $editCoffeeLogViewModel.sweetnessrating)
                     }
-                     
+                    
                     Divider()
-                     
+                    
                     VStack(alignment: .leading, spacing: 12) {
                         ratingRow(label: "フレーバー", rating: $editCoffeeLogViewModel.flavorrating)
                         Text("特徴を1つ選択").font(.subheadline).bold()
-                         
+                        
                         ForEach(editCoffeeLogViewModel.flavorOptions, id: \.self) { aroma in
                             let isSelected = editCoffeeLogViewModel.selectedAroma == aroma
                             Button(action: {
@@ -292,9 +303,9 @@ struct PostEditView: View {
                             .buttonStyle(.plain)
                         }
                     }
-                     
+                    
                     Divider()
-                     
+                    
                     memoField(
                         label: "一言メモ（任意）",
                         text: $editCoffeeLogViewModel.memo,
@@ -315,7 +326,7 @@ struct PostEditView: View {
             }
         }
     }
-     
+    
     @ViewBuilder
     private func step3View() -> some View {
         ScrollView {
@@ -324,14 +335,19 @@ struct PostEditView: View {
                     .font(.title2)
                     .bold()
                     .padding(.top, 50)
-                 
+                
                 CoffeeLogView(
                     log: Log(
                         id: post.id,
                         userId: post.userId,
                         shopName: editCoffeeLogViewModel.shopName.isEmpty ? "店舗名未入力" : editCoffeeLogViewModel.shopName,
-                        blend: editCoffeeLogViewModel.blend,
+                        blend: editCoffeeLogViewModel.isBlend ? editCoffeeLogViewModel.blend : nil,
                         countryName: editCoffeeLogViewModel.isBlend ? editCoffeeLogViewModel.blendCountry1 : editCoffeeLogViewModel.countryName,
+                        isBlend: editCoffeeLogViewModel.isBlend,
+                        blendCountry1: editCoffeeLogViewModel.isBlend ? editCoffeeLogViewModel.blendCountry1 : nil,
+                        blendCountry2: editCoffeeLogViewModel.isBlend ? editCoffeeLogViewModel.blendCountry2 : nil,
+                        blendCountry3: editCoffeeLogViewModel.isBlend ? editCoffeeLogViewModel.blendCountry3 : nil,
+                        brand: editCoffeeLogViewModel.isBlend ? nil : editCoffeeLogViewModel.brand,
                         farmName: editCoffeeLogViewModel.farmName,
                         grade: editCoffeeLogViewModel.grade,
                         roastLevel: editCoffeeLogViewModel.isBlend ? "" : editCoffeeLogViewModel.roastLevel,
@@ -363,15 +379,15 @@ struct PostEditView: View {
             .padding(.bottom, 40)
         }
     }
-     
+    
     // MARK: - Helpers
-     
+    
     private func triggerHaptic(style: UIImpactFeedbackGenerator.FeedbackStyle) {
         let generator = UIImpactFeedbackGenerator(style: style)
         generator.prepare()
         generator.impactOccurred()
     }
-     
+    
     @ViewBuilder
     private func blendCountryPickerButton(label: String, country: String, action: @escaping () -> Void) -> some View {
         Button(action: {
@@ -393,7 +409,7 @@ struct PostEditView: View {
             .cornerRadius(8)
         }
     }
-     
+    
     @ViewBuilder
     private func ratingRow(label: String, rating: Binding<Int>) -> some View {
         HStack {
@@ -412,7 +428,7 @@ struct PostEditView: View {
             }
         }
     }
-     
+    
     @ViewBuilder
     private func memoField(label: String, text: Binding<String>, placeholder: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -421,7 +437,7 @@ struct PostEditView: View {
                 .fontWeight(.bold)
                 .foregroundColor(.secondary)
                 .padding(.top, 10)
-
+            
             TextEditor(text: text)
                 .frame(height: 100)
                 .padding(4)
@@ -443,7 +459,7 @@ struct PostEditView: View {
                 )
         }
     }
-     
+    
     @ViewBuilder
     private func editField(label: String, text: Binding<String>, placeholder: String) -> some View {
         VStack {

@@ -8,11 +8,11 @@
 import SwiftUI
 import FirebaseAuth
 
-struct ProfileMenuView: View {
+struct MenuView: View {
     @Environment(\.dismiss) var dismiss // 画面を閉じるための環境変数
-    @EnvironmentObject var authManager: AuthManager
-    @EnvironmentObject var userManager: UserManager
-    var profileViewModel: ProfileViewModel
+    @Environment(AuthManager.self) var authManager
+    @Environment(UserManager.self) var userManager
+    @Environment(ProfileViewModel.self) var profileViewModel
     
     // アラートの表示管理用
     @State private var showLogoutConfirmation = false

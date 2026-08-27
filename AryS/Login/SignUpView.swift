@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct SignUpView: View {
-    @ObservedObject var authManager: AuthManager
+    @Environment(AuthManager.self) var authManager
     @StateObject private var viewModel = SignUpViewModel()
     @Environment(\.dismiss) var dismiss
     
@@ -591,5 +591,5 @@ struct StepLineView: View {
 
 // MARK: - プレビュー
 #Preview {
-    SignUpView(authManager: AuthManager())
+    SignUpView()
 }

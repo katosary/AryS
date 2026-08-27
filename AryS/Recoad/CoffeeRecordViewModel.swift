@@ -22,11 +22,12 @@ class CoffeeRecordViewModel {
     
     // シングルオリジン用
     var countryName: String = ""
-    var blend: String = "" // （※既存のコード構造に合わせてブレンド用名称として使用）
+    var brand: String = ""
     var farmName: String = ""
     var grade: String = ""
     
     // ブレンド用（3つまで選択可能）
+    var blend: String = ""
     var blendCountry1: String = ""
     var blendCountry2: String = ""
     var blendCountry3: String = ""
@@ -121,44 +122,45 @@ class CoffeeRecordViewModel {
     }
      
     private func saveLogToFirestore(imageUrl: String?, completion: @escaping (Bool) -> Void) {
-            guard let uid = Auth.auth().currentUser?.uid else {
-                completion(false); return
-            }
-            
-            let newLog = Log(
-                userId: uid,
-                shopName: shopName,
-                blend: blend,
-                countryName: isBlend ? "" : countryName, // 💡 シングル時のみ保持
-                isBlend: isBlend,                        // 💡 追加
-                blendCountry1: isBlend ? blendCountry1 : "", // 💡 ブレンド時のみ保持
-                blendCountry2: isBlend ? blendCountry2 : "",
-                blendCountry3: isBlend ? blendCountry3 : "",
-                farmName: isBlend ? "" : farmName,
-                grade: isBlend ? "" : grade,
-                roastLevel: roastLevel,
-                flavorrating: flavorrating,
-                memo: memo,
-                bitternessrating: bitternessrating,
-                acidityrating: acidityrating,
-                bodyrating: bodyrating,
-                sweetnessrating: sweetnessrating,
-                flavorTags: selectedAroma.isEmpty ? [] : [selectedAroma],
-                createdAt: Date(),
-                tagX: 0,
-                tagY: 0,
-                imageUrl: imageUrl
-            )
-             
-            do {
-                _ = try db.collection("posts").document().setData(from: newLog) // あるいは addDocument(from:)
-                clearFormFields()
-                completion(true)
-            } catch {
-                print("Firestore保存失敗: \(error.localizedDescription)")
-                completion(false)
-            }
+        guard let uid = Auth.auth().currentUser?.uid else {
+            completion(false); return
         }
+         
+        let newLog = Log(
+            userId: uid,
+            shopName: shopName,
+            blend: isBlend ? blend : "",
+            countryName: isBlend ? "" : countryName,
+            isBlend: isBlend,
+            blendCountry1: isBlend ? blendCountry1 : "",
+            blendCountry2: isBlend ? blendCountry2 : "",
+            blendCountry3: isBlend ? blendCountry3 : "",
+            brand: isBlend ? "" : brand,
+            farmName: isBlend ? "" : farmName,
+            grade: isBlend ? "" : grade,
+            roastLevel: isBlend ? "" : roastLevel,
+            flavorrating: flavorrating,
+            memo: memo,
+            bitternessrating: bitternessrating,
+            acidityrating: acidityrating,
+            bodyrating: bodyrating,
+            sweetnessrating: sweetnessrating,
+            flavorTags: selectedAroma.isEmpty ? [] : [selectedAroma],
+            createdAt: Date(),
+            tagX: 0,
+            tagY: 0,
+            imageUrl: imageUrl
+        )
+         
+        do {
+            _ = try db.collection("posts").document().setData(from: newLog)
+            clearFormFields()
+            completion(true)
+        } catch {
+            print("Firestore保存失敗: \(error.localizedDescription)")
+            completion(false)
+        }
+    }
      
     func resetForm() {
         clearFormFields()

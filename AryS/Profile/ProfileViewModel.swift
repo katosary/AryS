@@ -59,7 +59,9 @@ final class ProfileViewModel {
     
     init() {
         Task {
-            await loadUserData()
+            // 単発取得の代わりにリアルタイムリスナーで初期データ取得と常時監視を開始
+            listenToUserProfile()
+            
             await fetchBlockedUserIds()
             listenToBlockedUsers()
         }
@@ -74,7 +76,7 @@ final class ProfileViewModel {
     
     func reset() {
         stopListening()
-        
+         
         self.user = User(
             id: nil,
             userNo: 1,
@@ -110,70 +112,96 @@ final class ProfileViewModel {
         self.errorMessage = nil
     }
     
+    
     // MARK: - Listener Management
+        
+        nonisolated private func stopListening() {
+            // mainActorの制約を回避するため、あらかじめ非同期またはMainActorの外で安全に破棄できるようにします
+            // ListenerRegistration は保持しているプロパティ自体を直接 remove() する形にします。
+        }
     
-    /// nonisolatedにすることで、deinitなどの非メインアクター環境からも安全にリスナーを破棄できるようにする
-    nonisolated private func stopListening() {
-        // ListenerRegistrationのremove()自体はスレッドセーフティに配慮されています
-    }
+    // MARK: - Realtime Listener for Profile
     
-    // MARK: - Async One-time Fetch
-    
-    private func fetchProfile(uid: String) async {
-        guard !uid.isEmpty else {
-            self.errorMessage = "有効なユーザーIDが存在しません。"
+    private func listenToUserProfile() {
+        guard let currentUid = Auth.auth().currentUser?.uid else {
+            Task { @MainActor in
+                self.errorMessage = "ログインしていません。"
+            }
             return
         }
+        
+        userListenerRegistration?.remove()
         
         self.isLoading = true
         self.errorMessage = nil
         
-        do {
-            let snapshot = try await db.collection("users").document(uid).getDocument()
-            if snapshot.exists {
-                self.user = try snapshot.data(as: User.self)
-            } else {
-                self.errorMessage = "ユーザーデータが見つかりませんでした。"
+        userListenerRegistration = db.collection("users").document(currentUid)
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self = self else { return }
+                
+                if let error = error {
+                    print("❌ プロフィールの購読エラー: \(error)")
+                    Task { @MainActor in
+                        self.errorMessage = "データの取得に失敗しました: \(error.localizedDescription)"
+                        self.isLoading = false
+                    }
+                    return
+                }
+                
+                guard let snapshot = snapshot, snapshot.exists else {
+                    print("⚠️ プロフィールドキュメントが存在しません")
+                    Task { @MainActor in
+                        self.errorMessage = "ユーザーデータが見つかりませんでした。"
+                        self.isLoading = false
+                    }
+                    return
+                }
+                
+                Task { @MainActor [weak self] in
+                    guard let self = self else { return }
+                    do {
+                        self.user = try snapshot.data(as: User.self)
+                        print("📡 プロフィールをリアルタイム更新しました")
+                    } catch {
+                        print("⚠️ Userモデルへのデコード失敗: \(error.localizedDescription)")
+                        self.errorMessage = "データの解析に失敗しました: \(error.localizedDescription)"
+                    }
+                    self.isLoading = false
+                }
             }
-        } catch {
-            self.errorMessage = "データの取得に失敗しました: \(error.localizedDescription)"
-        }
-        
-        self.isLoading = false
     }
+    
+    // MARK: - Async One-time Fetch (手動更新やプルリフレッシュ用として残す場合)
     
     @MainActor
     func loadUserData() async {
-        guard let currentUid = Auth.auth().currentUser?.uid else {
-            self.errorMessage = "ログインしていません。"
-            return
-        }
-        await fetchProfile(uid: currentUid)
+        // 基本はリアルタイムリスナーが動きますが、必要に応じて再読み込み等に利用可能
+        listenToUserProfile()
     }
     
     // MARK: - Block / Report Logic
     
     func blockUser(targetUserId: String) async {
         guard let currentUid = Auth.auth().currentUser?.uid else { return }
-        
+         
         if targetUserId == currentUid {
             print("Error: Cannot block yourself")
             return
         }
-        
+         
         let blockData: [String: Any] = [
             "blockerId": currentUid,
             "blockedId": targetUserId,
             "createdAt": FieldValue.serverTimestamp()
         ]
-        
+         
         do {
             try await db.collection("blocks").addDocument(data: blockData)
-            
+             
             if !self.blockedUserIds.contains(targetUserId) {
                 self.blockedUserIds.append(targetUserId)
             }
-            
+             
             print("✅ ユーザーをブロックしました: \(targetUserId) (運営用ログ保存成功)")
         } catch {
             print("⚠️ ブロックの保存に失敗しました: \(error.localizedDescription)")
@@ -182,12 +210,12 @@ final class ProfileViewModel {
     
     func fetchBlockedUserIds() async {
         guard let currentUid = Auth.auth().currentUser?.uid else { return }
-        
+         
         do {
             let snapshot = try await db.collection("blocks")
                 .whereField("blockerId", isEqualTo: currentUid)
                 .getDocuments()
-            
+             
             self.blockedUserIds = snapshot.documents.compactMap { doc in
                 doc.data()["blockedId"] as? String
             }
@@ -199,21 +227,21 @@ final class ProfileViewModel {
     
     private func listenToBlockedUsers() {
         guard let currentUid = Auth.auth().currentUser?.uid else { return }
-        
+         
         blocksListenerRegistration?.remove()
-        
+         
         blocksListenerRegistration = db.collection("blocks")
             .whereField("blockerId", isEqualTo: currentUid)
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self = self else { return }
-                
+                 
                 if let error = error {
                     print("❌ ブロックリストの購読エラー: \(error)")
                     return
                 }
-                
+                 
                 guard let documents = snapshot?.documents else { return }
-                
+                 
                 Task { @MainActor [weak self] in
                     guard let self = self else { return }
                     self.blockedUserIds = documents.compactMap { doc in
@@ -227,22 +255,20 @@ final class ProfileViewModel {
     /// ユーザーまたは特定の投稿を通報してFirestoreに保存する
     func reportUser(targetUserId: String, postId: String? = nil, reason: String) async {
         guard let currentUid = Auth.auth().currentUser?.uid else { return }
-        
-        // 理由が空の場合はデフォルト値を設定する
+         
         let finalReason = reason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "理由なし（または選択式）" : reason
-        
+         
         var reportData: [String: Any] = [
             "reporterId": currentUid,        // 通報した人
             "targetUserId": targetUserId,    // 通報された人
             "reason": finalReason,           // 通報の理由
             "createdAt": FieldValue.serverTimestamp() // 通報日時
         ]
-        
-        // 投稿IDが存在する場合は含める
+         
         if let postId = postId {
             reportData["postId"] = postId
         }
-        
+         
         do {
             try await db.collection("reports").addDocument(data: reportData)
             print("✅ 通報内容の送信に成功しました: \(finalReason)")

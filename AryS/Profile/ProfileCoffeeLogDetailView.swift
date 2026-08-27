@@ -10,6 +10,7 @@ import SwiftUI
 struct ProfileCoffeeLogFullscreenView: View {
     @Bindable var profileCoffeeLogViewModel: ProfileCoffeeLogViewModel
     @Environment(ProfileViewModel.self) var profileViewModel
+    @Environment(AuthManager.self) var authManager
     
     @State var currentLogId: String?
     
@@ -29,14 +30,10 @@ struct ProfileCoffeeLogFullscreenView: View {
                                 try await profileCoffeeLogViewModel.fetchUser(userId: userId)
                             }
                         ) { author in
-                            // 💡 複雑さを解消するため、内部のビュー描画を切り出し
-                            ProfilePostCellView(
+                            PostCellView(
                                 log: log,
                                 author: author,
                                 profileUser: profileViewModel.user,
-                                onDelete: {
-                                    profileCoffeeLogViewModel.deleteLog(targetPost: log)
-                                },
                                 onEdit: {
                                     editingLog = log
                                     isShowingEditSheet = true
@@ -55,8 +52,11 @@ struct ProfileCoffeeLogFullscreenView: View {
             .scrollTargetBehavior(.paging)
             .scrollPosition(id: $currentLogId)
             .scrollContentBackground(.hidden)
+            .modifier(DarkToolbarModifier(
+                profileViewModel: profileViewModel,
+                authManager: authManager
+            ))
         }
-        .navigationTitle("アプリ名")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $isShowingEditSheet, onDismiss: { editingLog = nil }) {
             if let editingLog {
@@ -69,27 +69,7 @@ struct ProfileCoffeeLogFullscreenView: View {
     }
 }
 
-// 💡 複雑なネストを避けるための切り出し用ビュー
-private struct ProfilePostCellView: View {
-    let log: Log
-    let author: User
-    let profileUser: User
-    let onDelete: () -> Void
-    let onEdit: () -> Void
-    
-    var body: some View {
-        let isMyPost = log.userId == profileUser.id
-        let displayAuthor = isMyPost ? profileUser : author
-        
-        CoffeeLogView(
-            log: log,
-            author: displayAuthor,
-            authorName: displayAuthor.userName,
-            isEditable: isMyPost
-        )
-        .padding(.horizontal, 16)
-    }
-}
+
 
 // 共通で使っている非同期ユーザー取得用パーツ
 struct AsyncPostRow<Content: View>: View {

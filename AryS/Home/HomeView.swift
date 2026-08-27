@@ -3,14 +3,12 @@ import FirebaseAuth
 import FirebaseFirestore
 
 struct HomeView: View {
+    @Environment(AuthManager.self) var authManager
+    @Environment(UserManager.self) var userManager
     @Environment(ProfileViewModel.self) var profileViewModel
     @State var homeViewModel = HomeViewModel()
-    @EnvironmentObject var authManager: AuthManager
-    @EnvironmentObject var userManager: UserManager
-    
-    // 💡 タイムライン用のViewModelをここで一元管理する
-    @State private var timeLineViewModel = TimeLineViewModel()
-    
+    @State var timeLineViewModel = TimeLineViewModel()
+
     let barColor = Color(red: 89/255, green: 61/255, blue: 43/255)
     
     var body: some View {
@@ -93,8 +91,8 @@ struct DarkToolbarModifier: ViewModifier {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     NavigationLink {
-                        ProfileMenuView(profileViewModel: profileViewModel)
-                            .environmentObject(authManager)
+                        MenuView()
+                            .environment(authManager)
                     } label: {
                         Image(systemName: "line.3.horizontal")
                             .font(.body)

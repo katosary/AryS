@@ -87,6 +87,21 @@ class TimeLineViewModel {
         self.logs = allFetchedLogs.filter { log in
             !blockedUserIds.contains(log.userId)
         }
+        
+        // 💡 ここで logs の id 一覧と重複がないかチェックする
+        print("--- 📋 ログのID一覧チェック ---")
+        let ids = self.logs.compactMap { $0.id }
+        for (index, id) in ids.enumerated() {
+            print("index[\(index)]: ID = \(id)")
+        }
+        
+        // 重複があるかどうかの判定
+        let uniqueIds = Set(ids)
+        if ids.count != uniqueIds.count {
+            print("❌ 警告: IDの重複があります！！")
+        } else {
+            print("✅ IDはすべてユニーク（正常）です")
+        }
     }
      
     // MARK: - Update Local Log (即時反映用)
@@ -97,7 +112,7 @@ class TimeLineViewModel {
             newLogs[index] = updatedLog
             self.logs = newLogs
         }
-        
+         
         if let allIndex = allFetchedLogs.firstIndex(where: { $0.id == updatedLog.id }) {
             var newAllLogs = allFetchedLogs
             newAllLogs[allIndex] = updatedLog
@@ -105,56 +120,7 @@ class TimeLineViewModel {
         }
     }
      
-    // MARK: - Toggle Like
-    func toggleLike(for log: Log) {
-        guard let postId = log.id, let currentUid = Auth.auth().currentUser?.uid else { return }
-        guard let index = logs.firstIndex(where: { $0.id == postId }) else { return }
          
-        let isCurrentlyLiked = logs[index].likedUserIds.contains(currentUid)
-        let previousLikedUserIds = logs[index].likedUserIds
-        let previousLikesCount = logs[index].likesCount
-         
-        // 楽観的UI更新（配列インスタンスを新しくして確実に反映）
-        var newLogs = logs
-        if isCurrentlyLiked {
-            newLogs[index].likedUserIds.removeAll { $0 == currentUid }
-            newLogs[index].likesCount = max(0, newLogs[index].likesCount - 1)
-        } else {
-            newLogs[index].likedUserIds.append(currentUid)
-            newLogs[index].likesCount += 1
-        }
-        self.logs = newLogs
-         
-        let updatedLikedUserIds = self.logs[index].likedUserIds
-        let newCount = self.logs[index].likesCount
-         
-        db.collection("posts").document(postId).updateData([
-            "likedUserIds": updatedLikedUserIds,
-            "likesCount": newCount
-        ]) { [weak self] error in
-            if let error = error {
-                print("❌ いいねの更新に失敗しました: \(error)")
-                Task { @MainActor [weak self] in
-                    guard let self = self, let currentIndex = self.logs.firstIndex(where: { $0.id == postId }) else { return }
-                    var rollbackLogs = self.logs
-                    rollbackLogs[currentIndex].likedUserIds = previousLikedUserIds
-                    rollbackLogs[currentIndex].likesCount = previousLikesCount
-                    self.logs = rollbackLogs
-                }
-            }
-        }
-    }
-     
-    // MARK: - Delete Log
-    func deleteLog(targetPost: Log) {
-        guard let postId = targetPost.id else { return }
-        db.collection("posts").document(postId).delete { error in
-            if let error = error {
-                print("❌ 投稿の削除に失敗しました: \(error.localizedDescription)")
-            }
-        }
-    }
-     
     // MARK: - Fetch User
     func fetchUser(userId: String) async throws -> User {
         let snapshot = try await db.collection("users").document(userId).getDocument()

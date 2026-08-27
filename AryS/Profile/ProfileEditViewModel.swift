@@ -19,6 +19,7 @@ class ProfileEditViewModel {
     var userName: String = ""
     var selfIntroduction: String = ""
     var userAge: Int = 0
+    var userPrefecture: String = "" // 👈 追加・保持用
     var favoriteCoffee: String = ""
     
     // 評価（コーヒーの好み）
@@ -93,6 +94,7 @@ class ProfileEditViewModel {
         self.userName = user.userName
         self.selfIntroduction = user.selfIntroduction
         self.userAge = user.userAge
+        self.userPrefecture = user.prefecture // 👈 反映
         self.favoriteCoffee = user.favoriteCoffee
         
         self.probitter = user.probitter
@@ -101,7 +103,6 @@ class ProfileEditViewModel {
         self.prosweetness = user.prosweetness
         self.proflavor = user.proflavor
         
-        // 💡 ユーザーの保持する flavorTags をそのまま反映
         self.selectedFlavors = user.flavorTags
         
         self.dripper = user.dripper
@@ -166,8 +167,7 @@ class ProfileEditViewModel {
             let storageRef = Storage.storage().reference().child("profile_images/\(uid).jpg")
             _ = try await storageRef.putDataAsync(data)
             let rawUrlString = try await storageRef.downloadURL().absoluteString
-            let timestamp = Int(Date().timeIntervalSince1970)
-            imageUrl = "\(rawUrlString)?v=\(timestamp)"
+            imageUrl = rawUrlString
         }
          
         var toolImageUrl: String? = self.user.favoriteToolImageUrl
@@ -175,13 +175,13 @@ class ProfileEditViewModel {
             let storageRef = Storage.storage().reference().child("favorite_tool_images/\(uid).jpg")
             _ = try await storageRef.putDataAsync(data)
             let rawUrlString = try await storageRef.downloadURL().absoluteString
-            let timestamp = Int(Date().timeIntervalSince1970)
-            toolImageUrl = "\(rawUrlString)?v=\(timestamp)"
+            toolImageUrl = rawUrlString
         }
          
         self.user.userName = userName
         self.user.selfIntroduction = selfIntroduction
         self.user.userAge = userAge
+        self.user.prefecture = userPrefecture
         self.user.favoriteCoffee = favoriteCoffee
         self.user.probitter = probitter
         self.user.proacidity = proacidity
@@ -189,7 +189,6 @@ class ProfileEditViewModel {
         self.user.prosweetness = prosweetness
         self.user.proflavor = proflavor
         
-        // 💡 複数選択されたフレーバー配列をそのまま保存
         self.user.flavorTags = selectedFlavors
          
         self.user.dripper = dripper
@@ -209,7 +208,7 @@ class ProfileEditViewModel {
             "userName": self.user.userName,
             "selfIntroduction": self.user.selfIntroduction,
             "userAge": self.user.userAge,
-            "prefecture": self.user.prefecture,
+            "prefecture": self.user.prefecture, 
             "favoriteCoffee": self.user.favoriteCoffee,
             "probitter": self.user.probitter,
             "proacidity": self.user.proacidity,

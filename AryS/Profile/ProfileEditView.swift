@@ -12,11 +12,11 @@ import FirebaseStorage
 
 struct ProfileEditView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject var userManager: UserManager
+    @Environment(UserManager.self) var userManager
+    @Environment(ProfileViewModel.self) var profileViewModel
+    @State private var profileEditViewModel: ProfileEditViewModel
     
     let user: User
-    @State private var profileEditViewModel: ProfileEditViewModel
-    @Environment(ProfileViewModel.self) var profileViewModel
     
     let profileSize: CGFloat = 100
     
@@ -84,18 +84,18 @@ struct ProfileEditView: View {
                             }
                             Divider()
                             
-                            // 出身地選択
+                            // 出身地選択（ViewModelのuserPrefectureを使うように修正）
                             Button(action: { profileEditViewModel.isShowingPrefecturePicker = true }) {
                                 HStack {
                                     Text("出身地").foregroundColor(.primary)
                                     Spacer()
-                                    Text(profileEditViewModel.user.prefecture.isEmpty ? "選択してください" : profileEditViewModel.user.prefecture).foregroundColor(.secondary)
+                                    Text(profileEditViewModel.userPrefecture.isEmpty ? "選択してください" : profileEditViewModel.userPrefecture).foregroundColor(.secondary)
                                     Image(systemName: "chevron.right").font(.caption).foregroundColor(.gray)
                                 }
                             }
                             .padding(.vertical, 12)
                             .sheet(isPresented: $profileEditViewModel.isShowingPrefecturePicker) {
-                                PrefectureSelectionView { profileEditViewModel.user.prefecture = $0 }
+                                PrefectureSelectionView { profileEditViewModel.userPrefecture = $0 }
                                     .presentationDetents([.medium, .large])
                             }
                             Divider()
@@ -118,22 +118,18 @@ struct ProfileEditView: View {
                                 VStack(alignment: .leading, spacing: 8) {
                                     ForEach(profileEditViewModel.flavorOptions, id: \.self) { aroma in
                                         let isSelected = profileEditViewModel.selectedFlavors.contains(aroma)
-                                        // 💡 3つに達しているかどうかの判定
                                         let isMaxReached = profileEditViewModel.selectedFlavors.count >= 3
                                         
                                         Button(action: {
                                             withAnimation {
                                                 var current = profileEditViewModel.selectedFlavors
                                                 if isSelected {
-                                                    // 選択済みなら外す
                                                     current.removeAll { $0 == aroma }
                                                 } else {
-                                                    // 未選択で、まだ3つ未満なら追加する
                                                     if current.count < 3 {
                                                         current.append(aroma)
                                                     }
                                                 }
-                                                // 配列のインスタンスを新しくして確実に変更を通知
                                                 profileEditViewModel.selectedFlavors = current
                                             }
                                         }) {
@@ -148,13 +144,10 @@ struct ProfileEditView: View {
                                             }
                                             .padding(.vertical, 12)
                                             .padding(.horizontal, 16)
-                                            // 💡 3つに達していて未選択の項目は、少し薄くして押せない雰囲気を出す
                                             .background(isSelected ? Color.blue : Color(.systemGray6))
                                             .foregroundColor(isSelected ? .white : (isMaxReached && !isSelected ? .gray.opacity(0.6) : .primary))
                                             .cornerRadius(12)
                                         }
-                                        // 💡 3つに達しているとき、未選択のボタンはタップ不可にしたい場合は .disabled() をつけてもOK
-                                        // .disabled(isMaxReached && !isSelected)
                                     }
                                 }
                                 .padding(.bottom, 12)
@@ -227,10 +220,14 @@ struct ProfileEditView: View {
                         }
                         Task {
                             do {
-                                let updatedUser = try await profileEditViewModel.uploadProfileAndSave(uid: uid)
+                                // 1. アップロードとFirestoreへの保存を実行
+                                _ = try await profileEditViewModel.uploadProfileAndSave(uid: uid)
+                                
+                                // 2. ProfileViewが持っているViewModel側で最新データを再取得させる
+                                await profileViewModel.loadUserData()
+                                
                                 await MainActor.run {
-                                    userManager.currentUser = updatedUser
-                                    profileViewModel.user = updatedUser
+                                    // 3. 画面を閉じる
                                     dismiss()
                                 }
                             } catch {
@@ -267,7 +264,7 @@ struct ProfileEditView: View {
                 HStack(spacing: 4) {
                     ForEach(1...profileEditViewModel.maxRating, id: \.self) { number in
                         let isSelected = number <= rating.wrappedValue
-                         
+                        
                         Image(isSelected ? "coffeeBeanFill" : "coffeeBean")
                             .resizable()
                             .scaledToFit()

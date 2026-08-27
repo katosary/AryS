@@ -49,38 +49,38 @@ struct CoffeeRecordView: View {
     }
     
     private var previewLog: Log {
-            let finalCountryName: String
-            if coffeeRecordViewModel.isBlend {
-                let countries = [coffeeRecordViewModel.blendCountry1, coffeeRecordViewModel.blendCountry2, coffeeRecordViewModel.blendCountry3].filter { !$0.isEmpty }
-                finalCountryName = countries.joined(separator: ", ")
-            } else {
-                finalCountryName = coffeeRecordViewModel.countryName.isEmpty ? "生産国未入力" : coffeeRecordViewModel.countryName
-            }
-             
-            return Log(
-                id: nil,
-                userId: Auth.auth().currentUser?.uid ?? "",
-                shopName: coffeeRecordViewModel.shopName.isEmpty ? "店舗名未入力" : coffeeRecordViewModel.shopName,
-                blend: coffeeRecordViewModel.blend,
-                countryName: finalCountryName,
-                farmName: coffeeRecordViewModel.isBlend ? "" : coffeeRecordViewModel.farmName,
-                grade: coffeeRecordViewModel.isBlend ? "" : coffeeRecordViewModel.grade,
-                // 変更：ブレンドの場合は焙煎度を空文字にする
-                roastLevel: coffeeRecordViewModel.isBlend ? "" : coffeeRecordViewModel.roastLevel,
-                flavorrating: coffeeRecordViewModel.flavorrating,
-                memo: coffeeRecordViewModel.memo,
-                bitternessrating: coffeeRecordViewModel.bitternessrating,
-                acidityrating: coffeeRecordViewModel.acidityrating,
-                bodyrating: coffeeRecordViewModel.bodyrating,
-                sweetnessrating: coffeeRecordViewModel.sweetnessrating,
-                flavorTags: coffeeRecordViewModel.selectedAroma.isEmpty ? [] : [coffeeRecordViewModel.selectedAroma],
-                createdAt: Date(),
-                tagX: 0.0,
-                tagY: 0.0,
-                imageUrl: nil,
-                previewImage: coffeeRecordViewModel.logImages.first
-            )
+        let finalCountryName: String
+        if coffeeRecordViewModel.isBlend {
+            let countries = [coffeeRecordViewModel.blendCountry1, coffeeRecordViewModel.blendCountry2, coffeeRecordViewModel.blendCountry3].filter { !$0.isEmpty }
+            finalCountryName = countries.joined(separator: ", ")
+        } else {
+            finalCountryName = coffeeRecordViewModel.countryName.isEmpty ? "生産国未入力" : coffeeRecordViewModel.countryName
         }
+         
+        return Log(
+            id: nil,
+            userId: Auth.auth().currentUser?.uid ?? "",
+            shopName: coffeeRecordViewModel.shopName.isEmpty ? "店舗名未入力" : coffeeRecordViewModel.shopName,
+            // 修正：ブレンドなら blend、シングルオリジンなら brand を渡すようにする
+            blend: coffeeRecordViewModel.isBlend ? coffeeRecordViewModel.blend : coffeeRecordViewModel.brand,
+            countryName: finalCountryName,
+            farmName: coffeeRecordViewModel.isBlend ? "" : coffeeRecordViewModel.farmName,
+            grade: coffeeRecordViewModel.isBlend ? "" : coffeeRecordViewModel.grade,
+            roastLevel: coffeeRecordViewModel.isBlend ? "" : coffeeRecordViewModel.roastLevel,
+            flavorrating: coffeeRecordViewModel.flavorrating,
+            memo: coffeeRecordViewModel.memo,
+            bitternessrating: coffeeRecordViewModel.bitternessrating,
+            acidityrating: coffeeRecordViewModel.acidityrating,
+            bodyrating: coffeeRecordViewModel.bodyrating,
+            sweetnessrating: coffeeRecordViewModel.sweetnessrating,
+            flavorTags: coffeeRecordViewModel.selectedAroma.isEmpty ? [] : [coffeeRecordViewModel.selectedAroma],
+            createdAt: Date(),
+            tagX: 0.0,
+            tagY: 0.0,
+            imageUrl: nil,
+            previewImage: coffeeRecordViewModel.logImages.first
+        )
+    }
     
     var body: some View {
         NavigationStack {
@@ -351,8 +351,9 @@ struct CoffeeRecordView: View {
                         .padding(.vertical, 12)
                     }
                     Divider()
-                    
-                    editField(label: "銘柄 / 品種", text: $coffeeRecordViewModel.blend, placeholder: "銘柄名を入力")
+
+                    // 修正：blend から brand に変更
+                    editField(label: "銘柄 / 品種", text: $coffeeRecordViewModel.brand, placeholder: "銘柄名を入力")
                     editField(label: "農園名", text: $coffeeRecordViewModel.farmName, placeholder: "農園名を入力")
                     editField(label: "グレード", text: $coffeeRecordViewModel.grade, placeholder: "例: G1, AAなど")
                     

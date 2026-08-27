@@ -50,37 +50,52 @@ final class OtherProfileViewModel {
     private let db = Firestore.firestore()
     
     /// 指定されたUIDのユーザープロフィールと投稿ログを同時に取得する
-    func loadUserData(userId: String) async {
-        guard !userId.isEmpty else {
-            self.errorMessage = "有効なユーザーIDではありません。"
-            return
-        }
-        
-        isLoading = true
-        errorMessage = nil
-        
-        do {
-            let userSnapshot = try await db.collection("users").document(userId).getDocument()
-            if userSnapshot.exists {
-                self.user = try userSnapshot.data(as: User.self)
-            } else {
-                self.errorMessage = "ユーザーデータが見つかりませんでした。"
+    /// 指定されたUIDのユーザープロフィールと投稿ログを同時に取得する
+        func loadUserData(userId: String) async {
+            guard !userId.isEmpty else {
+                self.errorMessage = "有効なユーザーIDではありません。"
+                return
             }
-            
-            let logSnapshot = try await db.collection("posts")
-                .whereField("userId", isEqualTo: userId)
-                .getDocuments()
-            
-            self.logs = logSnapshot.documents.compactMap { document in
-                try? document.data(as: Log.self)
+             
+            isLoading = true
+            errorMessage = nil
+             
+            do {
+                let userSnapshot = try await db.collection("users").document(userId).getDocument()
+                if userSnapshot.exists {
+                    self.user = try userSnapshot.data(as: User.self)
+                } else {
+                    self.errorMessage = "ユーザーデータが見つかりませんでした。"
+                }
+                 
+                // ▼▼▼ ここをデバッグコードに置き換えます ▼▼▼
+                let logSnapshot = try await db.collection("posts")
+                    .whereField("userId", isEqualTo: userId)
+                    .getDocuments()
+                 
+                print("DEBUG: 取得したドキュメント数 = \(logSnapshot.documents.count)")
+                 
+                self.logs = logSnapshot.documents.compactMap { document in
+                    do {
+                        let log = try document.data(as: Log.self)
+                        return log
+                    } catch {
+                        // ※ document.0 はエラーになる場合があるため、ドキュメントIDを出力するように少し修正しています
+                        print("DEBUG: Logのデコードエラー (ID: \(document.documentID)): \(error)")
+                        return nil
+                    }
+                }
+                 
+                print("DEBUG: デコード成功したログ数 = \(self.logs.count)")
+                // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+                 
+            } catch {
+                self.errorMessage = "データの取得に失敗しました: \(error.localizedDescription)"
+                print("DEBUG: データ取得全体の例外エラー: \(error)") // ついでにここにもprintを仕込むと安心です
             }
-            
-        } catch {
-            self.errorMessage = "データの取得に失敗しました: \(error.localizedDescription)"
+             
+            isLoading = false
         }
-        
-        isLoading = false
-    }
     
     /// 投稿削除用
     func deleteLog(targetPost: Log) {

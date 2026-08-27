@@ -9,7 +9,7 @@ import SwiftUI
 import FirebaseAuth
 
 struct EmailVerificationNoticeView: View {
-    @ObservedObject var authManager: AuthManager
+    @Environment(AuthManager.self) var authManager
     @State private var message = ""
     @State private var isLoading = false
     

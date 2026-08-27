@@ -8,21 +8,24 @@
 import Foundation
 import FirebaseFirestore
 import UIKit
+import SwiftUI
+import FirebaseFirestore
 
-struct Log: Codable, Identifiable, Equatable {
-    @DocumentID var id: String? = nil
+
+struct Log: Codable, Identifiable, Equatable, Hashable {
+    @DocumentID var id: String?
     
     var userId: String = ""
     var shopName: String = ""
-    var blend: String = ""
+    var blend: String? = nil         // オプショナルに変更
     var countryName: String = "" // シングルオリジン用
     
-    // 💡 古いデータでも落ちないようにオプショナルにする
     var isBlend: Bool? = false
     var blendCountry1: String? = ""
     var blendCountry2: String? = ""
     var blendCountry3: String? = ""
     
+    var brand: String? = nil         // オプショナルに変更
     var farmName: String = ""
     var grade: String = ""
     var roastLevel: String = ""
@@ -49,7 +52,7 @@ struct Log: Codable, Identifiable, Equatable {
     enum CodingKeys: String, CodingKey {
         case id, userId, shopName, blend, countryName
         case isBlend, blendCountry1, blendCountry2, blendCountry3
-        case farmName, grade, roastLevel
+        case brand, farmName, grade, roastLevel
         case flavorrating, memo
         case bitternessrating, acidityrating, bodyrating, sweetnessrating
         case flavorTags
@@ -62,7 +65,7 @@ struct Log: Codable, Identifiable, Equatable {
     }
 }
 
-struct User: Identifiable, Codable {
+struct User: Identifiable, Codable, Hashable { 
     @DocumentID var id: String?
     var userNo: Int = 1
     var userName: String = ""
@@ -95,6 +98,15 @@ struct User: Identifiable, Codable {
         case probitter, proacidity, probody, proaroma, prosweetness, proflavor
         case flavorTags, dripper, paperFilter, kettle, server, scale, mill, grinder
         case espressoMachine, frenchPress, profileImageUrl, favoriteToolImageUrl
+    }
+    
+    // ⬅️ 2. Hashable & Equatable のための実装を追加
+    static func == (lhs: User, rhs: User) -> Bool {
+        return lhs.id == rhs.id
+    }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
     }
     
     init(from decoder: Decoder) throws {
@@ -157,7 +169,7 @@ struct User: Identifiable, Codable {
         proflavor: Int = 0,
         flavorTags: [String] = [],
         dripper: String = "",
-        paperFilter: String,
+        paperFilter: String = "", // デフォルト値を追加しておくと便利です
         kettle: String = "",
         server: String = "",
         scale: String = "",

@@ -8,13 +8,14 @@
 import SwiftUI
 import FirebaseAuth
 import FirebaseFirestore
-import Combine
+import Observation
 
-class AuthManager: ObservableObject {
-    @Published var isLoggedIn: Bool = false
+@Observable
+class AuthManager {
+    var isLoggedIn: Bool = false
     private var handle: AuthStateDidChangeListenerHandle?
     
-    // ゲッター: アクセスする瞬間に Auth.auth() を呼び出す
+    
     private var auth: Auth {
         return Auth.auth()
     }
@@ -25,7 +26,7 @@ class AuthManager: ObservableObject {
     
     private func setupAuthListener() {
         handle = self.auth.addStateDidChangeListener { [weak self] _, user in
-            DispatchQueue.main.async {
+            Task { @MainActor in 
                 self?.isLoggedIn = (user != nil)
             }
         }
@@ -53,7 +54,6 @@ class AuthManager: ObservableObject {
     }
     
     // MARK: - 新規登録処理（確認メール送信 ＆ Firestoreへの保存）
-    // 【変更】SignUpViewModel からすべての詳細データを引数で受け取れるように拡張します
     func signUp(
         email: String,
         password: String,
@@ -74,19 +74,19 @@ class AuthManager: ObservableObject {
                 completion(error.localizedDescription)
                 return
             }
-             
+            
             guard let user = authResult?.user else {
                 completion("ユーザーの作成に失敗しました。")
                 return
             }
-             
+            
             // 確認メールを送信
             user.sendEmailVerification { error in
                 if let error = error {
                     print("確認メールの送信に失敗しました: \(error.localizedDescription)")
                 }
             }
-             
+            
             // Firestoreへの詳細情報付きユーザー保存処理
             self?.saveUserToFirestore(
                 uid: user.uid,
@@ -123,10 +123,9 @@ class AuthManager: ObservableObject {
         completion: @escaping (String?) -> Void
     ) {
         let db = Firestore.firestore()
-          
+         
         let fullAddress = prefecture + addressDetail
-          
-        // ProfileEditViewModel と同じキー構造で初期データを構築
+         
         let userData: [String: Any] = [
             "userNo": 0,
             "userName": name,
@@ -142,7 +141,7 @@ class AuthManager: ObservableObject {
             "probody": probody,
             "prosweetness": prosweetness,
             "proflavor": proflavor,
-            "flavorTags": selectedFlavors, // 複数選択フレーバー
+            "flavorTags": selectedFlavors,
             "dripper": "",
             "paperFilter": "",
             "kettle": "",
@@ -155,7 +154,7 @@ class AuthManager: ObservableObject {
             "profileImageUrl": "",
             "favoriteToolImageUrl": ""
         ]
-          
+         
         db.collection("users").document(uid).setData(userData) { error in
             if let error = error {
                 completion(error.localizedDescription)

@@ -9,6 +9,8 @@ import SwiftUI
 
 struct ImageCropView: View {
     let inputImage: UIImage
+    var aspectRatio: CGFloat = 1.0 // デフォルトは正方形 (1:1)
+    var isCircular: Bool = true    // trueなら円形マスク、falseなら長方形マスク
     let onCropped: (UIImage) -> Void
     
     @Environment(\.dismiss) private var dismiss
@@ -27,15 +29,15 @@ struct ImageCropView: View {
                 
                 GeometryReader { geometry in
                     let screenWidth = geometry.size.width
-                    // 画面幅が極端に小さい場合でもマイナスにならないよう安全にガード
-                    let cropSize = max(50, screenWidth - 32)
+                    let cropWidth = max(50, screenWidth - 32)
+                    let cropHeight = cropWidth / aspectRatio // アスペクト比に応じた高さを計算
                     
                     let imageSize = inputImage.size
-                    let initialScale = min(cropSize / imageSize.width, cropSize / imageSize.height)
+                    let initialScale = max(cropWidth / imageSize.width, cropHeight / imageSize.height)
                     let currentScale = initialScale * scale
                     
-                    let maxOffsetX = max(0, (imageSize.width * currentScale - cropSize) / 2)
-                    let maxOffsetY = max(0, (imageSize.height * currentScale - cropSize) / 2)
+                    let maxOffsetX = max(0, (imageSize.width * currentScale - cropWidth) / 2)
+                    let maxOffsetY = max(0, (imageSize.height * currentScale - cropHeight) / 2)
                     
                     ZStack {
                         // ドラッグ・ピンチ操作対象の画像
@@ -50,7 +52,6 @@ struct ImageCropView: View {
                             )
                             .gesture(
                                 SimultaneousGesture(
-                                    // 拡大縮小
                                     MagnificationGesture()
                                         .onChanged { value in
                                             let delta = value / lastScale
@@ -60,17 +61,16 @@ struct ImageCropView: View {
                                         .onEnded { _ in
                                             lastScale = 1.0
                                             withAnimation(.easeInOut(duration: 0.2)) {
-                                                offset = clampedOffset(offset, for: currentScale, imageSize: imageSize, cropSize: cropSize)
+                                                offset = clampedOffset(offset, for: currentScale, imageSize: imageSize, cropWidth: cropWidth, cropHeight: cropHeight)
                                             }
                                         },
-                                    // 移動
                                     DragGesture()
                                         .onChanged { value in
                                             let rawOffset = CGSize(
                                                 width: lastOffset.width + value.translation.width,
                                                 height: lastOffset.height + value.translation.height
                                             )
-                                            offset = clampedOffset(rawOffset, for: currentScale, imageSize: imageSize, cropSize: cropSize)
+                                            offset = clampedOffset(rawOffset, for: currentScale, imageSize: imageSize, cropWidth: cropWidth, cropHeight: cropHeight)
                                         }
                                         .onEnded { _ in
                                             lastOffset = offset
@@ -78,8 +78,8 @@ struct ImageCropView: View {
                                 )
                             )
                         
-                        // 外側を暗くして円形をくり抜くマスク
-                        CircleMaskOverlay(cropSize: cropSize)
+                        // マスクオーバーレイ（円形 or 長方形）
+                        CropOverlayMask(cropWidth: cropWidth, cropHeight: cropHeight, isCircular: isCircular)
                             .allowsHitTesting(false)
                     }
                     .frame(width: screenWidth, height: geometry.size.height)
@@ -109,10 +109,9 @@ struct ImageCropView: View {
         }
     }
     
-    // オフセット制限関数
-    private func clampedOffset(_ offset: CGSize, for currentScale: CGFloat, imageSize: CGSize, cropSize: CGFloat) -> CGSize {
-        let maxOffsetX = max(0, (imageSize.width * currentScale - cropSize) / 2)
-        let maxOffsetY = max(0, (imageSize.height * currentScale - cropSize) / 2)
+    private func clampedOffset(_ offset: CGSize, for currentScale: CGFloat, imageSize: CGSize, cropWidth: CGFloat, cropHeight: CGFloat) -> CGSize {
+        let maxOffsetX = max(0, (imageSize.width * currentScale - cropWidth) / 2)
+        let maxOffsetY = max(0, (imageSize.height * currentScale - cropHeight) / 2)
         
         return CGSize(
             width: min(max(offset.width, -maxOffsetX), maxOffsetX),
@@ -120,33 +119,29 @@ struct ImageCropView: View {
         )
     }
     
-    // 切り抜き処理（画面幅基準の cropSize を動的に計算して合わせる）
-    // 切り抜き処理
     @MainActor
     private func renderCroppedImage() -> UIImage? {
         let imageSize = inputImage.size
-        
-        // 画面幅から cropSize を計算（UIScreenを使わず、GeometryReader等で持たせるか、画面の最小幅を使う方法）
-        // ここでは安全にアプリのウィンドウ幅を取得します
         let screenWidth = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
             .first?.screen.bounds.width ?? 390
-        let cropSize = screenWidth - 32
+        let cropWidth = screenWidth - 32
+        let cropHeight = cropWidth / aspectRatio
         
-        let initialScale = min(cropSize / imageSize.width, cropSize / imageSize.height)
+        let initialScale = max(cropWidth / imageSize.width, cropHeight / imageSize.height)
         let currentScale = initialScale * scale
-        let finalOffset = clampedOffset(offset, for: currentScale, imageSize: imageSize, cropSize: cropSize)
+        let finalOffset = clampedOffset(offset, for: currentScale, imageSize: imageSize, cropWidth: cropWidth, cropHeight: cropHeight)
         
         let renderer = ImageRenderer(content:
-                                        ZStack {
-            Image(uiImage: inputImage)
-                .resizable()
-                .scaledToFit()
-                .frame(width: imageSize.width, height: imageSize.height)
-                .scaleEffect(currentScale)
-                .offset(finalOffset)
-        }
-            .frame(width: cropSize, height: cropSize)
+            ZStack {
+                Image(uiImage: inputImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: imageSize.width, height: imageSize.height)
+                    .scaleEffect(currentScale)
+                    .offset(finalOffset)
+            }
+            .frame(width: cropWidth, height: cropHeight)
             .clipped()
         )
         renderer.scale = 3.0
@@ -154,31 +149,47 @@ struct ImageCropView: View {
     }
 }
 
-// 外側を半透明の黒にして中央の円をくり抜くマスクビュー
-struct CircleMaskOverlay: View {
-    let cropSize: CGFloat
+// マスクオーバーレイビュー（形状切り替え対応）
+struct CropOverlayMask: View {
+    let cropWidth: CGFloat
+    let cropHeight: CGFloat
+    let isCircular: Bool
     
     var body: some View {
         GeometryReader { geometry in
             let size = geometry.size
+            let rect = CGRect(
+                x: (size.width - cropWidth) / 2,
+                y: (size.height - cropHeight) / 2,
+                width: cropWidth,
+                height: cropHeight
+            )
+            
             Path { path in
                 path.addRect(CGRect(origin: .zero, size: size))
-                let circleRect = CGRect(
-                    x: (size.width - cropSize) / 2,
-                    y: (size.height - cropSize) / 2,
-                    width: cropSize,
-                    height: cropSize
-                )
-                path.addEllipse(in: circleRect)
+                if isCircular {
+                    path.addEllipse(in: rect)
+                } else {
+                    path.addRect(rect)
+                }
             }
             .fill(style: FillStyle(eoFill: true))
             .foregroundColor(.black.opacity(0.6))
             
-            // 円のガイド線
-            Circle()
-                .stroke(Color.white, lineWidth: 1)
-                .frame(width: cropSize, height: cropSize)
-                .position(x: size.width / 2, y: size.height / 2)
+            // ガイド枠
+            Group {
+                if isCircular {
+                    Circle()
+                        .stroke(Color.white, lineWidth: 1)
+                        .frame(width: cropWidth, height: cropWidth)
+                        .position(x: size.width / 2, y: size.height / 2)
+                } else {
+                    Rectangle()
+                        .stroke(Color.white, lineWidth: 1)
+                        .frame(width: cropWidth, height: cropHeight)
+                        .position(x: size.width / 2, y: size.height / 2)
+                }
+            }
         }
     }
 }

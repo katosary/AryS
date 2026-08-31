@@ -5,7 +5,6 @@
 //  Created by katoso on 2026/08/13.
 //
 
-// SavedPostsView.swift
 import SwiftUI
 
 struct SavedListView: View {
@@ -20,29 +19,32 @@ struct SavedListView: View {
     ]
     
     var body: some View {
-        ScrollView {
-            LazyVGrid(columns: columns, spacing: 1) {
-                // SavedListView.swift の ForEach 部分を修正
-                ForEach(savedListViewModel.savedLogs) { log in
-                    NavigationLink(destination: SavedCoffeeLogFullscreenView(
-                        savedListViewModel: savedListViewModel,
-                        currentLogId: log.id
-                    )) {
-                        if let imageUrl = log.imageUrl, let url = URL(string: imageUrl) {
-                            AsyncImage(url: url) { image in
-                                image
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(minWidth: 0, maxWidth: .infinity)
-                                    .aspectRatio(1, contentMode: .fit)
-                                    .clipped()
-                            } placeholder: {
+        ZStack {
+            AppBackgroundView() // 背景ビューの適用
+            
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: 1) {
+                    ForEach(savedListViewModel.savedLogs) { log in
+                        NavigationLink(destination: SavedCoffeeLogFullscreenView(
+                            savedListViewModel: savedListViewModel,
+                            currentLogId: log.id
+                        )) {
+                            if let imageUrl = log.imageUrl, let url = URL(string: imageUrl) {
+                                AsyncImage(url: url) { image in
+                                    image
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(minWidth: 0, maxWidth: .infinity)
+                                        .aspectRatio(1, contentMode: .fit)
+                                        .clipped()
+                                } placeholder: {
+                                    Color.gray.opacity(0.3)
+                                        .aspectRatio(1, contentMode: .fit)
+                                }
+                            } else {
                                 Color.gray.opacity(0.3)
                                     .aspectRatio(1, contentMode: .fit)
                             }
-                        } else {
-                            Color.gray.opacity(0.3)
-                                .aspectRatio(1, contentMode: .fit)
                         }
                     }
                 }

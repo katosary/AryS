@@ -1,4 +1,3 @@
-//
 //  NotificationView.swift
 //  snsmvvm
 //
@@ -10,7 +9,7 @@ import SwiftUI
 struct NotificationView: View {
     var body: some View {
         ZStack {
-            Color(.systemGroupedBackground).ignoresSafeArea()
+            AppBackgroundView() // 背景ビューの適用
             
             // 中身が空の状態（EmptyView）
             EmptyView()

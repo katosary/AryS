@@ -52,6 +52,7 @@ struct LoginView: View {
                                     .scaledToFit()
                                     .frame(width: 120, height: 40)
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    .foregroundColor(.white) // 💡 ここを追加して白色に固定する
                                 
                                 Text("にログイン")
                                     .font(.system(size: 20, weight: .bold))
@@ -59,7 +60,7 @@ struct LoginView: View {
                             }
                             
                             // 英語のタグライン
-                            Text("share their likes, discover your likes.")
+                            Text("touch their likes, discover your likes.")
                                 .font(.system(size: 15, weight: .bold, design: .serif))
                                 .italic()
                                 .foregroundColor(.white.opacity(0.9))

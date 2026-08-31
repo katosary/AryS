@@ -59,7 +59,6 @@ final class ProfileViewModel {
     
     init() {
         Task {
-            // 単発取得の代わりにリアルタイムリスナーで初期データ取得と常時監視を開始
             listenToUserProfile()
             
             await fetchBlockedUserIds()
@@ -68,7 +67,6 @@ final class ProfileViewModel {
     }
     
     deinit {
-        // nonisolated化されたメソッドを呼ぶことで安全に破棄する
         stopListening()
     }
     

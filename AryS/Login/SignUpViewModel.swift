@@ -7,7 +7,7 @@
 
 import SwiftUI
 import Combine
-import FirebaseFirestore // ← 追加
+import FirebaseFirestore
 
 final class SignUpViewModel: ObservableObject {
     // 現在のステップ（1〜4）
@@ -16,7 +16,7 @@ final class SignUpViewModel: ObservableObject {
     // --- 入力データ ---
     @Published var email = ""
     @Published var password = ""
-    @Published var confirmPassword = "" // ← 【追加】パスワード確認用
+    @Published var confirmPassword = "" // パスワード確認用
     
     // ステップ2: 基本情報
     @Published var name = ""
@@ -32,7 +32,11 @@ final class SignUpViewModel: ObservableObject {
     @Published var probody = 0
     @Published var prosweetness = 0
     @Published var proflavor = 0
-    @Published var selectedFlavors: [String] = [] // ← 【追加】選択されたフレーバータグ
+    @Published var selectedFlavors: [String] = [] // 選択されたフレーバータグ
+    
+    // 【追加】ステップ4: 利用規約・プライバシーポリシーの同意状態
+    @Published var isTermsAccepted = false
+    @Published var isPrivacyAccepted = false
     
     // フレーバーの選択肢
     let flavorOptions = [
@@ -59,9 +63,9 @@ final class SignUpViewModel: ObservableObject {
     // LoginViewと共通の背景色（コーヒーブラウン）
     let brandBackgroundColor = Color(red: 89/255, green: 61/255, blue: 43/255)
     
-    private let db = Firestore.firestore() // ← 追加
+    private let db = Firestore.firestore()
     
-    // 各ステップごనిの入力バリデーション
+    // 各ステップごとの入力バリデーション
     func isCurrentStepValid() -> Bool {
         switch currentStep {
         case 1:
@@ -69,10 +73,11 @@ final class SignUpViewModel: ObservableObject {
         case 2:
             return !name.isEmpty && age > 0 && !prefecture.isEmpty
         case 3:
-            // 【変更】苦味・酸味・コク・甘味・フレーバーのすべてが0より大きい（選択されている）場合のみ次へ進める
+            // 苦味・酸味・コク・甘味・フレーバーのすべてが0より大きい（選択されている）場合のみ次へ進める
             return probitter > 0 && proacidity > 0 && probody > 0 && prosweetness > 0 && proflavor > 0
         case 4:
-            return true
+            // 【変更】利用規約とプライバシーポリシーの両方に同意している場合のみ「登録する」ボタンを有効化
+            return isTermsAccepted && isPrivacyAccepted
         default:
             return false
         }
@@ -124,11 +129,10 @@ final class SignUpViewModel: ObservableObject {
         }
     }
     
-    /// もしサインアップ成功後に別途プロパティをFirestoreへ保存・更新する場合は、
-    /// AuthManagerからUIDを受け取るか、以下のようなメソッドを用意して `registerUser` 内から呼び出してください。
+    /// サインアップ成功後にプロパティをFirestoreへ保存・更新するメソッド
     func saveCoffeeProfile(uid: String) async throws {
         let fullAddress = prefecture + addressDetail
-        
+         
         let initialData: [String: Any] = [
             "userName": name,
             "userAge": age,
@@ -139,7 +143,7 @@ final class SignUpViewModel: ObservableObject {
             "probody": probody,
             "prosweetness": prosweetness,
             "proflavor": proflavor,
-            "flavorTags": selectedFlavors, // ← ProfileEditViewModel と同じプロパティ名で保存
+            "flavorTags": selectedFlavors, // ProfileEditViewModel と同じプロパティ名で保存
             "dripper": "",
             "paperFilter": "",
             "kettle": "",
@@ -152,7 +156,7 @@ final class SignUpViewModel: ObservableObject {
             "profileImageUrl": "",
             "favoriteToolImageUrl": ""
         ]
-        
+         
         try await db.collection("users").document(uid).setData(initialData, merge: true)
     }
 }

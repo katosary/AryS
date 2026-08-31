@@ -10,46 +10,34 @@ import FirebaseAuth
 
 struct EmailVerificationNoticeView: View {
     @Environment(AuthManager.self) var authManager
+    @Environment(\.scenePhase) private var scenePhase
     @State private var message = ""
     @State private var isLoading = false
+    @State private var timer: Timer?
     
     var body: some View {
         VStack(spacing: 24) {
             Image(systemName: "envelope.badge.fill")
                 .font(.system(size: 64))
                 .foregroundColor(.orange)
-            
+             
             Text("メールアドレスの確認が必要です")
                 .font(.title2)
                 .bold()
                 .multilineTextAlignment(.center)
-            
+             
             Text("ご登録いただいたメールアドレスに確認メールを送信しました。\nメール内のリンクをクリックして認証を完了させてください。")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
-            
+             
             if !message.isEmpty {
                 Text(message)
                     .font(.subheadline)
                     .foregroundColor(.green)
             }
-            
-            // 認証状態の更新チェックボタン
-            Button {
-                checkEmailVerification()
-            } label: {
-                Text("認証完了を確認する")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.orange)
-                    .cornerRadius(8)
-            }
-            .padding(.horizontal, 24)
-            
+             
             // 確認メール再送信ボタン
             Button {
                 resendVerificationEmail()
@@ -63,12 +51,11 @@ struct EmailVerificationNoticeView: View {
                 }
             }
             .disabled(isLoading)
-            
+             
             Spacer()
-            
+             
             // ログアウトボタン
             Button("ログアウトして別のアカウントでログイン") {
-                // 引数が必要な場合は適宜修正してください（下記AuthManagerのシグネチャに合わせます）
                 try? Auth.auth().signOut()
                 authManager.isLoggedIn = false
             }
@@ -78,20 +65,37 @@ struct EmailVerificationNoticeView: View {
         }
         .padding(.top, 40)
         .padding(.horizontal, 16)
+        .onAppear {
+            startVerificationTimer()
+        }
+        .onDisappear {
+            stopVerificationTimer()
+        }
+        .onChange(of: scenePhase) { oldPhase, newPhase in
+            if newPhase == .active {
+                checkEmailVerification()
+            }
+        }
+    }
+    
+    // 定期的に認証状態をチェックするタイマーを開始
+    private func startVerificationTimer() {
+        timer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { _ in
+            checkEmailVerification()
+        }
+    }
+    
+    // タイマーを停止
+    private func stopVerificationTimer() {
+        timer?.invalidate()
+        timer = nil
     }
     
     // 認証状態の再読み込みとチェック
     private func checkEmailVerification() {
-        guard let user = Auth.auth().currentUser else { return }
-        user.reload { error in
-            if let error = error {
-                message = "エラー: \(error.localizedDescription)"
-                return
-            }
-            // ユーザー情報を再取得してトリガーを引く
-            authManager.isLoggedIn = user.isEmailVerified
-            if !user.isEmailVerified {
-                message = "まだ認証が完了していません。"
+        authManager.checkEmailVerification { isVerified in
+            if isVerified {
+                stopVerificationTimer()
             }
         }
     }

@@ -19,7 +19,7 @@ class ProfileEditViewModel {
     var userName: String = ""
     var selfIntroduction: String = ""
     var userAge: Int = 0
-    var userPrefecture: String = "" // 👈 追加・保持用
+    var userPrefecture: String = ""
     var favoriteCoffee: String = ""
     
     // 評価（コーヒーの好み）
@@ -29,7 +29,7 @@ class ProfileEditViewModel {
     var prosweetness: Int = 0
     var proflavor: Int = 0
     
-    // 💡 フレーバー選択用プロパティ（制限なしの複数選択）
+    // フレーバー選択用プロパティ
     var selectedFlavors: [String] = []
     
     let flavorOptions = [
@@ -80,8 +80,13 @@ class ProfileEditViewModel {
     
     private let db = Firestore.firestore()
     
+    // クロップ画面制御用（プロフィール用）
     var isShowingImageCropView: Bool = false
     var tempSelectedUIImage: UIImage? = nil
+    
+    // クロップ画面制御用（お気に入りの道具用）
+    var isShowingCoffeeCropView: Bool = false
+    var tempSelectedCoffeeUIImage: UIImage? = nil
     
     init(user: User) {
         self.user = user
@@ -94,7 +99,7 @@ class ProfileEditViewModel {
         self.userName = user.userName
         self.selfIntroduction = user.selfIntroduction
         self.userAge = user.userAge
-        self.userPrefecture = user.prefecture // 👈 反映
+        self.userPrefecture = user.prefecture
         self.favoriteCoffee = user.favoriteCoffee
         
         self.probitter = user.probitter
@@ -123,13 +128,14 @@ class ProfileEditViewModel {
         guard let item = item else { return }
         guard let data = try? await item.loadTransferable(type: Data.self) else { return }
         guard let uiImage = UIImage(data: data) else { return }
-         
+        
         await MainActor.run {
             if isProfile {
                 self.tempSelectedUIImage = uiImage
                 self.isShowingImageCropView = true
             } else {
-                self.favoriteCoffeeImage = uiImage
+                self.tempSelectedCoffeeUIImage = uiImage
+                self.isShowingCoffeeCropView = true
             }
         }
     }
@@ -169,7 +175,7 @@ class ProfileEditViewModel {
             let rawUrlString = try await storageRef.downloadURL().absoluteString
             imageUrl = rawUrlString
         }
-         
+        
         var toolImageUrl: String? = self.user.favoriteToolImageUrl
         if let image = favoriteCoffeeImage, let data = image.jpegData(compressionQuality: 0.5) {
             let storageRef = Storage.storage().reference().child("favorite_tool_images/\(uid).jpg")
@@ -177,7 +183,7 @@ class ProfileEditViewModel {
             let rawUrlString = try await storageRef.downloadURL().absoluteString
             toolImageUrl = rawUrlString
         }
-         
+        
         self.user.userName = userName
         self.user.selfIntroduction = selfIntroduction
         self.user.userAge = userAge
@@ -190,7 +196,7 @@ class ProfileEditViewModel {
         self.user.proflavor = proflavor
         
         self.user.flavorTags = selectedFlavors
-         
+        
         self.user.dripper = dripper
         self.user.paperFilter = paperFilter
         self.user.kettle = kettle
@@ -200,15 +206,15 @@ class ProfileEditViewModel {
         self.user.grinder = grinder
         self.user.espressoMachine = espressoMachine
         self.user.frenchPress = frenchPress
-         
+        
         if let url = imageUrl { self.user.profileImageUrl = url }
         if let url = toolImageUrl { self.user.favoriteToolImageUrl = url }
-         
+        
         let updateData: [String: Any] = [
             "userName": self.user.userName,
             "selfIntroduction": self.user.selfIntroduction,
             "userAge": self.user.userAge,
-            "prefecture": self.user.prefecture, 
+            "prefecture": self.user.prefecture,
             "favoriteCoffee": self.user.favoriteCoffee,
             "probitter": self.user.probitter,
             "proacidity": self.user.proacidity,
@@ -228,7 +234,7 @@ class ProfileEditViewModel {
             "profileImageUrl": self.user.profileImageUrl ?? "",
             "favoriteToolImageUrl": self.user.favoriteToolImageUrl ?? ""
         ]
-         
+        
         try await db.collection("users").document(uid).setData(updateData, merge: true)
         return self.user
     }

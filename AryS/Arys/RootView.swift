@@ -13,26 +13,26 @@ struct RootView: View {
     @State private var profileViewModel = ProfileViewModel()
     @State private var isShowingSplash = true
     
-    
-
-    
     var body: some View {
         ZStack {
             Group {
-                if let currentUser = Auth.auth().currentUser {
-                    if !currentUser.isEmailVerified {
+                // ① authManager.isLoggedIn を使って判定する
+                if authManager.isLoggedIn {
+                    if !authManager.isEmailVerified {
                         // 1. ログインはしているが、メール認証がまだの場合
                         EmailVerificationNoticeView()
                     } else {
                         // 2. ログインしていて、メール認証も完了している場合
                         HomeView()
                             .task {
-                                await userManager.fetchCurrentUser(uid: currentUser.uid)
+                                if let uid = Auth.auth().currentUser?.uid {
+                                    await userManager.fetchCurrentUser(uid: uid)
+                                }
                             }
                             .task {
                                 await profileViewModel.loadUserData()
                             }
-                            .task(id: currentUser.uid) {
+                            .task(id: Auth.auth().currentUser?.uid) {
                                 bookmarkManager.startListening()
                             }
                     }
@@ -46,7 +46,7 @@ struct RootView: View {
             .environment(profileViewModel)
             .environment(bookmarkManager)
             .zIndex(1)
-             
+            
             // --- 起動時のスプラッシュ画面 ---
             if isShowingSplash {
                 SplashView()

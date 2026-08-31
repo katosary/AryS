@@ -29,10 +29,10 @@ struct OtherUserProfileView: View {
         GeometryReader { outerGeometry in
             let totalWidth = outerGeometry.size.width
             let totalHeight = outerGeometry.size.height
-            
+             
             ZStack {
-                Color(.systemBackground).ignoresSafeArea()
-                
+                AppBackgroundView() // 背景ビューの適用
+              
                 // 全体を上下ページングするための親 ScrollView
                 ScrollView(.vertical) {
                     VStack(spacing: 0) {
@@ -64,33 +64,43 @@ struct OtherUserProfileView: View {
                 }
                 .navigationTitle(viewModel.user.userName.isEmpty ? (user?.userName ?? "プロフィール") : viewModel.user.userName)
                 .navigationBarTitleDisplayMode(.inline)
-                
-                
+                 
+               
                 // MARK: - 右上にブロック・通報メニューを追加
                 .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
-                                            Button {
-                                                dismiss()
-                                            } label: {
-                                                HStack(spacing: 2) {
-                                                    Image(systemName: "chevron.left")
-                                                    Text("戻る")
-                                                }
-                                            }
-                                        }
+                        Button {
+                            dismiss()
+                        } label: {
+                            HStack(spacing: 2) {
+                                Image(systemName: "chevron.left")
+                                Text("戻る")
+                            }
+                        }
+                    }
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Menu {
                             Button(role: .destructive) {
                                 showingBlockAlert = true
                             } label: {
-                                Label("このユーザーをブロックする", systemImage: "hand.raised")
+                                HStack {
+                                    Image(systemName: "hand.raised")
+                                    Text("このユーザーをブロックする")
+                                }
+                                .foregroundColor(.red)
                             }
-                            
+                            .tint(.red)
+                             
                             Button(role: .destructive) {
                                 showingReportAlert = true
                             } label: {
-                                Label("このユーザーを通報する", systemImage: "flag")
+                                HStack {
+                                    Image(systemName: "exclamationmark.bubble")
+                                    Text("このユーザーを通報する")
+                                }
+                                .foregroundColor(.red)
                             }
+                            .tint(.red)
                         } label: {
                             Image(systemName: "ellipsis")
                                 .font(.body)
@@ -129,7 +139,6 @@ struct OtherUserProfileView: View {
                 } message: {
                     Text("運営チームが内容を確認し、適切に対処いたします。")
                 }
-                .background(Color(.systemBackground))
                 .onAppear {
                     if let initialUser = user {
                         viewModel.user = initialUser
@@ -160,10 +169,10 @@ struct OtherProfileDetailContentView: View {
     
     var body: some View {
         let user = viewModel.user
-        
+         
         return ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
-                
+                 
                 // 1. カバー画像 + 道具の情報オーバーレイ
                 ZStack(alignment: .bottomLeading) {
                     Group {
@@ -185,7 +194,7 @@ struct OtherProfileDetailContentView: View {
                     .frame(width: totalWidth)
                     .aspectRatio(4/3, contentMode: .fit)
                     .clipped()
-                    
+                     
                     let toolData: [(String, String)] = [
                         ("ドリッパー", user.dripper),
                         ("ペーパー", user.paperFilter),
@@ -197,7 +206,7 @@ struct OtherProfileDetailContentView: View {
                         ("マシン", user.espressoMachine),
                         ("プレス", user.frenchPress)
                     ].filter { !$0.1.isEmpty }
-                    
+                     
                     if !toolData.isEmpty {
                         VStack(alignment: .leading, spacing: 2) {
                             ForEach(toolData, id: \.0) { label, value in
@@ -224,7 +233,7 @@ struct OtherProfileDetailContentView: View {
                         )
                     }
                 }
-                
+                 
                 // 2. インスタ風レイアウト（アイコン、ユーザー名、自己紹介など）
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(spacing: 16) {
@@ -244,12 +253,12 @@ struct OtherProfileDetailContentView: View {
                         }
                         .frame(width: profileSize, height: profileSize)
                         .clipShape(Circle())
-                        
+                         
                         VStack(alignment: .leading, spacing: 4) {
                             Text(user.userName)
                                 .font(.title3)
                                 .bold()
-                            
+                             
                             HStack(spacing: 8) {
                                 if !user.prefecture.isEmpty {
                                     HStack(spacing: 2) {
@@ -263,7 +272,7 @@ struct OtherProfileDetailContentView: View {
                         }
                         Spacer()
                     }
-                    
+                     
                     if !user.selfIntroduction.isEmpty {
                         Text(user.selfIntroduction)
                             .font(.body)
@@ -272,7 +281,7 @@ struct OtherProfileDetailContentView: View {
                             .lineLimit(nil)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    
+                     
                     // --- これまでのベストコーヒー ---
                     HStack(alignment: .top) {
                         Text("ベスト")
@@ -280,7 +289,7 @@ struct OtherProfileDetailContentView: View {
                             .bold()
                             .foregroundColor(.secondary)
                             .frame(width: 50, alignment: .leading)
-                        
+                         
                         Text(user.favoriteCoffee.isEmpty ? "未登録" : user.favoriteCoffee)
                             .font(.subheadline)
                             .foregroundColor(.primary)
@@ -307,7 +316,7 @@ struct OtherProfileDetailContentView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
-                
+                 
                 // 下スワイプを促すアイコン
                 VStack(spacing: 4) {
                     Image(systemName: "chevron.compact.down")
@@ -329,13 +338,13 @@ struct OtherProfileCoffeeLogGridView: View {
     @Bindable var viewModel: OtherProfileViewModel
     let totalWidth: CGFloat
     let totalHeight: CGFloat
-    
+     
     private let columns = [
         GridItem(.flexible(), spacing: 2),
         GridItem(.flexible(), spacing: 2),
         GridItem(.flexible(), spacing: 2)
     ]
-    
+     
     var body: some View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 2) {
@@ -364,11 +373,11 @@ struct OtherProfileCoffeeLogGridView: View {
 struct OtherProfileCoffeeLogFullscreenView: View {
     @Bindable var viewModel: OtherProfileViewModel
     @State var currentLogId: String?
-    
+     
     var body: some View {
         ZStack {
-            Color(.systemBackground).ignoresSafeArea()
-            
+            AppBackgroundView() // 背景ビューの適用
+             
             ScrollView(.vertical, showsIndicators: false) {
                 LazyVStack(spacing: 0) {
                     ForEach(viewModel.logs) { log in
@@ -403,4 +412,3 @@ struct OtherProfileCoffeeLogFullscreenView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 }
-

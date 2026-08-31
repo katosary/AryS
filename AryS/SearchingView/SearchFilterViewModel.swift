@@ -1,5 +1,5 @@
 //
-//  SearchTipsViewModel.swift
+//  SearchFilterViewModel.swift
 //  snsmvvm
 //
 //  Created by katoso on 2026/07/18.
@@ -7,11 +7,11 @@
 
 import Observation
 import SwiftUI
-import FirebaseCore       // Firebase自体の初期化（configure）に必要
-import FirebaseFirestore  // Firestoreのデータベース操作に必要
+import FirebaseCore
+import FirebaseFirestore
 
 @Observable
-class SearchTipsViewModel {
+class SearchFilterViewModel {
     private var db: Firestore
     
     init() {
@@ -38,4 +38,8 @@ class SearchTipsViewModel {
         "その他（オセアニア・北米・島嶼部）": ["パプアニューギニア", "オーストラリア", "アメリカ合衆国（ハワイ・プエルトリコ）", "ニューカレドニア", "セントヘレナ島"]
     ]
     let regionOrder = ["中南米", "アフリカ", "中東", "アジア", "その他（オセアニア・北米・島嶼部）"]
+    
+    // 💡 評価のレンジスライダー用プロパティを追加
+    var minRating: Double = 0.0
+    var maxRating: Double = 5.0
 }

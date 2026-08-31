@@ -13,8 +13,8 @@ import Observation
 @Observable
 class AuthManager {
     var isLoggedIn: Bool = false
+    var isEmailVerified: Bool = false // 追加: メール認証が完了しているか
     private var handle: AuthStateDidChangeListenerHandle?
-    
     
     private var auth: Auth {
         return Auth.auth()
@@ -26,8 +26,9 @@ class AuthManager {
     
     private func setupAuthListener() {
         handle = self.auth.addStateDidChangeListener { [weak self] _, user in
-            Task { @MainActor in 
+            Task { @MainActor in
                 self?.isLoggedIn = (user != nil)
+                self?.isEmailVerified = user?.isEmailVerified ?? false
             }
         }
     }
@@ -37,6 +38,28 @@ class AuthManager {
             self.auth.removeStateDidChangeListener(handle)
         }
     }
+    
+    // 追加: メール認証の状態をサーバーから強制再取得して更新する
+    func checkEmailVerification(completion: @escaping (Bool) -> Void) {
+        guard let user = self.auth.currentUser else {
+            completion(false)
+            return
+        }
+        
+        user.reload { [weak self] error in
+            Task { @MainActor in
+                if error == nil {
+                    let verified = user.isEmailVerified
+                    self?.isEmailVerified = verified
+                    completion(verified)
+                } else {
+                    completion(false)
+                }
+            }
+        }
+    }
+    
+    // （既存の signIn, signUp, signOut 等はそのまま）
     
     // MARK: - ログイン処理（未登録のメールアドレスやパスワード違いをハンドリング）
     func signIn(email: String, password: String, completion: @escaping (String?) -> Void) {

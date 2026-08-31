@@ -26,112 +26,115 @@ struct PostEditView: View {
     }
     
     var body: some View {
-        NavigationStack {
-            ZStack(alignment: .top) {
-                VStack(spacing: 0) {
-                    Group {
-                        switch currentStep {
-                        case 0: step1View()
-                        case 1: step2View()
-                        case 2: step3View()
-                        default: step1View()
+        ZStack {
+            // 背景ビューを最背面に配置
+            AppBackgroundView()
+                .ignoresSafeArea()
+            
+            NavigationStack {
+                ZStack(alignment: .top) {
+                    VStack(spacing: 0) {
+                        Group {
+                            switch currentStep {
+                            case 0: step1View()
+                            case 1: step2View()
+                            case 2: step3View()
+                            default: step1View()
+                            }
                         }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-                .background(Color(.systemGroupedBackground))
-                
-                // ヘッダー（戻る/×ボタン と 次へ/保存するボタン）
-                HStack(spacing: 12) {
-                    if currentStep == 0 {
-                        Button(action: {
-                            triggerHaptic(style: .light)
-                            dismiss()
-                        }) {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundColor(.primary)
-                                .padding(10)
-                                .background(Color(.systemGray5))
-                                .clipShape(Circle())
-                        }
-                    } else {
-                        Button(action: {
-                            triggerHaptic(style: .light)
-                            isFocused = false
-                            withAnimation { currentStep -= 1 }
-                        }) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundColor(.primary)
-                                .padding(10)
-                                .background(Color(.systemGray5))
-                                .clipShape(Circle())
-                        }
-                    }
+                    .background(Color.clear) // 背景を透明にしてAppBackgroundViewを透けさせる
                     
-                    Spacer()
-                    
-                    if currentStep == 0 {
-                        Button(action: {
-                            triggerHaptic(style: .medium)
-                            withAnimation { currentStep = 1 }
-                        }) {
-                            nextButtonLabel(text: "次へ")
+                    // ヘッダー（戻る/×ボタン と 次へ/保存するボタン）
+                    HStack(spacing: 12) {
+                        if currentStep == 0 {
+                            Button(action: {
+                                triggerHaptic(style: .light)
+                                dismiss()
+                            }) {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(.primary)
+                                    .padding(10)
+                                    .background(Color(.systemGray5))
+                                    .clipShape(Circle())
+                            }
+                        } else {
+                            Button(action: {
+                                triggerHaptic(style: .light)
+                                isFocused = false
+                                withAnimation { currentStep -= 1 }
+                            }) {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(.primary)
+                                    .padding(10)
+                                    .background(Color(.systemGray5))
+                                    .clipShape(Circle())
+                            }
                         }
-                    }
-                    
-                    if currentStep == 1 {
-                        Button(action: {
-                            triggerHaptic(style: .medium)
-                            isFocused = false
-                            withAnimation { currentStep = 2 }
-                        }) {
-                            nextButtonLabel(text: "次へ")
+                        
+                        Spacer()
+                        
+                        if currentStep == 0 {
+                            Button(action: {
+                                triggerHaptic(style: .medium)
+                                withAnimation { currentStep = 1 }
+                            }) {
+                                nextButtonLabel(text: "次へ")
+                            }
                         }
-                    }
-                    
-                    if currentStep == 2 {
-                        Button(action: {
-                            triggerHaptic(style: .heavy)
-                            isFocused = false
-                            isSaving = true // 👈 2. ローディング開始
-                            
-                            // 最新のログデータを作る
-                            let updatedLog = editCoffeeLogViewModel.makeUpdatedLog(from: post)
-                            
-                            // 3. サーバーへの保存を「待ってから」閉じる
-                            editCoffeeLogViewModel.updateLog(targetPost: updatedLog) { success in
-                                Task { @MainActor in
-                                    isSaving = false
-                                    if success {
-                                        
-                                        post = updatedLog
-                                        onUpdate?(updatedLog)
-                                        dismiss() 
-                                    } else {
-                                        print("⚠️ サーバーへの保存に失敗しました")
+                        
+                        if currentStep == 1 {
+                            Button(action: {
+                                triggerHaptic(style: .medium)
+                                isFocused = false
+                                withAnimation { currentStep = 2 }
+                            }) {
+                                nextButtonLabel(text: "次へ")
+                            }
+                        }
+                        
+                        if currentStep == 2 {
+                            Button(action: {
+                                triggerHaptic(style: .heavy)
+                                isFocused = false
+                                isSaving = true
+                                
+                                let updatedLog = editCoffeeLogViewModel.makeUpdatedLog(from: post)
+                                
+                                editCoffeeLogViewModel.updateLog(targetPost: updatedLog) { success in
+                                    Task { @MainActor in
+                                        isSaving = false
+                                        if success {
+                                            post = updatedLog
+                                            onUpdate?(updatedLog)
+                                            dismiss()
+                                        } else {
+                                            print("⚠️ サーバーへの保存に失敗しました")
+                                        }
                                     }
                                 }
-                            }
-                        }) {
-                            HStack(spacing: 8) {
-                                if isSaving {
-                                    ProgressView()
-                                        .tint(.white)
+                            }) {
+                                HStack(spacing: 8) {
+                                    if isSaving {
+                                        ProgressView()
+                                            .tint(.white)
+                                    }
+                                    nextButtonLabel(text: isSaving ? "保存中..." : "保存する")
                                 }
-                                nextButtonLabel(text: isSaving ? "保存中..." : "保存する")
                             }
+                            .disabled(isSaving)
                         }
-                        .disabled(isSaving) // 👈 保存中は連打できないようにする
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+                    .zIndex(10)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
-                .zIndex(10)
+                .toolbar(.hidden, for: .navigationBar)
+                .onChange(of: currentStep) { _, _ in isFocused = false }
             }
-            .toolbar(.hidden, for: .navigationBar)
-            .onChange(of: currentStep) { _, _ in isFocused = false }
         }
     }
     
@@ -154,10 +157,8 @@ struct PostEditView: View {
             VStack(alignment: .leading, spacing: 20) {
                 Text("基本情報").font(.title2).bold().padding(.top, 80)
                 
-                // 1. 店舗名
                 editField(label: "店舗名（必須）", text: $editCoffeeLogViewModel.shopName, placeholder: "店舗名を入力")
                 
-                // 2. 豆の種類 (isBlendによる切り替え)
                 VStack(alignment: .leading, spacing: 8) {
                     Text("豆の種類").font(.subheadline).foregroundColor(.secondary)
                     Picker("豆の種類", selection: $editCoffeeLogViewModel.isBlend) {
@@ -167,9 +168,7 @@ struct PostEditView: View {
                     .pickerStyle(.segmented)
                 }
                 
-                // 3. タイプに応じた動的フォーム
                 if editCoffeeLogViewModel.isBlend {
-                    // --- ブレンドの場合 ---
                     editField(label: "ブレンド名（必須）", text: $editCoffeeLogViewModel.blend, placeholder: "ブレンド名を入力")
                     
                     VStack(alignment: .leading, spacing: 8) {
@@ -191,7 +190,6 @@ struct PostEditView: View {
                         }
                     }
                 } else {
-                    // --- シングルオリジンの場合 ---
                     Button(action: {
                         isFocused = false
                         editCoffeeLogViewModel.activeCountryTarget = .single
@@ -210,13 +208,11 @@ struct PostEditView: View {
                     }
                     Divider()
                     
-                    // 銘柄は brand プロパティを使用
                     editField(label: "銘柄 / 品種", text: $editCoffeeLogViewModel.brand, placeholder: "銘柄名を入力")
                     
                     editField(label: "農園名", text: $editCoffeeLogViewModel.farmName, placeholder: "農園名を入力")
                     editField(label: "グレード", text: $editCoffeeLogViewModel.grade, placeholder: "例: G1, AAなど")
                     
-                    // 4. 焙煎度（シングルオリジンのみ）
                     Button(action: {
                         isFocused = false
                         editCoffeeLogViewModel.isShowingRoastPicker = true
@@ -240,6 +236,7 @@ struct PostEditView: View {
             }
             .padding(24)
         }
+        .scrollContentBackground(.hidden)
         .sheet(isPresented: $editCoffeeLogViewModel.isShowingCountryPicker) {
             CountrySelectionView { selectedCountry in
                 switch editCoffeeLogViewModel.activeCountryTarget {
@@ -316,6 +313,7 @@ struct PostEditView: View {
                 .padding(24)
                 .padding(.bottom, 40)
             }
+            .scrollContentBackground(.hidden)
             .onTapGesture { isFocused = false }
             .onChange(of: isFocused) { _, focused in
                 if focused {
@@ -378,6 +376,7 @@ struct PostEditView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 40)
         }
+        .scrollContentBackground(.hidden)
     }
     
     // MARK: - Helpers

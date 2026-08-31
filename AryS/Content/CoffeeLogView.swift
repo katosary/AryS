@@ -1,3 +1,8 @@
+//
+//  CoffeeLogView.swift
+//  snsmvvm
+//
+
 import SwiftUI
 import PhotosUI
 import FirebaseAuth
@@ -13,7 +18,7 @@ struct CoffeeLogView: View {
     var onTapProfile: (() -> Void)?
     var onTapEdit: ((Log) -> Void)?
     var onTapDelete: (() -> Void)?
-    
+     
     init(
         log: Log,
         author: User?,
@@ -36,24 +41,27 @@ struct CoffeeLogView: View {
         self.onTapProfile = onTapProfile
         self.onTapEdit = onTapEdit
         self.onTapDelete = onTapDelete
-        
+         
         let vm = CoffeeLogViewModel(log: log, author: author)
         _coffeeLogViewModel = State(initialValue: vm)
     }
-    
+     
     @Environment(BookmarkManager.self) private var bookmarkManager
     @Environment(ProfileViewModel.self) var profileViewModel
-    
+     
     @State private var coffeeLogViewModel: CoffeeLogViewModel
     @State private var isShowingProfileFullCover = false
     @State private var isShowingDetailSheet = false
-    @State private var isShowingEditSheet = false
-    
+    @State private var isShowingEditFullScreen = false
+     
+    // 削除確認アラート用の状態
+    @State private var showingDeleteAlert = false
+     
     // ブロック・通報用の状態
     @State private var showingBlockAlert = false
     @State private var showingReportAlert = false
     @State private var reportReason = ""
-    
+     
     init(
         log: Log,
         author: User?,
@@ -72,16 +80,16 @@ struct CoffeeLogView: View {
         self.onTapLike = onTapLike
         self.onTapBookmark = onTapBookmark
         self.onTapProfile = onTapProfile
-        
+         
         let vm = CoffeeLogViewModel(log: log, author: author)
         _coffeeLogViewModel = State(initialValue: vm)
     }
-    
+     
     var body: some View {
         let screenWidth = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.screen.bounds.width ?? 393
         let cardWidth = screenWidth - 32
         let cardHeight = cardWidth * (16 / 9)
-        
+         
         ZStack {
             VStack(spacing: 0) {
                 ZStack {
@@ -101,7 +109,7 @@ struct CoffeeLogView: View {
                     }
                     .frame(width: cardWidth, height: cardHeight)
                     .clipped()
-                    
+                     
                     // --- 2. 左下のコーヒー情報 ---
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
@@ -109,7 +117,7 @@ struct CoffeeLogView: View {
                             Text(displayUser?.userName ?? authorName)
                         }
                         Text("Shop \(log.shopName)")
-                        
+                         
                         // ブレンドかシングルオリジンかで表示を切り替える
                         if log.isBlend == true {
                             if let blend = log.blend, !blend.isEmpty {
@@ -120,10 +128,10 @@ struct CoffeeLogView: View {
                                 Text("Country: \(log.countryName)")
                             }
                         }
-                        
+                         
                         // 全体を包む親 VStack
                         VStack(alignment: .leading, spacing: 6) {
-                            
+                             
                             // --- Bitterness ---
                             HStack(alignment: .firstTextBaseline, spacing: 8) {
                                 Text("Bitterness")
@@ -132,7 +140,7 @@ struct CoffeeLogView: View {
                                     .frame(width: 90, alignment: .leading)
                                 EmptyRatingView(rating: Double(log.bitternessrating))
                             }
-                            
+                             
                             // --- Acidity ---
                             HStack(alignment: .firstTextBaseline, spacing: 8) {
                                 Text("Acidity")
@@ -141,7 +149,7 @@ struct CoffeeLogView: View {
                                     .frame(width: 90, alignment: .leading)
                                 EmptyRatingView(rating: Double(log.acidityrating))
                             }
-                            
+                             
                             // --- Body ---
                             HStack(alignment: .firstTextBaseline, spacing: 8) {
                                 Text("Body")
@@ -150,7 +158,7 @@ struct CoffeeLogView: View {
                                     .frame(width: 90, alignment: .leading)
                                 EmptyRatingView(rating: Double(log.bodyrating))
                             }
-                            
+                             
                             // --- Sweetness ---
                             HStack(alignment: .firstTextBaseline, spacing: 8) {
                                 Text("Sweetness")
@@ -159,7 +167,7 @@ struct CoffeeLogView: View {
                                     .frame(width: 90, alignment: .leading)
                                 EmptyRatingView(rating: Double(log.sweetnessrating))
                             }
-                            
+                             
                             // --- Flavor ---
                             HStack(alignment: .firstTextBaseline, spacing: 8) {
                                 Text("Flavor")
@@ -185,11 +193,11 @@ struct CoffeeLogView: View {
                     .shadow(color: .black.opacity(0.6), radius: 2, x: 0, y: 1)
                     .padding(16)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-                    
+                     
                     // --- 3. 右上のメニューボタン ---
                     HStack(spacing: 12) {
                         Text(log.createdAt, style: .date).font(.caption).foregroundColor(.secondary)
-                        
+                         
                         if let customMenuAction = onTapMenu {
                             Button(action: customMenuAction) {
                                 Image(systemName: "ellipsis").padding(5).foregroundColor(.primary)
@@ -198,32 +206,61 @@ struct CoffeeLogView: View {
                             if coffeeLogViewModel.isMyPost {
                                 Menu {
                                     Button {
-                                        // 💡 自分自身のシートを開くのではなく、コールバックが設定されていればそれを呼び、
-                                        // なければ自身のフラグを立てる形に統一する
                                         if let customEdit = onTapEdit {
                                             customEdit(log)
                                         } else {
-                                            isShowingEditSheet = true
+                                            isShowingEditFullScreen = true
                                         }
                                     } label: {
-                                        Label("編集", systemImage: "pencil")
+                                        HStack {
+                                            Image(systemName: "pencil")
+                                            Text("編集")
+                                        }
                                     }
-                                    Button(role: .destructive) { coffeeLogViewModel.deletePost() } label: { Label("削除", systemImage: "trash") }
-                                } label: { Image(systemName: "ellipsis").padding(5).foregroundColor(.primary) }
+                                     
+                                    Button(role: .destructive) {
+                                        if let customDelete = onTapDelete {
+                                            customDelete()
+                                        } else {
+                                            showingDeleteAlert = true
+                                        }
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: "trash")
+                                            Text("削除")
+                                        }
+                                        .foregroundColor(.red)
+                                    }
+                                    .tint(.red)
+                                } label: {
+                                    Image(systemName: "ellipsis").padding(5).foregroundColor(.primary)
+                                }
                             } else {
                                 Menu {
                                     Button(role: .destructive) {
                                         showingBlockAlert = true
                                     } label: {
-                                        Label("このユーザーをブロックする", systemImage: "hand.raised")
+                                        HStack {
+                                            Image(systemName: "hand.raised")
+                                            Text("このユーザーをブロックする")
+                                        }
+                                        .foregroundColor(.red)
                                     }
-                                    
+                                    .tint(.red)
+                                     
                                     Button(role: .destructive) {
                                         showingReportAlert = true
                                     } label: {
-                                        Label("この投稿を報告する", systemImage: "exclamationmark.bubble")
+                                        HStack {
+                                            Image(systemName: "exclamationmark.bubble")
+                                            Text("この投稿を報告する")
+                                        }
+                                        .foregroundColor(.red)
                                     }
-                                } label: { Image(systemName: "ellipsis").padding(5).foregroundColor(.primary) }
+                                    .tint(.red)
+                                } label: {
+                                    Image(systemName: "ellipsis").padding(5).foregroundColor(.primary)
+                                }
                             }
                         }
                     }
@@ -232,7 +269,7 @@ struct CoffeeLogView: View {
                     .foregroundColor(.white)
                     .shadow(color: .black.opacity(0.6), radius: 2, x: 0, y: 1)
                     .padding(16)
-                    
+                     
                     // --- 4. 右下のアクションボタン ---
                     VStack(spacing: 15) {
                         VStack(spacing: 4) {
@@ -247,12 +284,12 @@ struct CoffeeLogView: View {
                                     .font(.system(size: 28))
                                     .foregroundColor(coffeeLogViewModel.isLikedByMe ? .red : .white)
                             }
-                            
+                             
                             Text("\(coffeeLogViewModel.log.likesCount)")
                                 .font(.system(size: 12, weight: .bold))
                                 .foregroundColor(.white)
                         }
-                        
+                         
                         Button {
                             if let customBookmark = onTapBookmark {
                                 customBookmark()
@@ -264,7 +301,7 @@ struct CoffeeLogView: View {
                                 .font(.system(size: 28))
                                 .foregroundColor(bookmarkManager.isSaved(log.id) ? .yellow : .white)
                         }
-                        
+                         
                         Button {
                             if let customProfile = onTapProfile {
                                 customProfile()
@@ -287,14 +324,14 @@ struct CoffeeLogView: View {
                         .fullScreenCover(isPresented: $isShowingProfileFullCover) {
                             NavigationStack {
                                 let baseUser = coffeeLogViewModel.isMyPost ? profileViewModel.user : author
-                                
+                                 
                                 let targetUser = User(
                                     id: (baseUser?.id?.isEmpty == false) ? baseUser!.id! : log.userId,
                                     userName: baseUser?.userName ?? authorName,
                                     email: baseUser?.email ?? "",
                                     profileImageUrl: baseUser?.profileImageUrl ?? ""
                                 )
-                                
+                                 
                                 OtherUserProfileView(user: targetUser)
                             }
                         }
@@ -311,7 +348,6 @@ struct CoffeeLogView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        // 💡 親から新しい log が渡されたときにViewModel側を最新に同期する
         .onChange(of: log) { _, newLog in
             coffeeLogViewModel.updateLog(newLog)
         }
@@ -323,25 +359,32 @@ struct CoffeeLogView: View {
                 coffeeLogViewModel: coffeeLogViewModel
             )
         }
-        
-        .sheet(isPresented: $isShowingEditSheet, onDismiss: {
-            // 閉じたときのクリーンアップ
-        }) {
-            PostEditView(
-                post: Binding(
-                    get: { log },
-                    set: { updatedLog in
+        .fullScreenCover(isPresented: $isShowingEditFullScreen) {
+            NavigationStack {
+                PostEditView(
+                    post: Binding(
+                        get: { log },
+                        set: { updatedLog in
+                            coffeeLogViewModel.updateLog(updatedLog)
+                            onTapEdit?(updatedLog)
+                        }
+                    ),
+                    onUpdate: { updatedLog in
+                        isShowingEditFullScreen = false
                         coffeeLogViewModel.updateLog(updatedLog)
                         onTapEdit?(updatedLog)
                     }
-                ),
-                onUpdate: { updatedLog in
-                    // 保存成功時に確実にシートを閉じる
-                    isShowingEditSheet = false
-                    coffeeLogViewModel.updateLog(updatedLog)
-                    onTapEdit?(updatedLog)
-                }
-            )
+                )
+            }
+        }
+        // 削除確認アラート
+        .alert("投稿の削除", isPresented: $showingDeleteAlert) {
+            Button("削除する", role: .destructive) {
+                coffeeLogViewModel.deletePost()
+            }
+            Button("キャンセル", role: .cancel) {}
+        } message: {
+            Text("この投稿を削除しますか？この操作は取り消せません。")
         }
         // ブロック確認アラート
         .alert("ユーザーのブロック", isPresented: $showingBlockAlert) {
@@ -369,4 +412,3 @@ struct CoffeeLogView: View {
         }
     }
 }
-

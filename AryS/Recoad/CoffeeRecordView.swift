@@ -27,7 +27,7 @@ struct CoffeeRecordView: View {
     // 基本情報の必須チェック（シングルオリジンは焙煎度も必須、ブレンドは店舗名・ブレンド名のみ必須）
     private var isBasicInfoValid: Bool {
         let isShopValid = !coffeeRecordViewModel.shopName.trimmingCharacters(in: .whitespaces).isEmpty
-        
+         
         if coffeeRecordViewModel.isBlend {
             let isBlendNameValid = !coffeeRecordViewModel.blend.trimmingCharacters(in: .whitespaces).isEmpty
             return isShopValid && isBlendNameValid
@@ -61,7 +61,6 @@ struct CoffeeRecordView: View {
             id: nil,
             userId: Auth.auth().currentUser?.uid ?? "",
             shopName: coffeeRecordViewModel.shopName.isEmpty ? "店舗名未入力" : coffeeRecordViewModel.shopName,
-            // 修正：ブレンドなら blend、シングルオリジンなら brand を渡すようにする
             blend: coffeeRecordViewModel.isBlend ? coffeeRecordViewModel.blend : coffeeRecordViewModel.brand,
             countryName: finalCountryName,
             farmName: coffeeRecordViewModel.isBlend ? "" : coffeeRecordViewModel.farmName,
@@ -97,7 +96,8 @@ struct CoffeeRecordView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .background(Color(.systemGroupedBackground))
+                // 💡 ここにAppBackgroundViewを適用（上部がしっかり茶色、下部がシステム背景色にグラデーション）
+                .background(AppBackgroundView())
                  
                 // 上部固定ヘッダーエリア
                 HStack(spacing: 12) {
@@ -138,7 +138,7 @@ struct CoffeeRecordView: View {
                             coffeeRecordViewModel.sweetnessrating = 0
                             coffeeRecordViewModel.flavorrating = 0
                             coffeeRecordViewModel.selectedAroma = ""
-                            
+                             
                             withAnimation { currentStep = 2 }
                         }) {
                             Text("次へ")
@@ -210,9 +210,9 @@ struct CoffeeRecordView: View {
             .onChange(of: currentStep) { _, _ in isFocused = false }
         }
     }
-        
+         
     // MARK: - Steps
-        
+         
     @ViewBuilder
     private func cameraStepView() -> some View {
         ZStack(alignment: .bottom) {
@@ -289,16 +289,16 @@ struct CoffeeRecordView: View {
             .padding(.bottom, 48)
         }
     }
-        
+         
     @ViewBuilder
     private func basicInfoStepView() -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 Text("基本情報").font(.title2).bold().padding(.top, 80)
-                
+                 
                 // 1. 店舗名
                 editField(label: "店舗名（必須）", text: $coffeeRecordViewModel.shopName, placeholder: "店舗名を入力")
-                
+                 
                 // 2. 豆の種類
                 VStack(alignment: .leading, spacing: 8) {
                     Text("豆の種類").font(.subheadline).foregroundColor(.secondary)
@@ -308,17 +308,17 @@ struct CoffeeRecordView: View {
                     }
                     .pickerStyle(.segmented)
                 }
-                
+                 
                 // 3. タイプに応じた動的フォーム
                 if coffeeRecordViewModel.isBlend {
                     // --- ブレンドの場合 ---
                     editField(label: "ブレンド名（必須）", text: $coffeeRecordViewModel.blend, placeholder: "ブレンド名を入力")
-                    
+                     
                     VStack(alignment: .leading, spacing: 8) {
                         Text("含まれている国（含有率の多い国から）")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
-                        
+                         
                         blendCountryPickerButton(label: "国 1", country: coffeeRecordViewModel.blendCountry1) {
                             coffeeRecordViewModel.activeCountryTarget = .blend1
                             coffeeRecordViewModel.isShowingCountryPicker = true
@@ -352,11 +352,10 @@ struct CoffeeRecordView: View {
                     }
                     Divider()
 
-                    // 修正：blend から brand に変更
                     editField(label: "銘柄 / 品種", text: $coffeeRecordViewModel.brand, placeholder: "銘柄名を入力")
                     editField(label: "農園名", text: $coffeeRecordViewModel.farmName, placeholder: "農園名を入力")
                     editField(label: "グレード", text: $coffeeRecordViewModel.grade, placeholder: "例: G1, AAなど")
-                    
+                     
                     // 4. 焙煎度（シングルオリジンのみ）
                     Button(action: { isFocused = false; coffeeRecordViewModel.isShowingRoastPicker = true }) {
                         HStack {
@@ -393,7 +392,7 @@ struct CoffeeRecordView: View {
             }
         }
     }
-        
+         
     @ViewBuilder
     private func editField(label: String, text: Binding<String>, placeholder: String) -> some View {
         VStack(spacing: 0) {
@@ -408,7 +407,7 @@ struct CoffeeRecordView: View {
             Divider()
         }
     }
-        
+         
     @ViewBuilder
     private func blendCountryPickerButton(label: String, country: String, action: @escaping () -> Void) -> some View {
         Button(action: { isFocused = false; action() }) {
@@ -425,7 +424,7 @@ struct CoffeeRecordView: View {
         }
         Divider()
     }
-        
+         
     @ViewBuilder
     private func tasteStepView() -> some View {
         ScrollViewReader { proxy in
@@ -479,7 +478,7 @@ struct CoffeeRecordView: View {
             }
         }
     }
-        
+         
     @ViewBuilder
     private func previewStepView() -> some View {
         ScrollView {
@@ -506,14 +505,14 @@ struct CoffeeRecordView: View {
             .padding(.bottom, 40)
         }
     }
-        
+         
     // MARK: - Helpers
-        
+         
     private func handleDismiss() {
         resetStateAndForm()
         onDismiss?() ?? dismiss()
     }
-        
+         
     private func resetStateAndForm() {
         coffeeRecordViewModel.resetForm()
         currentStep = 0
@@ -524,7 +523,7 @@ struct CoffeeRecordView: View {
         generator.prepare()
         generator.impactOccurred()
     }
-        
+         
     @ViewBuilder
     private func ratingRow(label: String, rating: Binding<Int>) -> some View {
         HStack {
@@ -540,7 +539,7 @@ struct CoffeeRecordView: View {
             }
         }
     }
-        
+         
     @ViewBuilder
     private func memoField(label: String, text: Binding<String>, placeholder: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {

@@ -17,15 +17,15 @@ struct Log: Codable, Identifiable, Equatable, Hashable {
     
     var userId: String = ""
     var shopName: String = ""
-    var blend: String? = nil         // オプショナルに変更
-    var countryName: String = "" // シングルオリジン用
+    var blend: String? = nil
+    var countryName: String = ""
     
     var isBlend: Bool? = false
     var blendCountry1: String? = ""
     var blendCountry2: String? = ""
     var blendCountry3: String? = ""
     
-    var brand: String? = nil         // オプショナルに変更
+    var brand: String? = nil
     var farmName: String = ""
     var grade: String = ""
     var roastLevel: String = ""
@@ -60,9 +60,9 @@ struct Log: Codable, Identifiable, Equatable, Hashable {
         case likesCount, likedUserIds
     }
 
-    static func == (lhs: Log, rhs: Log) -> Bool {
-        return lhs.id == rhs.id
-    }
+//    static func == (lhs: Log, rhs: Log) -> Bool {
+//        return lhs.id == rhs.id
+//    }
 }
 
 struct User: Identifiable, Codable, Hashable { 
@@ -98,11 +98,6 @@ struct User: Identifiable, Codable, Hashable {
         case probitter, proacidity, probody, proaroma, prosweetness, proflavor
         case flavorTags, dripper, paperFilter, kettle, server, scale, mill, grinder
         case espressoMachine, frenchPress, profileImageUrl, favoriteToolImageUrl
-    }
-    
-    // ⬅️ 2. Hashable & Equatable のための実装を追加
-    static func == (lhs: User, rhs: User) -> Bool {
-        return lhs.id == rhs.id
     }
     
     func hash(into hasher: inout Hasher) {

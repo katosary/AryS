@@ -17,6 +17,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "7C287E282F4F23C0007D67D4"
                BuildableName = "AryS.app"
+               BlueprintName = "AryS"
                ReferencedContainer = "container:AryS.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -36,6 +37,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "7C287E3F2F4F23C2007D67D4"
                BuildableName = "ArySUITests.xctest"
+               BlueprintName = "ArySUITests"
                ReferencedContainer = "container:AryS.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -46,6 +48,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "7C287E352F4F23C2007D67D4"
                BuildableName = "ArySTests.xctest"
+               BlueprintName = "ArySTests"
                ReferencedContainer = "container:AryS.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -68,6 +71,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "7C287E282F4F23C0007D67D4"
             BuildableName = "AryS.app"
+            BlueprintName = "AryS"
             ReferencedContainer = "container:AryS.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -84,6 +88,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "7C287E282F4F23C0007D67D4"
             BuildableName = "AryS.app"
+            BlueprintName = "AryS"
             ReferencedContainer = "container:AryS.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

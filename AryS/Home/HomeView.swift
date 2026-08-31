@@ -1,3 +1,8 @@
+//
+//  HomeView.swift
+//  snsmvvm
+//
+
 import SwiftUI
 import FirebaseAuth
 import FirebaseFirestore
@@ -8,16 +13,16 @@ struct HomeView: View {
     @Environment(ProfileViewModel.self) var profileViewModel
     @State var homeViewModel = HomeViewModel()
     @State var timeLineViewModel = TimeLineViewModel()
-
-    let barColor = Color(red: 89/255, green: 61/255, blue: 43/255)
     
     var body: some View {
         TabView(selection: $homeViewModel.selectedTab) {
             // --- 0: ホーム（タイムライン）タブ ---
             NavigationStack {
-                // 💡 生成したインスタンスを渡す
                 TimeLineView(timeLineViewModel: timeLineViewModel)
-                    .modifier(DarkToolbarModifier(profileViewModel: profileViewModel, authManager: authManager))
+                    .modifier(
+                        ProfileToolbarModifier(
+                            profileViewModel: profileViewModel,
+                            authManager: authManager))
             }
             .tabItem {
                 Label("ホーム", systemImage: "house")
@@ -45,32 +50,17 @@ struct HomeView: View {
             // --- 2: プロフィールタブ ---
             NavigationStack {
                 ProfileView()
-                    .modifier(DarkToolbarModifier(profileViewModel: profileViewModel, authManager: authManager))
+                    .modifier(
+                        ProfileToolbarModifier(
+                            profileViewModel: profileViewModel,
+                            authManager: authManager))
             }
             .tabItem {
                 Label("プロフィール", systemImage: "person.circle")
             }
             .tag(2)
         }
-        .accentColor(.white)
-        .preferredColorScheme(.dark)
-        // 💡 プロフィール編集シートの管理
-        .sheet(isPresented: .init(
-            get: { profileViewModel.isProfileEditSheet },
-            set: { profileViewModel.isProfileEditSheet = $0 }
-        )) {
-            if let currentUser = userManager.currentUser {
-                ProfileEditView(user: currentUser)
-                    .onAppear {
-                        profileViewModel.logs = homeViewModel.logs
-                    }
-            } else {
-                ProfileEditView(user: profileViewModel.user)
-                    .onAppear {
-                        profileViewModel.logs = homeViewModel.logs
-                    }
-            }
-        }
+        .tint(.primary)
         .task {
             if let uid = Auth.auth().currentUser?.uid {
                 await userManager.fetchCurrentUser(uid: uid)
@@ -79,47 +69,19 @@ struct HomeView: View {
     }
 }
 
+// MARK: - プレビュー用ダミー＆モック環境
+#Preview("ダークモード") {
+    HomeView()
+        .environment(AuthManager())
+        .environment(UserManager())
+        .environment(ProfileViewModel())
+        .preferredColorScheme(.dark)
+}
 
-struct DarkToolbarModifier: ViewModifier {
-    let barColor = Color(red: 89/255, green: 61/255, blue: 43/255)
-    
-    var profileViewModel: ProfileViewModel
-    var authManager: AuthManager
-
-    func body(content: Content) -> some View {
-        content
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    NavigationLink {
-                        MenuView()
-                            .environment(authManager)
-                    } label: {
-                        Image(systemName: "line.3.horizontal")
-                            .font(.body)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                    }
-                }
-                 
-                ToolbarItem(placement: .principal) {
-                    Image("logo")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: 44)
-                }
-                 
-                ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink {
-                        NotificationView()
-                    } label: {
-                        Image(systemName: "bell")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.primary)
-                    }
-                }
-            }
-            .toolbarBackground(barColor, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .navigationBarTitleDisplayMode(.inline)
-    }
+#Preview("ライトモード") {
+    HomeView()
+        .environment(AuthManager())
+        .environment(UserManager())
+        .environment(ProfileViewModel())
+        .preferredColorScheme(.light)
 }

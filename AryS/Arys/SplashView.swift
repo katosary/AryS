@@ -38,6 +38,7 @@ struct SplashView: View {
                         .scaledToFit()
                         .frame(width: 120, height: 40)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .foregroundColor(.white) // 💡 常に白色にする
                     
                     Text("へようこそ")
                         .font(.system(size: 20, weight: .bold))
@@ -45,7 +46,7 @@ struct SplashView: View {
                 }
                 
                 // 英語のタグライン
-                Text("share their likes, discover your likes.")
+                Text("touch their likes, discover your likes.")
                     .font(.system(size: 20, weight: .bold, design: .serif))
                     .italic()
                     .foregroundColor(.white.opacity(0.9))

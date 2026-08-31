@@ -13,49 +13,67 @@ struct ProfileCoffeeLogFullscreenView: View {
     @Environment(AuthManager.self) var authManager
     
     @State var currentLogId: String?
+    let initialLogId: String?
     
     @State private var editingLog: Log?
     @State private var isShowingEditSheet = false
     
+    init(profileCoffeeLogViewModel: ProfileCoffeeLogViewModel, currentLogId: String?) {
+        self.profileCoffeeLogViewModel = profileCoffeeLogViewModel
+        _currentLogId = State(initialValue: currentLogId)
+        self.initialLogId = currentLogId
+    }
+    
     var body: some View {
         ZStack {
-            Color(.systemBackground).ignoresSafeArea()
+            // 背景ビューを最背面に配置
+            AppBackgroundView()
+                .ignoresSafeArea()
             
-            ScrollView(.vertical, showsIndicators: false) {
-                LazyVStack(spacing: 0) {
-                    ForEach(profileCoffeeLogViewModel.logs) { log in
-                        AsyncPostRow(
-                            post: log,
-                            fetchUser: { userId in
-                                try await profileCoffeeLogViewModel.fetchUser(userId: userId)
-                            }
-                        ) { author in
-                            PostCellView(
-                                log: log,
-                                author: author,
-                                profileUser: profileViewModel.user,
-                                onEdit: {
-                                    editingLog = log
-                                    isShowingEditSheet = true
+            ScrollViewReader { proxy in
+                ScrollView(.vertical, showsIndicators: false) {
+                    LazyVStack(spacing: 0) {
+                        ForEach(profileCoffeeLogViewModel.logs) { log in
+                            AsyncPostRow(
+                                post: log,
+                                fetchUser: { userId in
+                                    try await profileCoffeeLogViewModel.fetchUser(userId: userId)
                                 }
-                            )
+                            ) { author in
+                                PostCellView(
+                                    log: log,
+                                    author: author,
+                                    profileUser: profileViewModel.user,
+                                    onEdit: {
+                                        editingLog = log
+                                        isShowingEditSheet = true
+                                    }
+                                )
+                            }
+                            .frame(maxWidth: .infinity)
+                            .containerRelativeFrame(.vertical) { length, _ in
+                                length
+                            }
+                            .id(log.id)
                         }
-                        .frame(maxWidth: .infinity)
-                        .containerRelativeFrame(.vertical) { length, _ in
-                            length
+                    }
+                    .scrollTargetLayout()
+                }
+                .scrollTargetBehavior(.paging)
+                .scrollPosition(id: $currentLogId)
+                .scrollContentBackground(.hidden)
+                .modifier(ProfileToolbarModifier(
+                    profileViewModel: profileViewModel,
+                    authManager: authManager
+                ))
+                .onAppear {
+                    if let initialLogId {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                            proxy.scrollTo(initialLogId, anchor: .top)
                         }
-                        .id(log.id)
                     }
                 }
-                .scrollTargetLayout()
             }
-            .scrollTargetBehavior(.paging)
-            .scrollPosition(id: $currentLogId)
-            .scrollContentBackground(.hidden)
-            .modifier(DarkToolbarModifier(
-                profileViewModel: profileViewModel,
-                authManager: authManager
-            ))
         }
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $isShowingEditSheet, onDismiss: { editingLog = nil }) {
@@ -68,8 +86,6 @@ struct ProfileCoffeeLogFullscreenView: View {
         }
     }
 }
-
-
 
 // 共通で使っている非同期ユーザー取得用パーツ
 struct AsyncPostRow<Content: View>: View {

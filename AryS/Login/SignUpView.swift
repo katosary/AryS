@@ -36,7 +36,7 @@ struct SignUpView: View {
                                 Step1View(
                                     email: $viewModel.email,
                                     password: $viewModel.password,
-                                    confirmPassword: $viewModel.confirmPassword // 【追加】確認用パスワード
+                                    confirmPassword: $viewModel.confirmPassword
                                 )
                             case 2:
                                 Step2View(
@@ -71,8 +71,10 @@ struct SignUpView: View {
                                     prosweetness: viewModel.prosweetness,
                                     proflavor: viewModel.proflavor,
                                     selectedFlavors: viewModel.selectedFlavors,
-                                    maxRating: viewModel.maxRating, // 【追加】レーティング表示用
-                                    brandBackgroundColor: viewModel.brandBackgroundColor
+                                    maxRating: viewModel.maxRating,
+                                    brandBackgroundColor: viewModel.brandBackgroundColor,
+                                    isTermsAccepted: $viewModel.isTermsAccepted,
+                                    isPrivacyAccepted: $viewModel.isPrivacyAccepted
                                 )
                             default:
                                 EmptyView()
@@ -188,7 +190,7 @@ extension View {
 struct Step1View: View {
     @Binding var email: String
     @Binding var password: String
-    @Binding var confirmPassword: String // 【追加】確認用パスワード
+    @Binding var confirmPassword: String
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -215,7 +217,6 @@ struct Step1View: View {
                     .foregroundColor(.white.opacity(0.7))
             }
             
-            // 【追加】パスワード（確認）入力欄
             VStack(alignment: .leading, spacing: 8) {
                 Text("パスワード（確認）")
                     .font(.subheadline)
@@ -224,7 +225,6 @@ struct Step1View: View {
                 SecureField("もう一度パスワードを入力", text: $confirmPassword)
                     .customSignUpTextFieldStyle()
                 
-                // 一致しているかどうかの簡易インジケーター（任意で表示）
                 if !confirmPassword.isEmpty {
                     if password == confirmPassword {
                         Text("パスワードが一致しています")
@@ -252,7 +252,6 @@ struct Step2View: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            // ユーザーネーム
             VStack(alignment: .leading, spacing: 8) {
                 Text("ユーザーネーム")
                     .font(.subheadline)
@@ -262,7 +261,6 @@ struct Step2View: View {
                     .customSignUpTextFieldStyle()
             }
             
-            // 年齢
             VStack(alignment: .leading, spacing: 8) {
                 Text("年齢")
                     .font(.subheadline)
@@ -291,7 +289,6 @@ struct Step2View: View {
                 }
             }
             
-            // 住所（都道府県選択 ＋ それ以降の入力）
             VStack(alignment: .leading, spacing: 8) {
                 Text("お住まいの地域")
                     .font(.subheadline)
@@ -321,10 +318,6 @@ struct Step2View: View {
                     }
                     .presentationDetents([.medium])
                 }
-                
-                TextField("市区町村・番地など（任意）", text: $addressDetail)
-                    .customSignUpTextFieldStyle()
-                    .padding(.top, 4)
             }
         }
     }
@@ -349,7 +342,6 @@ struct Step3CoffeePreferenceView: View {
                     .bold()
                     .foregroundColor(.white)
                 
-                // 案内文の追加（任意）
                 Text("※すべてのレーティング項目を入力してください")
                     .font(.caption)
                     .foregroundColor(.white.opacity(0.6))
@@ -425,10 +417,10 @@ struct RatingRow: View {
         HStack {
             Text(label)
                 .font(.subheadline)
-                .foregroundColor(.white.opacity(0.7)) // 他の項目と色味を合わせる場合
-                .frame(width: 140, alignment: .leading) // 他のConfirmationRowのタイトル幅（140）と統一
+                .foregroundColor(.white.opacity(0.7))
+                .frame(width: 140, alignment: .leading)
             
-            Spacer() // ← ここにSpacerを入れることで、右側に押しやる
+            Spacer()
             
             HStack(spacing: 6) {
                 ForEach(1...maxRating, id: \.self) { number in
@@ -451,7 +443,7 @@ struct RatingRow: View {
     }
 }
 
-// MARK: - ステップ 4: 入力確認
+// MARK: - ステップ 4: 入力確認 & 利用規約
 struct Step4ConfirmationView: View {
     let email: String
     let password: String
@@ -466,7 +458,16 @@ struct Step4ConfirmationView: View {
     let selectedFlavors: [String]
     let maxRating: Int
     let brandBackgroundColor: Color
-    
+
+    @Binding var isTermsAccepted: Bool
+    @Binding var isPrivacyAccepted: Bool
+
+    @Environment(\.openURL) var openURL
+
+    // 修正：URLを正しい項目に入れ替えました
+    private let termsURL = URL(string: "https://sites.google.com/d/1hgwbPGg6Dz7nm3GNFxWw_1AsttJceEXx/p/1WAmRUDO552YbIq6X9fgbQnP0p8Bln8fR/edit")!
+    let privacyURL = URL(string: "https://sites.google.com/d/1yVKs4XMg78E3NSHHxruuzdQoAKV8XsyU/p/1QYho7F0qTFM6MpUOKbeMFJvDXcHYBViv/edit")!
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("入力内容のご確認")
@@ -482,7 +483,6 @@ struct Step4ConfirmationView: View {
                 
                 Divider().background(Color.white.opacity(0.2))
                 
-                // 【変更】コーヒーの好みをCoffeeBeanのRatingViewで表示
                 RatingRow(label: "苦味", rating: .constant(probitter), maxRating: maxRating, isInteractive: false)
                 RatingRow(label: "酸味", rating: .constant(proacidity), maxRating: maxRating, isInteractive: false)
                 RatingRow(label: "コク", rating: .constant(probody), maxRating: maxRating, isInteractive: false)
@@ -498,10 +498,66 @@ struct Step4ConfirmationView: View {
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(Color.white.opacity(0.3), lineWidth: 1)
             )
+
+            // 利用規約の同意セクション
+            VStack(alignment: .leading, spacing: 12) {
+                Text("利用規約・プライバシーポリシーの同意")
+                    .font(.subheadline)
+                    .bold()
+                    .foregroundColor(.white)
+
+                // 利用規約
+                HStack(alignment: .top, spacing: 12) {
+                    Button {
+                        isTermsAccepted.toggle()
+                    } label: {
+                        Image(systemName: isTermsAccepted ? "checkmark.square.fill" : "square")
+                            .font(.system(size: 20))
+                            .foregroundColor(isTermsAccepted ? .yellow : .white.opacity(0.7))
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Button("利用規約に同意する") {
+                            openURL(termsURL)
+                        }
+                        .font(.subheadline)
+                        .foregroundColor(.white)
+                        .underline()
+
+                        Text("（タップして内容を確認する）")
+                            .font(.caption2)
+                            .foregroundColor(.white.opacity(0.6))
+                    }
+                }
+
+                // プライバシーポリシー
+                HStack(alignment: .top, spacing: 12) {
+                    Button {
+                        isPrivacyAccepted.toggle()
+                    } label: {
+                        Image(systemName: isPrivacyAccepted ? "checkmark.square.fill" : "square")
+                            .font(.system(size: 20))
+                            .foregroundColor(isPrivacyAccepted ? .yellow : .white.opacity(0.7))
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Button("プライバシーポリシーに同意する") {
+                            openURL(privacyURL)
+                        }
+                        .font(.subheadline)
+                        .foregroundColor(.white)
+                        .underline()
+
+                        Text("（タップして内容を確認する）")
+                            .font(.caption2)
+                            .foregroundColor(.white.opacity(0.6))
+                    }
+                }
+            }
+            .padding(.top, 8)
         }
     }
 }
-
 struct ConfirmationRow: View {
     let title: String
     let value: String

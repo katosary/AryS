@@ -350,6 +350,14 @@ struct CoffeeLogView: View {
         .onChange(of: log) { _, newLog in
             coffeeLogViewModel.updateLog(newLog)
         }
+        .onChange(of: author) { _, newAuthor in
+            coffeeLogViewModel.updateAuthor(newAuthor)
+        }
+        .onChange(of: profileViewModel.user.profileImageUrl) { _, _ in
+            if coffeeLogViewModel.isMyPost {
+                coffeeLogViewModel.updateAuthor(profileViewModel.user)
+            }
+        }
         .sheet(isPresented: $isShowingDetailSheet) {
             CoffeeLogDetailView(
                 log: log,
@@ -411,4 +419,3 @@ struct CoffeeLogView: View {
         }
     }
 }
-

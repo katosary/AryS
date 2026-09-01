@@ -29,7 +29,7 @@ struct SavedListView: View {
                             savedListViewModel: savedListViewModel,
                             currentLogId: log.id
                         )) {
-                            // 💡 AsyncImageを使わず、ViewModel内の UIImage を表示
+                          
                             if let logId = log.id, let uiImage = savedListViewModel.thumbnailImages[logId] {
                                 Image(uiImage: uiImage)
                                     .resizable()

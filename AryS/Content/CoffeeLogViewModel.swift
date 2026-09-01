@@ -1,3 +1,8 @@
+//
+//  CoffeeLogViewModel.swift
+//  snsmvvm
+//
+
 import SwiftUI
 import FirebaseAuth
 import FirebaseFirestore
@@ -10,7 +15,7 @@ class CoffeeLogViewModel {
     var shouldNavigateToProfile: Bool = false
     var targetUserForProfile: User?
     
-    // --- 追加: 画像保持用プロパティ ---
+    // --- 画像保持用プロパティ ---
     var remoteImage: UIImage? = nil
     var remoteAuthorImage: UIImage? = nil
     
@@ -28,7 +33,13 @@ class CoffeeLogViewModel {
         loadImages()
     }
     
-    // --- 追加: 投稿画像と著者アイコンを非同期で取得 ---
+    /// 💡 著者情報が更新されたときにアイコン画像を再ロードするメソッド
+    func updateAuthor(_ newAuthor: User?) {
+        self.author = newAuthor
+        loadImages()
+    }
+    
+    // --- 投稿画像と著者アイコンを非同期で取得 ---
     private func loadImages() {
         // 1. 投稿画像のロード
         if let preview = log.previewImage {
@@ -45,10 +56,11 @@ class CoffeeLogViewModel {
                 }
             }
         }
-        
+         
         // 2. 著者プロフィール画像のロード
-        let displayUser = isMyPost ? nil : author // 自分の場合は profileViewModel から取るなど適宜調整
-        if let urlString = displayUser?.profileImageUrl, !urlString.isEmpty, let url = URL(string: urlString) {
+        let targetProfileImageUrl = author?.profileImageUrl
+        
+        if let urlString = targetProfileImageUrl, !urlString.isEmpty, let url = URL(string: urlString) {
             Task {
                 do {
                     let (data, _) = try await URLSession.shared.data(from: url)
@@ -59,6 +71,9 @@ class CoffeeLogViewModel {
                     print("⚠️ 著者アイコン画像取得エラー: \(error)")
                 }
             }
+        } else {
+            // 画像URLがない場合はクリアする
+            self.remoteAuthorImage = nil
         }
     }
     
@@ -78,10 +93,10 @@ class CoffeeLogViewModel {
     
     func toggleLike() {
         guard let currentUid, let logId = log.id else { return }
-        
+         
         let previousState = isLikedByMe
         let previousCount = log.likesCount
-        
+         
         if previousState {
             log.likedUserIds.removeAll { $0 == currentUid }
             log.likesCount = max(0, log.likesCount - 1)
@@ -89,9 +104,9 @@ class CoffeeLogViewModel {
             log.likedUserIds.append(currentUid)
             log.likesCount += 1
         }
-        
+         
         let postRef = db.collection("posts").document(logId)
-        
+         
         Task {
             do {
                 if previousState {
@@ -130,7 +145,7 @@ class CoffeeLogViewModel {
     
     func deletePost() {
         guard let logId = log.id else { return }
-        
+         
         Task {
             do {
                 try await db.collection("posts").document(logId).delete()

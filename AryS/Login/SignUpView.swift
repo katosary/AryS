@@ -139,6 +139,7 @@ struct SignUpView: View {
                         .padding(.horizontal, 24)
                         .padding(.bottom, 32)
                     }
+                    .id(viewModel.currentStep)
                 }
             }
             .navigationBarTitleDisplayMode(.inline)

@@ -29,7 +29,7 @@ struct ProfileCoffeeLogView: View {
                         profileCoffeeLogViewModel: profileCoffeeLogViewModel,
                         currentLogId: log.id
                     )) {
-                        // 💡 AsyncImageを使わず、ViewModel内の UIImage を表示
+                       
                         if let logId = log.id, let uiImage = profileCoffeeLogViewModel.thumbnailImages[logId] {
                             Image(uiImage: uiImage)
                                 .resizable()

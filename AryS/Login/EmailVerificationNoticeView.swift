@@ -16,55 +16,61 @@ struct EmailVerificationNoticeView: View {
     @State private var timer: Timer?
     
     var body: some View {
-        VStack(spacing: 24) {
-            Image(systemName: "envelope.badge.fill")
-                .font(.system(size: 64))
-                .foregroundColor(.orange)
-             
-            Text("メールアドレスの確認が必要です")
-                .font(.title2)
-                .bold()
-                .multilineTextAlignment(.center)
-             
-            Text("ご登録いただいたメールアドレスに確認メールを送信しました。\nメール内のリンクをクリックして認証を完了させてください。")
-                .font(.body)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-             
-            if !message.isEmpty {
-                Text(message)
-                    .font(.subheadline)
-                    .foregroundColor(.green)
-            }
-             
-            // 確認メール再送信ボタン
-            Button {
-                resendVerificationEmail()
-            } label: {
-                if isLoading {
-                    ProgressView()
-                } else {
-                    Text("確認メールを再送信する")
+        ZStack {
+            // 💡 最背面に共通の背景ビューを配置
+            AppBackgroundView()
+                .ignoresSafeArea()
+            
+            VStack(spacing: 24) {
+                Image(systemName: "envelope.badge.fill")
+                    .font(.system(size: 64))
+                    .foregroundColor(.orange)
+                 
+                Text("メールアドレスの確認が必要です")
+                    .font(.title2)
+                    .bold()
+                    .multilineTextAlignment(.center)
+                 
+                Text("ご登録いただいたメールアドレスに確認メールを送信しました。\nメール内のリンクをクリックして認証を完了させてください。")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+                 
+                if !message.isEmpty {
+                    Text(message)
                         .font(.subheadline)
-                        .foregroundColor(.blue)
+                        .foregroundColor(.green)
                 }
+                 
+                // 確認メール再送信ボタン
+                Button {
+                    resendVerificationEmail()
+                } label: {
+                    if isLoading {
+                        ProgressView()
+                    } else {
+                        Text("確認メールを再送信する")
+                            .font(.subheadline)
+                            .foregroundColor(.blue)
+                    }
+                }
+                .disabled(isLoading)
+                 
+                Spacer()
+                 
+                // ログアウトボタン
+                Button("ログアウトして別のアカウントでログイン") {
+                    try? Auth.auth().signOut()
+                    authManager.isLoggedIn = false
+                }
+                .font(.footnote)
+                .foregroundColor(.secondary)
+                .padding(.bottom, 20)
             }
-            .disabled(isLoading)
-             
-            Spacer()
-             
-            // ログアウトボタン
-            Button("ログアウトして別のアカウントでログイン") {
-                try? Auth.auth().signOut()
-                authManager.isLoggedIn = false
-            }
-            .font(.footnote)
-            .foregroundColor(.secondary)
-            .padding(.bottom, 20)
+            .padding(.top, 40)
+            .padding(.horizontal, 16)
         }
-        .padding(.top, 40)
-        .padding(.horizontal, 16)
         .onAppear {
             startVerificationTimer()
         }

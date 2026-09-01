@@ -176,13 +176,10 @@ struct OtherProfileDetailContentView: View {
                 // 1. カバー画像 + 道具の情報オーバーレイ
                 ZStack(alignment: .bottomLeading) {
                     Group {
-                        if let urlString = user.favoriteToolImageUrl, let url = URL(string: urlString) {
-                            AsyncImage(url: url) { image in
-                                image.resizable().scaledToFill()
-                            } placeholder: {
-                                Color(.secondarySystemBackground)
-                                    .overlay(ProgressView())
-                            }
+                        if let toolImage = viewModel.remoteToolImage {
+                            Image(uiImage: toolImage)
+                                .resizable()
+                                .scaledToFill()
                         } else {
                             Color(.secondarySystemBackground)
                                 .overlay(
@@ -238,12 +235,10 @@ struct OtherProfileDetailContentView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(spacing: 16) {
                         Group {
-                            if let urlString = user.profileImageUrl, let url = URL(string: urlString) {
-                                AsyncImage(url: url) { image in
-                                    image.resizable().scaledToFill()
-                                } placeholder: {
-                                    ProgressView()
-                                }
+                            if let profileImage = viewModel.remoteProfileImage {
+                                Image(uiImage: profileImage)
+                                    .resizable()
+                                    .scaledToFill()
                             } else {
                                 Image(systemName: "person.crop.circle.fill")
                                     .resizable()
@@ -353,14 +348,15 @@ struct OtherProfileCoffeeLogGridView: View {
                         viewModel: viewModel,
                         currentLogId: log.id
                     )) {
-                        if let imageUrlString = log.imageUrl, let url = URL(string: imageUrlString) {
-                            AsyncImage(url: url) { image in
-                                image.resizable().scaledToFill()
-                            } placeholder: {
-                                Color.gray.opacity(0.2)
-                            }
-                            .frame(width: totalWidth / 3, height: totalWidth / 3)
-                            .clipped()
+                        if let logId = log.id, let logImage = viewModel.remoteLogImages[logId] {
+                            Image(uiImage: logImage)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: totalWidth / 3, height: totalWidth / 3)
+                                .clipped()
+                        } else {
+                            Color.gray.opacity(0.2)
+                                .frame(width: totalWidth / 3, height: totalWidth / 3)
                         }
                     }
                 }

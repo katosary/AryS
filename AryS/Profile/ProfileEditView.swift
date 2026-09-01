@@ -27,13 +27,11 @@ struct ProfileEditView: View {
     
     var body: some View {
         ZStack {
-            // 背景ビューを最背面に配置して安全領域まで拡張
             AppBackgroundView()
                 .ignoresSafeArea()
             
             NavigationStack {
                 ZStack {
-                    // 画面全体の背景を透過（必要な場合）
                     Color.clear.ignoresSafeArea()
                     
                     GeometryReader { geometry in
@@ -48,30 +46,10 @@ struct ProfileEditView: View {
                                         Spacer()
                                         ZStack {
                                             if let uiImage = profileEditViewModel.profileImage {
-                                                // 1. ユーザーが新しく画像を選択した場合
                                                 Image(uiImage: uiImage)
                                                     .resizable()
                                                     .scaledToFill()
-                                            } else if let urlString = profileEditViewModel.user.profileImageUrl,
-                                                      !urlString.isEmpty,
-                                                      let url = URL(string: urlString) {
-                                                // 2. すでにサーバーに画像がある場合（URLが空でない）
-                                                AsyncImage(url: url) { phase in
-                                                    switch phase {
-                                                    case .empty:
-                                                        ProgressView()
-                                                    case .success(let image):
-                                                        image.resizable().scaledToFill()
-                                                    case .failure(_):
-                                                        Image(systemName: "person.crop.circle.fill")
-                                                            .resizable()
-                                                            .foregroundColor(.gray.opacity(0.6))
-                                                    @unknown default:
-                                                        EmptyView()
-                                                    }
-                                                }
                                             } else {
-                                                // 3. 中身が空（未登録）の場合：ローディングを出さずにデフォルトの人型アイコンを表示
                                                 Image(systemName: "person.crop.circle.fill")
                                                     .resizable()
                                                     .foregroundColor(.gray.opacity(0.6))
@@ -98,7 +76,6 @@ struct ProfileEditView: View {
                                     
                                     editField(label: "自己紹介", text: $profileEditViewModel.selfIntroduction, placeholder: "自己紹介を入力してください", isMultiLine: true)
                                     
-                                    // 年齢選択
                                     Button(action: { profileEditViewModel.isShowingAgePicker = true }) {
                                         HStack {
                                             Text("年齢").foregroundColor(.primary)
@@ -113,7 +90,6 @@ struct ProfileEditView: View {
                                     }
                                     Divider()
                                     
-                                    // 出身地選択
                                     Button(action: { profileEditViewModel.isShowingPrefecturePicker = true }) {
                                         HStack {
                                             Text("出身地").foregroundColor(.primary)
@@ -138,7 +114,6 @@ struct ProfileEditView: View {
                                     ratingRow(label: "甘味", rating: $profileEditViewModel.prosweetness)
                                     ratingRow(label: "フレーバー", rating: $profileEditViewModel.proflavor)
                                     
-                                    // フレーバー選択UI
                                     VStack(alignment: .leading, spacing: 12) {
                                         Text("お気に入りのフレーバー（最大3つまで）")
                                             .font(.body)
@@ -191,32 +166,13 @@ struct ProfileEditView: View {
                                         .padding(.top, 20)
                                         .padding(.bottom, 10)
                                     
-                                    // カバー画像
                                     PhotosPicker(selection: $profileEditViewModel.selectedCoffeeItem, matching: .images) {
                                         ZStack {
                                             if let uiImage = profileEditViewModel.favoriteCoffeeImage {
-                                                // 1. 新しく選択した画像がある場合
                                                 Image(uiImage: uiImage)
                                                     .resizable()
                                                     .scaledToFill()
-                                            } else if let urlString = profileEditViewModel.user.favoriteToolImageUrl,
-                                                      !urlString.isEmpty,
-                                                      let url = URL(string: urlString) {
-                                                // 2. すでにサーバーに画像がある場合
-                                                AsyncImage(url: url) { phase in
-                                                    switch phase {
-                                                    case .empty:
-                                                        Color.gray.opacity(0.2).overlay(ProgressView())
-                                                    case .success(let image):
-                                                        image.resizable().scaledToFill()
-                                                    case .failure(_):
-                                                        Rectangle().fill(Color.gray.opacity(0.2))
-                                                    @unknown default:
-                                                        EmptyView()
-                                                    }
-                                                }
                                             } else {
-                                                // 3. 空の状態の場合：ローディングを出さずに単色のグレーを表示
                                                 Rectangle().fill(Color.gray.opacity(0.2))
                                             }
                                         }
@@ -234,7 +190,6 @@ struct ProfileEditView: View {
                                         }
                                     }
                                     
-                                    // 道具の詳細入力
                                     VStack(alignment: .leading, spacing: 15) {
                                         editField(label: "ドリッパー", text: $profileEditViewModel.dripper, placeholder: "ドリッパー")
                                         editField(label: "フィルター", text: $profileEditViewModel.paperFilter, placeholder: "ペーパーフィルター")
@@ -282,8 +237,14 @@ struct ProfileEditView: View {
                             }
                             Task {
                                 do {
-                                    _ = try await profileEditViewModel.uploadProfileAndSave(uid: uid)
+                                    let updatedUser = try await profileEditViewModel.uploadProfileAndSave(uid: uid)
+                                    
+                                    await MainActor.run {
+                                        profileViewModel.user = updatedUser
+                                    }
+                                    
                                     await profileViewModel.loadUserData()
+                                    
                                     await MainActor.run {
                                         dismiss()
                                     }

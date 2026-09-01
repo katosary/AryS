@@ -10,16 +10,56 @@ class CoffeeLogViewModel {
     var shouldNavigateToProfile: Bool = false
     var targetUserForProfile: User?
     
+    // --- 追加: 画像保持用プロパティ ---
+    var remoteImage: UIImage? = nil
+    var remoteAuthorImage: UIImage? = nil
+    
     private let db = Firestore.firestore()
     
     init(log: Log, author: User? = nil) {
         self.log = log
         self.author = author
+        loadImages() // 初期化時に画像をロード
     }
     
     /// 💡 親から新しいログデータを受け取って即時反映するためのメソッド
     func updateLog(_ newLog: Log) {
         self.log = newLog
+        loadImages()
+    }
+    
+    // --- 追加: 投稿画像と著者アイコンを非同期で取得 ---
+    private func loadImages() {
+        // 1. 投稿画像のロード
+        if let preview = log.previewImage {
+            self.remoteImage = preview
+        } else if let urlString = log.imageUrl, let url = URL(string: urlString) {
+            Task {
+                do {
+                    let (data, _) = try await URLSession.shared.data(from: url)
+                    if let image = UIImage(data: data) {
+                        await MainActor.run { self.remoteImage = image }
+                    }
+                } catch {
+                    print("⚠️ 投稿画像取得エラー: \(error)")
+                }
+            }
+        }
+        
+        // 2. 著者プロフィール画像のロード
+        let displayUser = isMyPost ? nil : author // 自分の場合は profileViewModel から取るなど適宜調整
+        if let urlString = displayUser?.profileImageUrl, !urlString.isEmpty, let url = URL(string: urlString) {
+            Task {
+                do {
+                    let (data, _) = try await URLSession.shared.data(from: url)
+                    if let image = UIImage(data: data) {
+                        await MainActor.run { self.remoteAuthorImage = image }
+                    }
+                } catch {
+                    print("⚠️ 著者アイコン画像取得エラー: \(error)")
+                }
+            }
+        }
     }
     
     private var currentUid: String? {

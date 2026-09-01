@@ -29,18 +29,14 @@ struct SavedListView: View {
                             savedListViewModel: savedListViewModel,
                             currentLogId: log.id
                         )) {
-                            if let imageUrl = log.imageUrl, let url = URL(string: imageUrl) {
-                                AsyncImage(url: url) { image in
-                                    image
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                        .frame(minWidth: 0, maxWidth: .infinity)
-                                        .aspectRatio(1, contentMode: .fit)
-                                        .clipped()
-                                } placeholder: {
-                                    Color.gray.opacity(0.3)
-                                        .aspectRatio(1, contentMode: .fit)
-                                }
+                            // 💡 AsyncImageを使わず、ViewModel内の UIImage を表示
+                            if let logId = log.id, let uiImage = savedListViewModel.thumbnailImages[logId] {
+                                Image(uiImage: uiImage)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(minWidth: 0, maxWidth: .infinity)
+                                    .aspectRatio(1, contentMode: .fit)
+                                    .clipped()
                             } else {
                                 Color.gray.opacity(0.3)
                                     .aspectRatio(1, contentMode: .fit)

@@ -1,3 +1,8 @@
+//
+//  ProfileView.swift
+//  snsmvvm
+//
+
 import SwiftUI
 import FirebaseAuth
 import FirebaseFirestore
@@ -8,8 +13,6 @@ struct ProfileView: View {
     @Environment(ProfileViewModel.self) var profileViewModel
     @State private var isDetailShowing = false
       
-    @State private var scrollPosition: Int? = 0
-      
     let profileSize: CGFloat = 80   // アイコンのサイズ
       
     var body: some View {
@@ -18,11 +21,9 @@ struct ProfileView: View {
             let totalHeight = outerGeometry.size.height
              
             ZStack {
-                // 💡 1. 最背面に共通の背景ビューを配置
                 AppBackgroundView()
 
                 NavigationStack {
-                    // 縦方向のスクロールにページング動作を適用
                     ScrollView(.vertical) {
                         VStack(spacing: 0) {
                             ProfileDetailContentView(
@@ -49,10 +50,10 @@ struct ProfileView: View {
                     }
                     .navigationTitle("プロフィール")
                     .navigationBarTitleDisplayMode(.inline)
-                    .scrollContentBackground(.hidden) // 💡 システムの背景を非表示
-                    .background(Color.clear) // 💡 背景を完全に透明にする
+                    .scrollContentBackground(.hidden)
+                    .background(Color.clear)
                 }
-                .background(Color.clear) // 💡 NavigationStack自体の背景も透明にする
+                .background(Color.clear)
                 .onAppear {
                     Task {
                         await profileViewModel.loadUserData()
@@ -79,32 +80,14 @@ struct ProfileDetailContentView: View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
                  
-                // 1. 一番上の背景画像（カバー画像） + 左下に道具の情報をオーバーレイ
+                // 1. カバー画像
                 ZStack(alignment: .bottomLeading) {
                     Group {
-                        if let urlString = profileViewModel.user.favoriteToolImageUrl,
-                           !urlString.isEmpty,
-                           let url = URL(string: urlString) {
-                            
-                            AsyncImage(url: url) { phase in
-                                switch phase {
-                                case .empty:
-                                    // ダウンロード中の間だけローディングを表示
-                                    Color(.secondarySystemBackground)
-                                        .overlay(ProgressView())
-                                case .success(let image):
-                                    // 読み込み成功
-                                    image.resizable().scaledToFill()
-                                case .failure(_):
-                                    // 読み込み失敗時はデフォルトのアイコンを表示
-                                    Color(.secondarySystemBackground)
-                                        .overlay(Image(systemName: "photo").foregroundColor(.secondary))
-                                @unknown default:
-                                    EmptyView()
-                                }
-                            }
+                        if let uiImage = profileViewModel.remoteToolImage {
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .scaledToFill()
                         } else {
-                            // 最初からURLが空（未登録）の場合は、ローディングを出さずに即座に写真アイコンを表示
                             Color(.secondarySystemBackground)
                                 .overlay(
                                     Image(systemName: "photo")
@@ -116,7 +99,6 @@ struct ProfileDetailContentView: View {
                     .aspectRatio(4/3, contentMode: .fit)
                     .clipped()
                      
-                    // --- 道具の情報のみを左下に配置 ---
                     let toolData: [(String, String)] = [
                         ("ドリッパー", profileViewModel.user.dripper ),
                         ("ペーパー", profileViewModel.user.paperFilter ),
@@ -163,7 +145,6 @@ struct ProfileDetailContentView: View {
                                 .font(.caption)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
-                                // 💡 編集ボタンの背景を透明（または極薄のクリア）に変更
                                 .background(Color.clear)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 8)
@@ -175,27 +156,11 @@ struct ProfileDetailContentView: View {
                     HStack(spacing: 20) {
                         // プロフィールアイコン
                         Group {
-                            if let urlString = profileViewModel.user.profileImageUrl,
-                               !urlString.isEmpty,
-                               let url = URL(string: urlString) {
-                                
-                                AsyncImage(url: url) { phase in
-                                    switch phase {
-                                    case .empty:
-                                        ProgressView()
-                                    case .success(let image):
-                                        image.resizable().scaledToFill()
-                                    case .failure(_):
-                                        Image(systemName: "person.crop.circle.fill")
-                                            .resizable()
-                                            .scaledToFit()
-                                            .foregroundColor(Color(.systemGray3))
-                                    @unknown default:
-                                        EmptyView()
-                                    }
-                                }
+                            if let uiImage = profileViewModel.remoteProfileImage {
+                                Image(uiImage: uiImage)
+                                    .resizable()
+                                    .scaledToFill()
                             } else {
-                                // 最初からURLが空の場合
                                 Image(systemName: "person.crop.circle.fill")
                                     .resizable()
                                     .scaledToFit()
@@ -205,8 +170,7 @@ struct ProfileDetailContentView: View {
                         .frame(width: profileSize, height: profileSize)
                         .clipShape(Circle())
                         
-                         
-                        VStack{
+                        VStack {
                             HStack(alignment: .center, spacing: 8) {
                                 Text(profileViewModel.user.userName)
                                     .font(.title)
@@ -226,7 +190,6 @@ struct ProfileDetailContentView: View {
                      
                     Spacer(minLength: 18)
                      
-                    // 自己紹介文
                     if !profileViewModel.user.selfIntroduction.isEmpty {
                         Text(profileViewModel.user.selfIntroduction)
                             .font(.body)
@@ -238,7 +201,6 @@ struct ProfileDetailContentView: View {
                      
                     Spacer(minLength: 18)
                      
-                    // --- これまでのベストコーヒー ---
                     HStack(alignment: .top) {
                         Text("あなたのベストコーヒー")
                             .font(.subheadline)
@@ -252,7 +214,6 @@ struct ProfileDetailContentView: View {
                             .bold()
                     }
                      
-                    // --- 好きな味わいをもっと詳しくボタン ---
                     NavigationLink {
                         ProfileFlavorDetailView()
                     } label: {
@@ -271,7 +232,6 @@ struct ProfileDetailContentView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
                  
-                // 下スワイプを促すアイコン
                 VStack(spacing: 4) {
                     Image(systemName: "chevron.compact.down")
                         .font(.title2)
@@ -286,24 +246,4 @@ struct ProfileDetailContentView: View {
         }
         .background(Color.clear)
     }
-      
-    @ViewBuilder
-    private func parameterRow(label: String, rating: Int) -> some View {
-        HStack(spacing: 15) {
-            Text(label)
-                .font(.subheadline)
-                .frame(width: 45, alignment: .leading)
-             
-            EmptyRatingView(rating: Double(rating))
-        }
-        .padding(.trailing, 5)
-    }
-}
-
-// MARK: - Preview
-#Preview {
-    ProfileView()
-        .environment(AuthManager())
-        .environment(ProfileViewModel())
-        .environment(UserManager())
 }

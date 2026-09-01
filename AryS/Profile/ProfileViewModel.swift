@@ -42,6 +42,10 @@ final class ProfileViewModel {
         favoriteToolImageUrl: nil
     )
     
+    // --- 追加: リモート画像保持用プロパティ ---
+    var remoteProfileImage: UIImage? = nil
+    var remoteToolImage: UIImage? = nil
+    
     var isProfileEditSheet: Bool = false
     var logs: [Log] = []
     var blockedUserIds: [String] = []
@@ -60,7 +64,7 @@ final class ProfileViewModel {
     init() {
         Task {
             listenToUserProfile()
-            
+             
             await fetchBlockedUserIds()
             listenToBlockedUsers()
         }
@@ -102,6 +106,8 @@ final class ProfileViewModel {
             profileImageUrl: nil,
             favoriteToolImageUrl: nil
         )
+        self.remoteProfileImage = nil
+        self.remoteToolImage = nil
         self.logs = []
         self.blockedUserIds = []
         self.blockedByMeUserIds = []
@@ -110,13 +116,12 @@ final class ProfileViewModel {
         self.errorMessage = nil
     }
     
-    
     // MARK: - Listener Management
         
-        nonisolated private func stopListening() {
-            // mainActorの制約を回避するため、あらかじめ非同期またはMainActorの外で安全に破棄できるようにします
-            // ListenerRegistration は保持しているプロパティ自体を直接 remove() する形にします。
-        }
+    nonisolated private func stopListening() {
+        // mainActorの制約を回避するため、あらかじめ非同期またはMainActorの外で安全に破棄できるようにします
+        // ListenerRegistration は保持しているプロパティ自体を直接 remove() する形にします。
+    }
     
     // MARK: - Realtime Listener for Profile
     
@@ -127,16 +132,16 @@ final class ProfileViewModel {
             }
             return
         }
-        
+         
         userListenerRegistration?.remove()
-        
+         
         self.isLoading = true
         self.errorMessage = nil
-        
+         
         userListenerRegistration = db.collection("users").document(currentUid)
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self = self else { return }
-                
+                 
                 if let error = error {
                     print("❌ プロフィールの購読エラー: \(error)")
                     Task { @MainActor in
@@ -145,7 +150,7 @@ final class ProfileViewModel {
                     }
                     return
                 }
-                
+                 
                 guard let snapshot = snapshot, snapshot.exists else {
                     print("⚠️ プロフィールドキュメントが存在しません")
                     Task { @MainActor in
@@ -154,12 +159,15 @@ final class ProfileViewModel {
                     }
                     return
                 }
-                
+                 
                 Task { @MainActor [weak self] in
                     guard let self = self else { return }
                     do {
                         self.user = try snapshot.data(as: User.self)
                         print("📡 プロフィールをリアルタイム更新しました")
+                        
+                        // ユーザーデータの更新に合わせてリモート画像を再取得
+                        self.loadRemoteImages()
                     } catch {
                         print("⚠️ Userモデルへのデコード失敗: \(error.localizedDescription)")
                         self.errorMessage = "データの解析に失敗しました: \(error.localizedDescription)"
@@ -169,11 +177,51 @@ final class ProfileViewModel {
             }
     }
     
-    // MARK: - Async One-time Fetch (手動更新やプルリフレッシュ用として残す場合)
+    // MARK: - Remote Image Loading
+    
+    /// URLから画像を非同期でダウンロードしてUIImageに変換・保持する
+    private func loadRemoteImages() {
+        // プロフィール画像のロード
+        if let profileUrlStr = user.profileImageUrl, let url = URL(string: profileUrlStr) {
+            Task {
+                do {
+                    let (data, _) = try await URLSession.shared.data(from: url)
+                    if let image = UIImage(data: data) {
+                        await MainActor.run {
+                            self.remoteProfileImage = image
+                        }
+                    }
+                } catch {
+                    print("⚠️ プロフィール画像取得エラー: \(error)")
+                }
+            }
+        } else {
+            self.remoteProfileImage = nil
+        }
+        
+        // お気に入りの道具（カバー）画像のロード
+        if let toolUrlStr = user.favoriteToolImageUrl, let url = URL(string: toolUrlStr) {
+            Task {
+                do {
+                    let (data, _) = try await URLSession.shared.data(from: url)
+                    if let image = UIImage(data: data) {
+                        await MainActor.run {
+                            self.remoteToolImage = image
+                        }
+                    }
+                } catch {
+                    print("⚠️ ツール画像取得エラー: \(error)")
+                }
+            }
+        } else {
+            self.remoteToolImage = nil
+        }
+    }
+    
+    // MARK: - Async One-time Fetch
     
     @MainActor
     func loadUserData() async {
-        // 基本はリアルタイムリスナーが動きますが、必要に応じて再読み込み等に利用可能
         listenToUserProfile()
     }
     

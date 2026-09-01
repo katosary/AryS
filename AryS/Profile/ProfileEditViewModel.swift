@@ -15,21 +15,18 @@ import FirebaseFirestore
 class ProfileEditViewModel {
     var user: User
     
-    // 入力項目（ViewのBinding用）
     var userName: String = ""
     var selfIntroduction: String = ""
     var userAge: Int = 0
     var userPrefecture: String = ""
     var favoriteCoffee: String = ""
     
-    // 評価（コーヒーの好み）
     var probitter: Int = 0
     var proacidity: Int = 0
     var probody: Int = 0
     var prosweetness: Int = 0
     var proflavor: Int = 0
     
-    // フレーバー選択用プロパティ
     var selectedFlavors: [String] = []
     
     let flavorOptions = [
@@ -46,7 +43,6 @@ class ProfileEditViewModel {
         "スパイス (スパイシーなアクセント)"
     ]
     
-    // 道具
     var dripper: String = ""
     var paperFilter: String = ""
     var kettle: String = ""
@@ -57,7 +53,6 @@ class ProfileEditViewModel {
     var espressoMachine: String = ""
     var frenchPress: String = ""
     
-    // 画像用
     var profileImage: UIImage? = nil
     var selectedProfileItem: PhotosPickerItem? {
         didSet { Task { await loadImage(from: selectedProfileItem, isProfile: true) } }
@@ -80,11 +75,9 @@ class ProfileEditViewModel {
     
     private let db = Firestore.firestore()
     
-    // クロップ画面制御用（プロフィール用）
     var isShowingImageCropView: Bool = false
     var tempSelectedUIImage: UIImage? = nil
     
-    // クロップ画面制御用（お気に入りの道具用）
     var isShowingCoffeeCropView: Bool = false
     var tempSelectedCoffeeUIImage: UIImage? = nil
     
@@ -173,17 +166,17 @@ class ProfileEditViewModel {
             let storageRef = Storage.storage().reference().child("profile_images/\(uid).jpg")
             _ = try await storageRef.putDataAsync(data)
             let rawUrlString = try await storageRef.downloadURL().absoluteString
-            imageUrl = rawUrlString
+            imageUrl = "\(rawUrlString)&t=\(Date().timeIntervalSince1970)"
         }
-        
+         
         var toolImageUrl: String? = self.user.favoriteToolImageUrl
         if let image = favoriteCoffeeImage, let data = image.jpegData(compressionQuality: 0.5) {
             let storageRef = Storage.storage().reference().child("favorite_tool_images/\(uid).jpg")
             _ = try await storageRef.putDataAsync(data)
             let rawUrlString = try await storageRef.downloadURL().absoluteString
-            toolImageUrl = rawUrlString
+            toolImageUrl = "\(rawUrlString)&t=\(Date().timeIntervalSince1970)"
         }
-        
+         
         self.user.userName = userName
         self.user.selfIntroduction = selfIntroduction
         self.user.userAge = userAge
@@ -194,9 +187,9 @@ class ProfileEditViewModel {
         self.user.probody = probody
         self.user.prosweetness = prosweetness
         self.user.proflavor = proflavor
-        
+         
         self.user.flavorTags = selectedFlavors
-        
+         
         self.user.dripper = dripper
         self.user.paperFilter = paperFilter
         self.user.kettle = kettle
@@ -206,10 +199,10 @@ class ProfileEditViewModel {
         self.user.grinder = grinder
         self.user.espressoMachine = espressoMachine
         self.user.frenchPress = frenchPress
-        
+         
         if let url = imageUrl { self.user.profileImageUrl = url }
         if let url = toolImageUrl { self.user.favoriteToolImageUrl = url }
-        
+         
         let updateData: [String: Any] = [
             "userName": self.user.userName,
             "selfIntroduction": self.user.selfIntroduction,
@@ -234,7 +227,7 @@ class ProfileEditViewModel {
             "profileImageUrl": self.user.profileImageUrl ?? "",
             "favoriteToolImageUrl": self.user.favoriteToolImageUrl ?? ""
         ]
-        
+         
         try await db.collection("users").document(uid).setData(updateData, merge: true)
         return self.user
     }

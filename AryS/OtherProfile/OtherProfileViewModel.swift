@@ -2,8 +2,6 @@
 //  OtherProfileViewModel.swift
 //  snsmvvm
 //
-//  Created by katoso on 2026/08/14.
-//
 
 import Foundation
 import Observation
@@ -29,7 +27,7 @@ final class OtherProfileViewModel {
         proaroma: 0,
         prosweetness: 0,
         proflavor: 0,
-        flavorTags: [],         // ← proflavorTags から flavorTags に修正
+        flavorTags: [],
         dripper: "",
         paperFilter: "",
         kettle: "",
@@ -44,58 +42,113 @@ final class OtherProfileViewModel {
     )
     
     var logs: [Log] = []
+    
+    // --- 追加: リモート画像保持用プロパティ ---
+    var remoteProfileImage: UIImage? = nil
+    var remoteToolImage: UIImage? = nil
+    var remoteLogImages: [String: UIImage] = [:] // [LogId: UIImage]
+    
     var isLoading: Bool = false
     var errorMessage: String? = nil
     
     private let db = Firestore.firestore()
     
     /// 指定されたUIDのユーザープロフィールと投稿ログを同時に取得する
-    /// 指定されたUIDのユーザープロフィールと投稿ログを同時に取得する
-        func loadUserData(userId: String) async {
-            guard !userId.isEmpty else {
-                self.errorMessage = "有効なユーザーIDではありません。"
-                return
-            }
-             
-            isLoading = true
-            errorMessage = nil
-             
-            do {
-                let userSnapshot = try await db.collection("users").document(userId).getDocument()
-                if userSnapshot.exists {
-                    self.user = try userSnapshot.data(as: User.self)
-                } else {
-                    self.errorMessage = "ユーザーデータが見つかりませんでした。"
-                }
-                 
-                // ▼▼▼ ここをデバッグコードに置き換えます ▼▼▼
-                let logSnapshot = try await db.collection("posts")
-                    .whereField("userId", isEqualTo: userId)
-                    .getDocuments()
-                 
-                print("DEBUG: 取得したドキュメント数 = \(logSnapshot.documents.count)")
-                 
-                self.logs = logSnapshot.documents.compactMap { document in
-                    do {
-                        let log = try document.data(as: Log.self)
-                        return log
-                    } catch {
-                        // ※ document.0 はエラーになる場合があるため、ドキュメントIDを出力するように少し修正しています
-                        print("DEBUG: Logのデコードエラー (ID: \(document.documentID)): \(error)")
-                        return nil
-                    }
-                }
-                 
-                print("DEBUG: デコード成功したログ数 = \(self.logs.count)")
-                // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
-                 
-            } catch {
-                self.errorMessage = "データの取得に失敗しました: \(error.localizedDescription)"
-                print("DEBUG: データ取得全体の例外エラー: \(error)") // ついでにここにもprintを仕込むと安心です
-            }
-             
-            isLoading = false
+    func loadUserData(userId: String) async {
+        guard !userId.isEmpty else {
+            self.errorMessage = "有効なユーザーIDではありません。"
+            return
         }
+         
+        isLoading = true
+        errorMessage = nil
+         
+        do {
+            let userSnapshot = try await db.collection("users").document(userId).getDocument()
+            if userSnapshot.exists {
+                self.user = try userSnapshot.data(as: User.self)
+                // ユーザー情報取得後に画像をロード
+                loadRemoteImages()
+            } else {
+                self.errorMessage = "ユーザーデータが見つかりませんでした。"
+            }
+             
+            let logSnapshot = try await db.collection("posts")
+                .whereField("userId", isEqualTo: userId)
+                .getDocuments()
+             
+            self.logs = logSnapshot.documents.compactMap { document in
+                do {
+                    let log = try document.data(as: Log.self)
+                    return log
+                } catch {
+                    print("DEBUG: Logのデコードエラー (ID: \(document.documentID)): \(error)")
+                    return nil
+                }
+            }
+            
+            // ログの画像もロード
+            loadLogImages()
+             
+        } catch {
+            self.errorMessage = "データの取得に失敗しました: \(error.localizedDescription)"
+            print("DEBUG: データ取得全体の例外エラー: \(error)")
+        }
+         
+        isLoading = false
+    }
+    
+    // --- 追加: プロフィール・ツール画像を非同期ロード ---
+    private func loadRemoteImages() {
+        if let profileUrlStr = user.profileImageUrl, let url = URL(string: profileUrlStr) {
+            Task {
+                do {
+                    let (data, _) = try await URLSession.shared.data(from: url)
+                    if let image = UIImage(data: data) {
+                        await MainActor.run { self.remoteProfileImage = image }
+                    }
+                } catch {
+                    print("⚠️ 他ユーザープロフィール画像取得エラー: \(error)")
+                }
+            }
+        } else {
+            self.remoteProfileImage = nil
+        }
+        
+        if let toolUrlStr = user.favoriteToolImageUrl, let url = URL(string: toolUrlStr) {
+            Task {
+                do {
+                    let (data, _) = try await URLSession.shared.data(from: url)
+                    if let image = UIImage(data: data) {
+                        await MainActor.run { self.remoteToolImage = image }
+                    }
+                } catch {
+                    print("⚠️ 他ユーザーツール画像取得エラー: \(error)")
+                }
+            }
+        } else {
+            self.remoteToolImage = nil
+        }
+    }
+    
+    // --- 追加: 投稿一覧の画像を非同期ロード ---
+    private func loadLogImages() {
+        for log in logs {
+            guard let logId = log.id, let imageUrlStr = log.imageUrl, let url = URL(string: imageUrlStr) else { continue }
+            Task {
+                do {
+                    let (data, _) = try await URLSession.shared.data(from: url)
+                    if let image = UIImage(data: data) {
+                        await MainActor.run {
+                            self.remoteLogImages[logId] = image
+                        }
+                    }
+                } catch {
+                    print("⚠️ ログ画像取得エラー (\(logId)): \(error)")
+                }
+            }
+        }
+    }
     
     /// 投稿削除用
     func deleteLog(targetPost: Log) {
@@ -107,6 +160,7 @@ final class OtherProfileViewModel {
             do {
                 try await db.collection("posts").document(logId).delete()
                 logs.removeAll { $0.id == logId }
+                remoteLogImages.removeValue(forKey: logId)
             } catch {
                 print("Failed to delete log: \(error)")
             }

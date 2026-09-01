@@ -24,20 +24,21 @@ struct ProfileCoffeeLogView: View {
     var body: some View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 2) {
-                // profileCoffeeLogViewModel.logs が空でないか確認
                 ForEach(profileCoffeeLogViewModel.logs) { log in
                     NavigationLink(destination: ProfileCoffeeLogFullscreenView(
                         profileCoffeeLogViewModel: profileCoffeeLogViewModel,
                         currentLogId: log.id
                     )) {
-                        if let imageUrlString = log.imageUrl, let url = URL(string: imageUrlString) {
-                            AsyncImage(url: url) { image in
-                                image.resizable().scaledToFill()
-                            } placeholder: {
-                                Color.gray.opacity(0.2)
-                            }
-                            .frame(width: totalWidth / 3, height: totalWidth / 3)
-                            .clipped()
+                        // 💡 AsyncImageを使わず、ViewModel内の UIImage を表示
+                        if let logId = log.id, let uiImage = profileCoffeeLogViewModel.thumbnailImages[logId] {
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: totalWidth / 3, height: totalWidth / 3)
+                                .clipped()
+                        } else {
+                            Color.gray.opacity(0.2)
+                                .frame(width: totalWidth / 3, height: totalWidth / 3)
                         }
                     }
                 }

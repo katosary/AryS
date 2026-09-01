@@ -95,16 +95,12 @@ struct CoffeeLogView: View {
                 ZStack {
                     // --- 1. 背景画像エリア ---
                     Group {
-                        if let previewImage = log.previewImage {
-                            Image(uiImage: previewImage)
+                        if let uiImage = coffeeLogViewModel.remoteImage {
+                            Image(uiImage: uiImage)
                                 .resizable()
                                 .scaledToFill()
-                        } else if let urlString = log.imageUrl, let url = URL(string: urlString) {
-                            AsyncImage(url: url) { image in
-                                image.resizable().scaledToFill()
-                            } placeholder: {
-                                ProgressView()
-                            }
+                        } else {
+                            Color(.secondarySystemBackground)
                         }
                     }
                     .frame(width: cardWidth, height: cardHeight)
@@ -310,14 +306,17 @@ struct CoffeeLogView: View {
                             }
                         } label: {
                             HStack {
-                                let displayUser = coffeeLogViewModel.isMyPost ? profileViewModel.user : author
-                                if let urlString = displayUser?.profileImageUrl, !urlString.isEmpty, let url = URL(string: urlString) {
-                                    AsyncImage(url: url) { image in image.resizable().scaledToFill() }
-                                    placeholder: { Circle().fill(Color.gray) }
+                                if let uiImage = coffeeLogViewModel.remoteAuthorImage {
+                                    Image(uiImage: uiImage)
+                                        .resizable()
+                                        .scaledToFill()
                                         .frame(width: 40, height: 40)
                                         .clipShape(Circle())
                                 } else {
-                                    Image(systemName: "person.circle.fill").resizable().frame(width: 40, height: 40).foregroundColor(.gray)
+                                    Image(systemName: "person.circle.fill")
+                                        .resizable()
+                                        .frame(width: 40, height: 40)
+                                        .foregroundColor(.gray)
                                 }
                             }
                         }
@@ -412,3 +411,4 @@ struct CoffeeLogView: View {
         }
     }
 }
+
